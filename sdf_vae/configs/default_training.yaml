@@ -1,0 +1,9 @@
+iterations: 100000
+batch_size: 8
+l2_large_weight: 1
+l2_small_weight: 1
+l1_large_weight: 0
+l1_small_weight: 0
+pc_weight: 0
+kld_weight: 1
+learning_rate: 1e-3

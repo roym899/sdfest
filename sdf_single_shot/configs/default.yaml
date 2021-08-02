@@ -1,0 +1,25 @@
+config:
+    - vae: "../vae_models/mug.yaml"
+    - generated_dataset: "./generated_dataset.yaml"
+
+# Training params
+batch_size: 32
+iterations: 1.0e6
+learning_rate: 1.0e-3
+position_weight: 1
+scale_weight: 1
+orientation_weight: 1
+
+# Network params
+backbone_type: VanillaPointNet
+backbone:
+    in_size: 3  # dimension of input points
+    mlp_out_sizes: [64, 64, 64, 128, 1024]
+    batchnorm: True
+
+head_type: SDFPoseHead
+head:
+    in_size: 1024 # number of input features
+    mlp_out_sizes: [512, 256, 128] 
+    batchnorm: True
+    orientation_repr: quaternion

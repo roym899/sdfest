@@ -1,0 +1,12 @@
+decoder:
+  fc_layers:
+    - {out: 20}
+    - {out: 50}
+    - {out: 100}
+    - {out: 2048}
+  conv_layers:
+    - {in_size: 4, in_channels: 32, out_channels: 16, kernel_size: 3, relu: false}
+    - {in_size: 8, in_channels: 16, out_channels: 16, kernel_size: 3, relu: false}
+    - {in_size: 16, in_channels: 16, out_channels: 8, kernel_size: 3, relu: false}
+    - {in_size: 32, in_channels: 8, out_channels: 4, kernel_size: 3, relu: false}
+    - {in_size: 64, in_channels: 4, out_channels: 1, kernel_size: 1, relu: false}

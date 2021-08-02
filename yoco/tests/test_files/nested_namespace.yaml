@@ -1,0 +1,4 @@
+config:
+  a:
+    b: config_1.yaml
+    b2: config_1.yaml

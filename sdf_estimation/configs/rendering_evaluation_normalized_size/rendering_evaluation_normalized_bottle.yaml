@@ -1,0 +1,7 @@
+config:
+  - ../rendering_evaluation.yaml
+  - ../bottle.yaml
+
+mesh_scale: 0.15
+rel_scale: False
+camera_distance: 0.3

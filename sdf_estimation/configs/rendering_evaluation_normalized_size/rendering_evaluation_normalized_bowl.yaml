@@ -1,0 +1,7 @@
+config:
+  - ../rendering_evaluation.yaml
+  - ../bowl.yaml
+
+mesh_scale: 0.1
+rel_scale: False
+camera_distance: 0.3

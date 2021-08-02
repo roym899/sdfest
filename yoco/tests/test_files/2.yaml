@@ -1,0 +1,5 @@
+config: 4.yaml
+2_and_4: 2
+2_and_3: 2
+2_only: 2
+all: 2

@@ -1,0 +1,20 @@
+config:
+  decoder_old.yaml
+latent_size: 10
+tsdf: False  # Should be either False or float
+encoder: 
+  layer_infos:
+    - type: torch.nn.Conv3d
+      args: {in_channels: 1, out_channels: 4, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 4, out_channels: 8, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 8, out_channels: 16, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Flatten
+      args: {}

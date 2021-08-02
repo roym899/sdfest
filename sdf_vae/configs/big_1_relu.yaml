@@ -1,0 +1,39 @@
+decoder:
+  fc_layers:
+    - {out: 64}
+    - {out: 128}
+    - {out: 256}
+    - {out: 512}
+    - {out: 4096}
+  conv_layers:
+    - {in_size: 8, in_channels: 8, out_channels: 16, kernel_size: 3, relu: true}
+    - {in_size: 16, in_channels: 16, out_channels: 16, kernel_size: 3, relu: true}
+    - {in_size: 16, in_channels: 16, out_channels: 8, kernel_size: 3, relu: true}
+    - {in_size: 32, in_channels: 8, out_channels: 4, kernel_size: 3, relu: true}
+    - {in_size: 64, in_channels: 4, out_channels: 1, kernel_size: 1, relu: false}
+encoder: 
+  layer_infos:
+    - type: torch.nn.Conv3d
+      args: {in_channels: 1, out_channels: 8, kernel_size: 3, padding: 1}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.MaxPool3d
+      args: {kernel_size: 2, stride: 2}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 8, out_channels: 16, kernel_size: 3, padding: 1}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.MaxPool3d
+      args: {kernel_size: 2, stride: 2}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 16, out_channels: 16, kernel_size: 3, padding: 1}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.MaxPool3d
+      args: {kernel_size: 2, stride: 2}
+    - type: torch.nn.Flatten
+      args: {}
+    - type: torch.nn.Linear
+      args: {in_features: 8192, out_features: 128}
+    - type: torch.nn.ReLU
+      args: {}
