@@ -302,14 +302,6 @@ gitdb = ">=4.0.1,<5"
 typing-extensions = {version = ">=3.7.4.3", markers = "python_version < \"3.10\""}
 
 [[package]]
-name = "graphql-core"
-version = "3.1.5"
-description = "GraphQL implementation for Python, a port of GraphQL.js, the JavaScript reference implementation for GraphQL."
-category = "main"
-optional = false
-python-versions = ">=3.6,<4"
-
-[[package]]
 name = "healpy"
 version = "1.15.0"
 description = "Healpix tools package for Python"
@@ -562,7 +554,7 @@ test = ["build", "coverage", "pytest", "pytest-cov", "pytest-mock"]
 
 [[package]]
 name = "jupyter-server"
-version = "1.10.1"
+version = "1.10.2"
 description = "The backend—i.e. core services, APIs, and REST endpoints—to Jupyter web applications."
 category = "main"
 optional = false
@@ -624,7 +616,7 @@ pygments = ">=2.4.1,<3"
 
 [[package]]
 name = "jupyterlab-server"
-version = "2.6.1"
+version = "2.6.2"
 description = "A set of server components for JupyterLab and JupyterLab like applications ."
 category = "main"
 optional = false
@@ -1323,13 +1315,13 @@ python-versions = ">=3.7"
 numpy = ">=1.16.5"
 
 [[package]]
-name = "sdf_differentiable_renderer"
+name = "sdf-differentiable-renderer"
 version = "0.2.0"
-description = ""
+description = "CUDA-based differentiable renderer for PyTorch"
 category = "main"
 optional = false
 python-versions = "*"
-develop = false
+develop = true
 
 [package.dependencies]
 click = "*"
@@ -1345,13 +1337,13 @@ type = "directory"
 url = "sdf_differentiable_renderer"
 
 [[package]]
-name = "sdf_estimation"
+name = "sdf-estimation"
 version = "0.1.0"
-description = ""
+description = "7-DoF pose and shape estimation architecture"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-develop = false
+develop = true
 
 [package.dependencies]
 ffmpeg-python = "*"
@@ -1372,13 +1364,13 @@ type = "directory"
 url = "sdf_estimation"
 
 [[package]]
-name = "sdf_single_shot"
+name = "sdf-single-shot"
 version = "0.1.0"
-description = ""
+description = "7-DoF pose estimation of signed distance fields"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-develop = false
+develop = true
 
 [package.dependencies]
 healpy = "*"
@@ -1397,13 +1389,13 @@ type = "directory"
 url = "sdf_single_shot"
 
 [[package]]
-name = "sdf_vae"
+name = "sdf-vae"
 version = "0.1.0"
-description = ""
+description = "Variational autoencoder for generative modelling of signed distance fields"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-develop = false
+develop = true
 
 [package.dependencies]
 ffmpeg-python = "*"
@@ -1515,6 +1507,14 @@ description = "Sniff out which async library your code is running under"
 category = "main"
 optional = false
 python-versions = ">=3.5"
+
+[[package]]
+name = "subprocess32"
+version = "3.5.4"
+description = "A backport of the subprocess module from Python 3 for use on 2.x."
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*, <4"
 
 [[package]]
 name = "tabulate"
@@ -1680,7 +1680,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "wandb"
-version = "0.11.1"
+version = "0.11.2"
 description = "A CLI and library for interacting with the Weights and Biases API."
 category = "main"
 optional = false
@@ -1691,7 +1691,6 @@ Click = ">=7.0,<8.0.0 || >8.0.0"
 configparser = ">=3.8.1"
 docker-pycreds = ">=0.4.0"
 GitPython = ">=1.0.0"
-graphql-core = ">=2.3.0"
 pathtools = "*"
 promise = ">=2.0,<3"
 protobuf = ">=3.12.0"
@@ -1702,6 +1701,8 @@ requests = ">=2.0.0,<3"
 sentry-sdk = ">=1.0.0"
 shortuuid = ">=0.5.0"
 six = ">=1.13.0"
+subprocess32 = ">=3.5.3"
+urllib3 = ">=1.26.5"
 
 [package.extras]
 aws = ["boto3"]
@@ -1749,11 +1750,11 @@ notebook = ">=4.4.1"
 [[package]]
 name = "yoco"
 version = "0.1.1"
-description = ""
+description = "Minimalistic YAML-based configuration system"
 category = "main"
 optional = false
 python-versions = ">=3.7"
-develop = false
+develop = true
 
 [package.dependencies]
 "ruamel.yaml" = "*"
@@ -1777,7 +1778,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "622d27435fda95653b234600375b00f1ed0cfa6e0e91808eeb2a238dd24759f0"
+content-hash = "09b59472634b4c2336e58cb043e1b204fd95fd1e31d21e7fa7aed1c1a684c0c7"
 
 [metadata.files]
 addict = [
@@ -2024,10 +2025,6 @@ gitpython = [
     {file = "GitPython-3.1.20-py3-none-any.whl", hash = "sha256:b1e1c269deab1b08ce65403cf14e10d2ef1f6c89e33ea7c5e5bb0222ea593b8a"},
     {file = "GitPython-3.1.20.tar.gz", hash = "sha256:df0e072a200703a65387b0cfdf0466e3bab729c0458cf6b7349d0e9877636519"},
 ]
-graphql-core = [
-    {file = "graphql-core-3.1.5.tar.gz", hash = "sha256:a755635d1d364a17e8d270347000722351aaa03f1ab7d280878aae82fc68b1f3"},
-    {file = "graphql_core-3.1.5-py3-none-any.whl", hash = "sha256:91d96ef0e86665777bb7115d3bbb6b0326f43dc7dbcdd60da5486a27a50cfb11"},
-]
 healpy = [
     {file = "healpy-1.15.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:7e0bc24c3d3aeb1ef81b9b0473a497355a288e24d6bbfda753633484fe41df97"},
     {file = "healpy-1.15.0-cp36-cp36m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:c18d3089e8eae36af8789a74510136cbe22bc7b0fabfa7fe584d37fec74cda63"},
@@ -2104,8 +2101,8 @@ jupyter-packaging = [
     {file = "jupyter_packaging-0.10.4.tar.gz", hash = "sha256:589db027cb85a92612f9bcfaeecaa8a9072ac8a4bddaf827f648664258e587c4"},
 ]
 jupyter-server = [
-    {file = "jupyter_server-1.10.1-py3-none-any.whl", hash = "sha256:b3eef770ffa34595ed26a6e4460866eaf0f4ff710eccc7648f701bb8c1d0443c"},
-    {file = "jupyter_server-1.10.1.tar.gz", hash = "sha256:fe6b589bd8d8fe08f608e90ce7da1e6bbfd020d99897453b45149a7853e9188f"},
+    {file = "jupyter_server-1.10.2-py3-none-any.whl", hash = "sha256:491c920013144a2d6f5286ab4038df6a081b32352c9c8b928ec8af17eb2a5e10"},
+    {file = "jupyter_server-1.10.2.tar.gz", hash = "sha256:d3a3b68ebc6d7bfee1097f1712cf7709ee39c92379da2cc08724515bb85e72bf"},
 ]
 jupyterlab = [
     {file = "jupyterlab-3.1.1-py3-none-any.whl", hash = "sha256:a181184b1000a550c38da35471dcf91ce11e96750de56430be3fc93ca01dde1e"},
@@ -2116,8 +2113,8 @@ jupyterlab-pygments = [
     {file = "jupyterlab_pygments-0.1.2.tar.gz", hash = "sha256:cfcda0873626150932f438eccf0f8bf22bfa92345b814890ab360d666b254146"},
 ]
 jupyterlab-server = [
-    {file = "jupyterlab_server-2.6.1-py3-none-any.whl", hash = "sha256:58d4b660fce8da4e90f0433ac54f462436fe5fbe731e3a281e15adcdecddb0eb"},
-    {file = "jupyterlab_server-2.6.1.tar.gz", hash = "sha256:73279d1ffdcd3426f716bf5538cf1fdd2eb8a340ac25c5688f3c192c5bd3afc9"},
+    {file = "jupyterlab_server-2.6.2-py3-none-any.whl", hash = "sha256:ab568da1dcef2ffdfc9161128dc00b931aae94d6a94978b16f55330dcd1cb043"},
+    {file = "jupyterlab_server-2.6.2.tar.gz", hash = "sha256:6dc6e7d26600d110b862acbfaa4d1a2c5e86781008d139213896d96178c3accd"},
 ]
 jupyterlab-widgets = [
     {file = "jupyterlab_widgets-1.0.0-py3-none-any.whl", hash = "sha256:caeaf3e6103180e654e7d8d2b81b7d645e59e432487c1d35a41d6d3ee56b3fef"},
@@ -2795,10 +2792,10 @@ scipy = [
     {file = "scipy-1.6.1-cp39-cp39-win_amd64.whl", hash = "sha256:a5193a098ae9f29af283dcf0041f762601faf2e595c0db1da929875b7570353f"},
     {file = "scipy-1.6.1.tar.gz", hash = "sha256:c4fceb864890b6168e79b0e714c585dbe2fd4222768ee90bc1aa0f8218691b11"},
 ]
-sdf_differentiable_renderer = []
-sdf_estimation = []
-sdf_single_shot = []
-sdf_vae = []
+sdf-differentiable-renderer = []
+sdf-estimation = []
+sdf-single-shot = []
+sdf-vae = []
 send2trash = [
     {file = "Send2Trash-1.7.1-py3-none-any.whl", hash = "sha256:c20fee8c09378231b3907df9c215ec9766a84ee20053d99fbad854fe8bd42159"},
     {file = "Send2Trash-1.7.1.tar.gz", hash = "sha256:17730aa0a33ab82ed6ca76be3bb25f0433d0014f1ccf63c979bab13a5b9db2b2"},
@@ -2833,6 +2830,11 @@ smmap = [
 sniffio = [
     {file = "sniffio-1.2.0-py3-none-any.whl", hash = "sha256:471b71698eac1c2112a40ce2752bb2f4a4814c22a54a3eed3676bc0f5ca9f663"},
     {file = "sniffio-1.2.0.tar.gz", hash = "sha256:c4666eecec1d3f50960c6bdf61ab7bc350648da6c126e3cf6898d8cd4ddcd3de"},
+]
+subprocess32 = [
+    {file = "subprocess32-3.5.4-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:88e37c1aac5388df41cc8a8456bb49ebffd321a3ad4d70358e3518176de3a56b"},
+    {file = "subprocess32-3.5.4-cp27-cp27mu-manylinux2014_x86_64.whl", hash = "sha256:e45d985aef903c5b7444d34350b05da91a9e0ea015415ab45a21212786c649d0"},
+    {file = "subprocess32-3.5.4.tar.gz", hash = "sha256:eb2937c80497978d181efa1b839ec2d9622cf9600a039a79d0e108d1f9aec79d"},
 ]
 tabulate = [
     {file = "tabulate-0.8.9-py3-none-any.whl", hash = "sha256:d7c013fe7abbc5e491394e10fa845f8f32fe54f8dc60c6622c6cf482d25d47e4"},
@@ -2947,8 +2949,8 @@ urllib3 = [
     {file = "urllib3-1.26.6.tar.gz", hash = "sha256:f57b4c16c62fa2760b7e3d97c35b255512fb6b59a259730f36ba32ce9f8e342f"},
 ]
 wandb = [
-    {file = "wandb-0.11.1-py2.py3-none-any.whl", hash = "sha256:5476855e83a0b3d498d8f60a3c6955cd4dd78c92a60299c91d00b4699250c567"},
-    {file = "wandb-0.11.1.tar.gz", hash = "sha256:006df9b7cf939ae863f58851332da2fa903d37cd8062dbb96ff538346cbe8ca3"},
+    {file = "wandb-0.11.2-py2.py3-none-any.whl", hash = "sha256:7bd00153873b0c1ceb31ae45852991bb08c1785f9c89d30dec0c569378ea3020"},
+    {file = "wandb-0.11.2.tar.gz", hash = "sha256:324ee38bcc1baea13cf914d5b28b21519237e17ab13dc7cac0870e0291930a2e"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
