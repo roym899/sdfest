@@ -553,7 +553,7 @@ class SDFPipeline:
                 orientation_repr = torch.softmax(orientation_repr, 1)
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
-                        orientation_repr.argmax()
+                        orientation_repr.argmax().item()
                     ),
                     dtype=torch.float,
                     device=self.device,

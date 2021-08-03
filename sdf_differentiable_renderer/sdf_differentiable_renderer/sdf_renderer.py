@@ -346,7 +346,7 @@ class SDFRendererFunctionGPU(torch.autograd.Function):
         g_sdf = g_p = g_q = g_is = g_thresh = g_camera = None
         g_sdf, g_p, g_q, g_is = sdf_renderer_cpp.backward(
             grad_depth_image,
-            *ctx.saved_variables,
+            *ctx.saved_tensors,
             ctx.width,
             ctx.height,
             ctx.cx,
