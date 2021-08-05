@@ -1,0 +1,9 @@
+# Quantitative evaluation on annotated Redwood data
+python -m sdf_estimation.scripts.real_evaluation \
+    --ann_path ./data/redwood_annotations/ \
+    --data_path ./data/redwood/ \
+    --config sdf_estimation/configs/real_evaluation.yaml \
+    --out_folder ./results \
+    --run_name redwood
+
+# Qualtitative evaluation (will keep picking random frames)

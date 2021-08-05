@@ -70,7 +70,7 @@ See below for expected folder structure for each dataset.
 # Reproduce Experiments
 Depending on which dataset, you have downloaded you can reproduce the results reported in the paper (using the already trained models) by running the script
 ```bash
-source reproduce_{shapenet,modelnet,redwood,rgbd_uw}_experiments.sh
+source reproduce_{shapenet,modelnet,redwood}_experiments.sh
 ```
 after that, all results can be found in `./results`.
 
