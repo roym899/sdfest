@@ -62,7 +62,6 @@ def mesh_from_sdf(
         sdf_volume.shape
         vertices, faces, normals, _ = marching_cubes(sdf_volume, spacing=2 / np.array(sdf_volume.shape), level=level)
         vertices -= 1
-        print(vertices.max(), vertices.min())
     except ValueError:
         return None
     return Trimesh(

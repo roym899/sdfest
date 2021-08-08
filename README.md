@@ -67,6 +67,13 @@ See below for expected folder structure for each dataset.
 ...
 ```
 
+### Shapenet Dataset (for training, [Website](https://shapenet.org/))
+```
+./data/shapenet/bottle_02876657/...
+./data/shapenet/bowl_02880940/...
+./data/shapenet/mug_03797390/...
+```
+
 # Reproduce Experiments
 Depending on which dataset, you have downloaded you can reproduce the results reported in the paper (using the already trained models) by running the script
 ```bash
@@ -77,6 +84,15 @@ after that, all results can be found in `./results`.
 # Train models
 To train a network for a specific category you need to first train a per-category VAE, and *afterwards* an initialization network.
 ## VAE
+First we need to convert the ShapeNet meshes to SDFs and optionally filter the dataset. To reproduce the preprocessing of the paper run
+```bash
+source preprocess_shapenet.sh
+```
+Then run
+```bash
+source train_vaes.sh
+```
+to train the models using the same configuration as used for the paper.
 
 ## Init
 

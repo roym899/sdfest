@@ -10,7 +10,7 @@ inside the root directory.
 
 You need to preprocess the mesh data prior to running the script, like this:
 ```bash
-python -m sdf_vae.scripts.process_shapenet.py --inpath shapenet_subfolder --outpath output_path --resolution 64 --padding 2
+python -m sdf_vae.scripts.process_shapenet --inpath shapenet_subfolder --outpath output_path --resolution 64 --padding 2
 ```
 You can control the resolution and added padding so that there is some empty space left in the signed distance field on all borders. If you are running this script via ssh you need to run `export PYOPENGL_PLATFORM=egl` prior to running the script and use the `--all` option which will disable any filtering. Otherwise mesh selection will proceed in two steps: first you see one mesh after another and need to decide which to keep. Pressing left will remove a mesh, pressing right will keep it. After a decision has been made, the conversion will run. Finally another manual selection process is started, where you can remove SDFs in which the mesh to SDF conversion has failed. 
 

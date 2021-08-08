@@ -154,7 +154,7 @@ def check_meshes(path):
 
 if __name__ == "__main__":
     # define the arguments
-    parser = argparse.ArgumentParser(description="Training script for init network.")
+    parser = argparse.ArgumentParser(description="Preprocess ShapeNet, interactive filtering and SDF conversion")
 
     # parse arguments int(float(x)) to support exponential notation
     parser.add_argument("--resolution", required=True, type=lambda x: int(x))

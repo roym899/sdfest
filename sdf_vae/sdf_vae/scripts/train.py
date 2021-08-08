@@ -24,8 +24,6 @@ if "DISPLAY" not in os.environ or "localhost" in os.environ["DISPLAY"]:
     print("Using EGL instead of pyglet for OffscreenRendering")
     os.environ["PYOPENGL_PLATFORM"] = "egl"
 
-wandb.init(project="sdf-vae")
-
 
 def pc_loss(points, position, orientation, scale, sdf):
     """Compute trilinerly interpolated SDF value at the points positions.
@@ -415,4 +413,5 @@ def main():
 
 
 if __name__ == "__main__":
+    wandb.init(project="sdf-vae")
     main()
