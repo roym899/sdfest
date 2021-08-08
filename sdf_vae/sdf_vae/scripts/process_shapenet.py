@@ -11,6 +11,7 @@ import shutil
 
 from sdf_vae import sdf_utils  # needs to be imported before pyrender
 
+from typing import List
 import numpy as np
 import time
 from tqdm import tqdm
@@ -151,67 +152,12 @@ def check_meshes(path):
             print(f"Progress: {progress:.2f}% Kept: {len(filtered_objects)}")
     return filtered_objects
 
+def conv_to_sdf(obj):
+    return obj.convert_to_sdf(resolution, padding)
 
-if __name__ == "__main__":
-    # define the arguments
-    parser = argparse.ArgumentParser(description="Preprocess ShapeNet, interactive filtering and SDF conversion")
-
-    # parse arguments int(float(x)) to support exponential notation
-    parser.add_argument("--resolution", required=True, type=lambda x: int(x))
-    parser.add_argument("--inpath", required=True)
-    parser.add_argument("--outpath", required=True)
-    parser.add_argument("--all", default=False, action="store_true")
-    parser.add_argument("--padding", required=True, type=lambda x: int(x))
-
-    args = parser.parse_args()
-
-    path = args.inpath
-    output_path = args.outpath
-    resolution = args.resolution
-    padding = args.padding
-    no_filtering = args.all
-
-    if no_filtering:
-        objects = []
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                file_name, file_extension = os.path.splitext(file)
-                if file_extension == ".obj":
-                    full_file_path = os.path.join(root, file)
-                    objects.append(Object3D(full_file_path))
-                    objects[-1].load_mesh()
-    else:
-        good_mesh_paths_file_path = os.path.join("./good_meshes.json")
-
-        if not os.path.isfile(good_mesh_paths_file_path):
-            good_mesh_paths_dict = {}
-        else:
-            with open(good_mesh_paths_file_path) as f:
-                good_mesh_paths_dict = json.load(f)
-
-        if path in good_mesh_paths_dict:
-            good_mesh_paths = good_mesh_paths_dict[path]
-            objects = [Object3D(good_mesh_path) for good_mesh_path in good_mesh_paths]
-            for object in objects:
-                object.load_mesh()
-        else:
-            objects = check_meshes(path)
-            while True:
-                print(f"Store decisions? ({good_mesh_paths_file_path}) (y/n)")
-                decision = input()
-                if decision == "y":
-                    good_mesh_paths = [obj.mesh_path for obj in objects]
-                    good_mesh_paths_dict[path] = good_mesh_paths
-                    with open(good_mesh_paths_file_path, "w") as f:
-                        json.dump(good_mesh_paths_dict, f, indent=4)
-                    break
-                elif decision == "n":
-                    break
-
+def convert_to_sdf(objects: List[Object3D]) -> List[Object3D]:
     # convert to SDF
     # TODO do not keep everything in memory, store to disk instead
-    def conv_to_sdf(obj):
-        return obj.convert_to_sdf(resolution, padding)
 
     num_objects = len(objects)
     with Pool() as p:
@@ -232,8 +178,82 @@ if __name__ == "__main__":
 
     print(f"{len(objects)} / {num_objects} have been successfully converted.")
 
-    # check if sdf volume is okay
+    return objects
+
+
+if __name__ == "__main__":
+    # define the arguments
+    parser = argparse.ArgumentParser(description="Training script for init network.")
+
+    # parse arguments int(float(x)) to support exponential notation
+    parser.add_argument("--resolution", required=True, type=lambda x: int(x))
+    parser.add_argument("--inpath", required=True)
+    parser.add_argument("--outpath", required=True)
+    parser.add_argument("--all", default=False, action="store_true")
+    parser.add_argument("--padding", required=True, type=lambda x: int(x))
+    parser.add_argument("--good_meshes", required=False, default="./good_meshes.json")
+    parser.add_argument("--final_meshes", required=False, default="./final_meshes.json")
+
+    args = parser.parse_args()
+
+    path = args.inpath
+    output_path = args.outpath
+    resolution = args.resolution
+    padding = args.padding
+    no_filtering = args.all
+    good_mesh_paths_file_path = args.good_meshes
+    final_mesh_paths_file_path = args.final_meshes
+
+    if not os.path.isfile(good_mesh_paths_file_path):
+        good_mesh_paths_dict = {}
+    else:
+        with open(good_mesh_paths_file_path) as f:
+            good_mesh_paths_dict = json.load(f)
+    if not os.path.isfile(final_mesh_paths_file_path):
+        final_mesh_paths_dict = {}
+    else:
+        with open(final_mesh_paths_file_path) as f:
+            final_mesh_paths_dict = json.load(f)
+
     if no_filtering:
+        objects = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                file_name, file_extension = os.path.splitext(file)
+                if file_extension == ".obj":
+                    full_file_path = os.path.join(root, file)
+                    objects.append(full_file_path)
+                    objects.append(Object3D(full_file_path))
+                    objects[-1].load_mesh()
+    else:
+        if path in final_mesh_paths_dict:
+            final_mesh_paths = final_mesh_paths_dict[path]
+            objects = [Object3D(p) for p in final_mesh_paths]
+            for object in objects:
+                object.load_mesh()
+        elif path in good_mesh_paths_dict:
+            good_mesh_paths = good_mesh_paths_dict[path]
+            objects = [Object3D(good_mesh_path) for good_mesh_path in good_mesh_paths]
+            for object in objects:
+                object.load_mesh()
+        else:
+            objects = check_meshes(path)
+            while True:
+                print(f"Store decisions? ({good_mesh_paths_file_path}) (y/n)")
+                decision = input()
+                if decision == "y":
+                    good_mesh_paths = [obj.mesh_path for obj in objects]
+                    good_mesh_paths_dict[path] = good_mesh_paths
+                    with open(good_mesh_paths_file_path, "w") as f:
+                        json.dump(good_mesh_paths_dict, f, indent=4)
+                    break
+                elif decision == "n":
+                    break
+
+    objects = convert_to_sdf(objects)
+
+    # manually check if sdf volume is okay
+    if no_filtering or path in final_mesh_paths_dict:
         final_objects = objects
     else:
         print("Decide which shapes have an okay sdf reconstruction?")
@@ -253,6 +273,17 @@ if __name__ == "__main__":
             if decision == "stop":
                 break
             print(f"Progress: {i/len(objects) * 100:.2f}% Kept: {len(final_objects)}")
+        while True:
+            print(f"Store final decisions? ({final_mesh_paths_file_path}) (y/n)")
+            decision = input()
+            if decision == "y":
+                final_mesh_paths = [obj.mesh_path for obj in final_objects]
+                final_mesh_paths_dict[path] = final_mesh_paths
+                with open(final_mesh_paths_file_path, "w") as f:
+                    json.dump(final_mesh_paths_dict, f, indent=4)
+                break
+            elif decision == "n":
+                break
 
     # save the objects
     os.makedirs(output_path, exist_ok=True)
