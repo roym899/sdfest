@@ -5,7 +5,7 @@ import torch
 import yoco
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # unused, but needed for 3D projection
-from typing import Tuple, Callable, List, Optional
+from typing import Tuple, Callable, List, Optional, Iterator
 from sdf_differentiable_renderer.sdf_renderer import render_depth_gpu
 from sdf_vae.sdf_vae import SDFVAE
 from sdf_single_shot import pointset_utils
@@ -115,7 +115,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._orientation_repr = orientation_repr
         self._orientation_grid = orientation_grid
 
-    def __iter__(self) -> iter:
+    def __iter__(self) -> Iterator:
         """Return SDF volume at a specific index.
 
         Returns:

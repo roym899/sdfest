@@ -184,8 +184,7 @@ def train(config):
     # create SummaryWriter for logging and intermediate output
     writer = torch.utils.tensorboard.SummaryWriter(f"runs/" + run_name)
 
-    script_path = os.path.dirname(os.path.abspath(__file__))
-    model_base_path = os.path.join(script_path, "models", run_name)
+    model_base_path = os.path.join(os.getcwd(), "models", run_name)
     program_starts = time.time()
     warm_up_iterations = 1000
     stop = False

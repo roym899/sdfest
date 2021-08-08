@@ -6,8 +6,8 @@ config:
 batch_size: 32
 iterations: 1.0e6
 learning_rate: 1.0e-3
-position_weight: 1
-scale_weight: 1
+position_weight: 1000
+scale_weight: 1000
 orientation_weight: 1
 
 # Network params

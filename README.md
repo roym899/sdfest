@@ -94,7 +94,13 @@ source train_vaes.sh
 ```
 to train the models using the same configuration as used for the paper.
 
-## Init
+## Init Network
+To train the initialization network we used in our paper, run
+```bash
+source train_init_networks.sh
+```
+If you want to train the initialization network based on a previously trained object model, you need to create a new config linking to the newly trained VAE. 
+See, for example, `sdf_single_shot/configs/discretized_mug.yaml`, which links to `sdf_single_shot/vae_models/mug.yaml`).
 
 # Code Structure
 Code is structured into 5 standalone Python packages:

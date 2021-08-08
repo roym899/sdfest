@@ -2,6 +2,12 @@ config:
     - vae: "../vae_models/mug.yaml"
     - generated_dataset: "./generated_dataset.yaml"
 
+generated_dataset:
+    z_min: 0.2
+    z_max: 1.5
+    extent_mean: 0.11
+    extent_std: 0.01
+
 # Training params
 batch_size: 32
 iterations: 500000
