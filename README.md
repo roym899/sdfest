@@ -67,13 +67,6 @@ See below for expected folder structure for each dataset.
 ...
 ```
 
-### Shapenet Dataset (for training, [Website](https://shapenet.org/))
-```
-./data/shapenet/bottle_02876657/...
-./data/shapenet/bowl_02880940/...
-./data/shapenet/mug_03797390/...
-```
-
 # Reproduce Experiments
 Depending on which dataset, you have downloaded you can reproduce the results reported in the paper (using the already trained models) by running the script
 ```bash
