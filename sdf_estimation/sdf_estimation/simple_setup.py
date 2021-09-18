@@ -331,7 +331,7 @@ class SDFPipeline:
 
             with torch.no_grad():
                 if visualize and (
-                    current_iteration % 10 == 0
+                    current_iteration % 10 == 1
                     or current_iteration == self.config["max_iterations"]
                 ):
                     q_w2c = quaternion.quaternion_invert(camera_orientations[0])
@@ -347,13 +347,12 @@ class SDFPipeline:
                     depth_image = depth_images[0]
                     color_image = color_images[0]
 
-                    if current_iteration == 0:
+                    if current_iteration == 1:
                         vmin = depth_image[depth_image != 0].min() * 0.9
                         vmax = depth_image[depth_image != 0].max()
                         # show input image
                         axes[0, 0].clear()
                         axes[0, 0].imshow(depth_image.cpu(), vmin=vmin, vmax=vmax)
-
                         axes[0, 1].imshow(color_image.cpu())
 
                         # show initial estimate
