@@ -289,11 +289,6 @@ def main() -> None:
     parser.add_argument("--segmentation_dir", default="./cached_segmentations/")
     parser.add_argument("--config", default="configs/default.yaml", nargs="+")
 
-    args, _ = parser.parse_known_args()
-
-    # if args.config == "configs/default.yaml":
-    #     print("Warning: using default config for real data. Was this on purpose?")
-
     config = yoco.load_config_from_args(parser)
 
     if "input" in config and "folder" in config:
