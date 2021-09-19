@@ -31,8 +31,3 @@ python -m sdf_estimation.scripts.rendering_evaluation \
     --config sdf_estimation/configs/ablation_study.yaml \
     --out_folder ./results/ \
     --data_path data/shapenet/mug_03797390
-
-# Runtime analyis
-python -m sdf_estimation.scripts.real_data \
-    --config sdf_estimation/configs/runtime_analysis.yaml \
-    --out_folder ./results

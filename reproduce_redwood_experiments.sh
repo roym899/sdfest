@@ -7,3 +7,8 @@ python -m sdf_estimation.scripts.real_evaluation \
     --run_name redwood
 
 # Qualtitative evaluation (will keep picking random frames)
+
+# Runtime analyis
+python -m sdf_estimation.scripts.real_data \
+    --config sdf_estimation/configs/runtime_analysis.yaml \
+    --out_folder ./results
