@@ -46,6 +46,47 @@ from sdf_estimation.simple_setup import SDFPipeline
 matplotlib.use("tkagg")
 
 
+def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
+    """Load RGB-D image from RGB path.
+
+    Args:
+        rgb_path: path to RGB image
+
+    Returns:
+        Tuple containing:
+            - The color image. np.array
+            - The depth image.
+            - The color path.
+            - The depth path.
+    """
+    depth_path = rgb_path[:-10] + "_depth.png"
+    color_img = np.asarray(o3d.io.read_image(rgb_path))
+    depth_img = (
+        np.asarray(
+            o3d.io.read_image(depth_path),
+            dtype=np.float64,
+        )
+        * 0.001
+    )
+    return color_img, depth_img, rgb_path, depth_path
+
+
+def load_real275_sample(folder: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
+    """Load a sample from RGBD Object dataset.
+
+    https://rgbd-dataset.cs.washington.edu/dataset/
+
+    Args:
+        folder: The root folder of the dataset.
+
+    Returns:
+        See load_real275_rgbd.
+    """
+    files = glob.glob(folder + "/**/*color.png", recursive=True)
+    rgb_path = random.choice(files)
+    return load_real275_rgbd(rgb_path)
+
+
 def load_rgbd_object_uw_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
     """Load RGB-D image from RGB path.
 
@@ -71,7 +112,7 @@ def load_rgbd_object_uw_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str
     return color_img, depth_img, rgb_path, depth_path
 
 
-def load_rgbd_object_uw_sample(folder: str) -> Tuple:
+def load_rgbd_object_uw_sample(folder: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
     """Load a sample from RGBD Object dataset.
 
     https://rgbd-dataset.cs.washington.edu/dataset/
@@ -166,6 +207,8 @@ def load_sample_from_folder(config: dict) -> Tuple[np.ndarray, np.ndarray, str, 
         return load_redwood_sample(config["folder"])
     elif config["dataset"] == "rgbd_object_uw":
         return load_rgbd_object_uw_sample(config["folder"])
+    elif config["dataset"] == "real275":
+        return load_real275_sample(config["folder"])
     else:
         raise NotImplementedError(f"Dataset {config['dataset']} is not supported")
 
@@ -218,6 +261,8 @@ def load_rgbd(config: dict) -> Tuple[np.ndarray, np.ndarray, str, str]:
         return load_redwood_rgbd(config["input"])
     elif config["dataset"] == "rgbd_object_uw":
         return load_rgbd_object_uw_rgbd(config["input"])
+    elif config["dataset"] == "real275":
+        return load_real275_rgbd(config["input"])
     else:
         raise NotImplementedError(f"Dataset {config['dataset']} is not supported")
 
@@ -240,8 +285,8 @@ def str_to_bool(v: str) -> bool:
 def generate_runtime_overview(config, timing_dicts: List[Dict]) -> None:
     total_runs = len(timing_dicts) / 2  # runs per setting, 2 settings
     stats_dicts = {
-        True: defaultdict(lambda: {"total": 0, "total_calls": 0}),
-        False: defaultdict(lambda: {"total": 0, "total_calls": 0}),
+        True: defaultdict(lambda: {"total": 0.0, "total_calls": 0}),
+        False: defaultdict(lambda: {"total": 0.0, "total_calls": 0}),
     }
     for timing_dict in timing_dicts:
         for name, timings in timing_dict.items():
@@ -376,8 +421,10 @@ def main() -> None:
 
         matching_instances.sort(key=lambda k: k.pred_masks.sum())
 
-        if "input" in config and not matching_instances:
+        if not matching_instances:
             print("Warning: category not detected in input")
+        else:
+            print("Category detected")
 
         for instance in matching_instances:
             if config["visualize_input"]:
