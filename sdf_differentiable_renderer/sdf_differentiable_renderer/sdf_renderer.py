@@ -44,8 +44,8 @@ class Camera:
         fy: float,
         cx: float,
         cy: float,
-        s: Optional[float] = 0,
-        pixel_center: Optional[float] = 0,
+        s: float = 0.0,
+        pixel_center: float = 0.0,
     ):
         """Initialize camera parameters.
 
