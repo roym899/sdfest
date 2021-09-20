@@ -150,6 +150,8 @@ def train(config):
         dataset=dataset, batch_size=batch_size, shuffle=True, drop_last=True
     )
 
+    camera = Camera(640, 480, 320, 320, 320, 240, pixel_center=0.5)
+
     if "device" not in config or config["device"] is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
@@ -256,14 +258,11 @@ def train(config):
                         p,
                         q,
                         s,
-                        None,
-                        None,
-                        None,
                         0.01,
-                        camera=Camera(640, 480, 320, 320, 320, 240, pixel_center=0.5),
+                        camera=camera,
                     )
                     pointcloud = pointset_utils.depth_to_pointcloud(
-                        depth_image, 320, normalize=False
+                        depth_image, camera
                     )
                 loss_pc = loss_pc + torch.sum(
                     pc_loss(pointcloud, p, q[0], s, recon_sdf_volume[0]) ** 2

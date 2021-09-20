@@ -1,6 +1,7 @@
 """Utility functions to handle pointsets."""
 import torch
 from typing import Optional
+from sdf_differentiable_renderer import Camera
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
@@ -25,8 +26,8 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
 
 def depth_to_pointcloud(
     depth_image: torch.Tensor,
-    f: float,
-    normalize: bool,
+    camera: Camera,
+    normalize: bool = False,
     mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Convert depth image to pointcloud.
@@ -42,6 +43,9 @@ def depth_to_pointcloud(
     """
     width = depth_image.shape[1]
     height = depth_image.shape[0]
+
+    fx, fy, cx, cy, _ = camera.get_pinhole_camera_parameters(0.0)
+
     if mask is None:
         indices = torch.nonzero(depth_image, as_tuple=True)
     else:
@@ -58,9 +62,9 @@ def depth_to_pointcloud(
 
     # OpenGL coordinate system
     final_points = torch.empty_like(points)
-    final_points[:, 0] = (points[:, 0] - width / 2) * points[:, 2] / f
-    final_points[:, 1] = (height / 2 - points[:, 1]) * points[:, 2] / f
-    final_points[:, 2] = points[:, 2] * (-1.0)
+    final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
+    final_points[:, 1] = - (points[:, 1] - cy) * points[:, 2] / fy
+    final_points[:, 2] = - points[:, 2]
 
     if normalize:
         final_points, _ = normalize_points(final_points)

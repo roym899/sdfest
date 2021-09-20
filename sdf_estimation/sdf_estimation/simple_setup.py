@@ -64,11 +64,6 @@ class SDFPipeline:
             sdf, pos, quat, i_s, None, None, None, config["threshold"], self.cam
         )
         self.config = config
-        self.f = config["camera"]["fx"]
-        if config["camera"]["fx"] != config["camera"]["fy"]:
-            # probably does not require many changes, but e.g., depth to point cloud
-            # currently only supports one f
-            raise NotImplementedError("fx and fy must be the same")
 
         self.log_data = []
 
@@ -96,7 +91,7 @@ class SDFPipeline:
 
         # pointcloud l1
         pointcloud_obs = pointset_utils.depth_to_pointcloud(
-            depth_input, self.f, normalize=False
+            depth_input, self.cam, normalize=False
         )
         pointcloud_error = losses.pc_loss(
             pointcloud_obs,
@@ -109,7 +104,7 @@ class SDFPipeline:
 
         # nearest neighbor l1
         # pointcloud_outliers = pointset_utils.depth_to_pointcloud(
-        #     depth_estimate, self.f, normalize=False, mask=depth_outlier_mask
+        #     depth_estimate, self.cam, normalize=False, mask=depth_outlier_mask
         # )
 
         loss_nn = 0
@@ -532,7 +527,7 @@ class SDFPipeline:
             centroid = None
             if self.config["init"]["backbone_type"] == "VanillaPointNet":
                 inp = pointset_utils.depth_to_pointcloud(
-                    depth_image, self.f, normalize=False
+                    depth_image, self.cam, normalize=False
                 )
                 if self.config["init"]["generated_dataset"]["normalize_pose"]:
                     inp, centroid = pointset_utils.normalize_points(inp)
