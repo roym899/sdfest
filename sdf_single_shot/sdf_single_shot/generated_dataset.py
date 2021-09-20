@@ -2,6 +2,7 @@
 import math
 import random
 import torch
+import torchvision.transforms as T
 import yoco
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # unused, but needed for 3D projection
@@ -72,6 +73,9 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         render_threshold: float,
         orientation_repr: Optional[str] = "quaternion",
         orientation_grid: Optional[SO3Grid] = None,
+        mask_noise: bool = False,
+        mask_noise_min: float = 0.1,
+        mask_noise_max: float = 2.0,
     ):
         """Construct the dataset.
 
@@ -101,6 +105,15 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             orientation_grid:
                 The grid used to discretize SO3.
                 Only used if orientation_repr == "discretized".
+            mask_noise:
+                Whether the mask should be perturbed to simulate noisy segmentation.
+                If True a random, small, affine transform will be applied to the correct
+                mask. The outliers will be filled with a random value sampled between
+                mask_noise_min, and mask_noise_max.
+            mask_noise_min:
+                Minimum value to fill in for noisy mask.
+            mask_noise_max:
+                Maximum value to fill in for noisy mask.
         """
         self._vae = vae
         self._device = device
@@ -109,6 +122,8 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._fov_deg = fov_deg
         self._z_sampler = lambda: random.uniform(z_min, z_max)
         self._scale_sampler = lambda: random.gauss(extent_mean, extent_std) / 2.0
+        self._mask_noise = mask_noise
+        self._mask_noise_sampler = lambda: random.uniform(mask_noise_min, mask_noise_max)
         self._pointcloud = pointcloud
         self._normalize_pose = normalize_pose
         self._render_threshold = render_threshold
@@ -125,7 +140,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         while True:
             yield self.generate_valid_sample()
 
-    def generate_uniform_quaternion(self) -> torch.tensor:
+    def generate_uniform_quaternion(self) -> torch.Tensor:
         """Generate a uniform quaternion.
 
         Following the method from K. Shoemake, Uniform Random Rotations, 1992.
@@ -167,6 +182,18 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             # or the object pose is completely outside the frustum
         return inp, targets
 
+    def _perturb_mask(self, mask: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            mask: The mask to perturb.
+        Returns:
+            The perturbed mask. Same shape as mask.
+        """
+        affine_transfomer = T.RandomAffine(
+            degrees=(0, 1), translate=(0.00, 0.01), scale=(0.999, 1.001)
+        )
+        return affine_transfomer(mask.unsqueeze(0))[0]
+
     def generate_sample(self) -> Tuple:
         """Generate a single sample. Possibly (normally very unlikely) zero / empty.
 
@@ -199,6 +226,11 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
                 self._fov_deg,
                 self._render_threshold,
             )
+
+            if self._mask_noise:
+                mask = depth_image != 0
+                perturbed_mask = self._perturb_mask(mask)
+                depth_image[mask * (mask != perturbed_mask)] = self._mask_noise_sampler()
 
             if self._pointcloud:
                 indices = torch.nonzero(depth_image, as_tuple=True)
@@ -255,7 +287,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
 
 if __name__ == "__main__":
     # test the dataset
-    vae_config = yoco.load_config_from_file("./configs/vae.yaml")
+    vae_config = yoco.load_config_from_file("../vae_models/mug.yaml")
     device = "cuda"
     vae = SDFVAE(
         sdf_size=64,
@@ -264,7 +296,7 @@ if __name__ == "__main__":
         decoder_dict=vae_config["decoder"],
         device=device,
     ).to(device)
-    state_dict = torch.load(vae_config["vae_model"], map_location=device)
+    state_dict = torch.load(vae_config["model"], map_location=device)
     vae.load_state_dict(state_dict)
     z = vae.sample()
     sdf = vae.decode(z)
@@ -285,6 +317,7 @@ if __name__ == "__main__":
         render_threshold=0.01,
         orientation_repr="discretized",
         orientation_grid=SO3Grid(0),
+        mask_noise=True,
     )
     vae_dataset_iter = iter(vae_dataset)
     if pointcloud:
