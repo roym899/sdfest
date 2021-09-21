@@ -10,6 +10,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 
+import torch
 import yoco
 
 from sdf_estimation.simple_setup import SDFPipeline
@@ -61,6 +62,21 @@ def main() -> None:
                 continue
 
             # apply estimation
+            pipeline = pipeline_dict[category]
+            depth_tensor = torch.from_numpy(depth).float().to(config["device"]) 
+            rgb_tensor = torch.from_numpy(rgb).to(config["device"]) 
+            mask_tensor = torch.from_numpy(mask).to(config["device"]) != 0
+
+            position, orientation, scale, shape = pipeline(
+                depth_tensor,
+                mask_tensor,
+                rgb_tensor,
+                visualize=config["visualize_optimization"],
+            )
+
+            # TODO: convert to transformation matrix and adjust convention
+
+            # TODO: store result
 
 
 if __name__ == "__main__":
