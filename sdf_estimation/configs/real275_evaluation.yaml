@@ -6,16 +6,10 @@ config:
       bottle: bottle.yaml
       bowl: bowl.yaml
 
-
 threshold: 0.005
 device: cuda
 
 max_iterations: 30
 visualize_optimization: False
-visualize_meshes: False
-visualize_points: False
-visualize_input: False
-visualize_results: False
-iso_threshold: 0.02
 log_folder: null
 run_name: ''
