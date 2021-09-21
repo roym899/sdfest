@@ -32,7 +32,7 @@ Specific parameters:
     visualize_results: whether to show result mesh after optimization
     samples: number of evaluation samples
     mode:
-        evaluation mode, one of: full | bb | seg
+        evaluation mode, one of: full | seg
     metrics:
         dictionary of metrics to evaluate
         each key, is interpreted as the name of the metric, each value has to be a dict
@@ -189,7 +189,7 @@ class Evaluator:
         self, color: np.array, depth: np.array, gt_mesh: synthetic
     ) -> np.array:
         if self.base_config["mode"] == "full":
-            pass
+            raise NotImplementedError("full mode not implemented. Use seg.")
         elif self.base_config["mode"] == "seg":
             gt_depth = synthetic.draw_depth_geometry(gt_mesh, self.cam)
             mask = np.abs(gt_depth - depth) < 0.1 * (gt_depth != 0) * (depth != 0)
