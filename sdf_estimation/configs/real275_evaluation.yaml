@@ -10,9 +10,6 @@ config:
 threshold: 0.005
 device: cuda
 
-init_view: first
-num_views: [1, 2, 3]
-camera_distance: 0.3
 max_iterations: 30
 visualize_optimization: False
 visualize_meshes: False
@@ -21,5 +18,4 @@ visualize_input: False
 visualize_results: False
 iso_threshold: 0.02
 log_folder: null
-mode: seg
 run_name: ''
