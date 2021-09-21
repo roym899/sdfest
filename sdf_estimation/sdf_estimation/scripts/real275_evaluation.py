@@ -8,8 +8,10 @@ import argparse
 import copy
 import os
 import pickle
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.spatial.transform import Rotation
 import torch
 import yoco
 
@@ -63,8 +65,8 @@ def main() -> None:
 
             # apply estimation
             pipeline = pipeline_dict[category]
-            depth_tensor = torch.from_numpy(depth).float().to(config["device"]) 
-            rgb_tensor = torch.from_numpy(rgb).to(config["device"]) 
+            depth_tensor = torch.from_numpy(depth).float().to(config["device"])
+            rgb_tensor = torch.from_numpy(rgb).to(config["device"])
             mask_tensor = torch.from_numpy(mask).to(config["device"]) != 0
 
             position, orientation, scale, shape = pipeline(
@@ -74,7 +76,44 @@ def main() -> None:
                 visualize=config["visualize_optimization"],
             )
 
-            # TODO: convert to transformation matrix and adjust convention
+            position = position.detach().cpu()
+            rot_matrix = Rotation.from_quat(orientation.detach().cpu()).as_matrix()
+            print("my scale:", scale*2)
+            # for me: -1 to 1, scale being 0 to 1
+            # for them: 0 to 1, scale being 0 to 1
+            transform_gl = np.eye(4)
+            transform_gl[0:3, 0:3] = rot_matrix * scale.detach().cpu().numpy() * 2
+            transform_gl[0:3, 3] = position
+
+            # OpenGL -> OpenCV convention
+            transform_cv = transform_gl.copy()
+            transform_cv[1,:] *= -1
+            transform_cv[2,:] *= -1
+
+            # fix canonical convention
+            fix = np.array([[0,0,-1],[-1,0,0],[0,1,0]])
+            transform_cv[0:3,0:3] = transform_cv[0:3,0:3] @ fix
+
+            # NOCS Format
+            # RT is 4x4 transformation matrix, where the rotation matrix includes the scale
+            # scale includes another scale for the bb separate for each axis...
+            # -> there is a pencil of solutions
+
+            # print(transform_cv[0:3,0:3])
+            # nocs_rot = nocs_dict["gt_RTs"][3][0:3, 0:3]
+            # nocs_rot_scale = np.sqrt((nocs_rot @ nocs_rot.T)[0,0])
+            # print(np.cbrt(np.linalg.det(nocs_rot)), nocs_rot_scale)
+            # nocs_rot_noscale = nocs_rot / nocs_rot_scale
+            # print(np.linalg.det(nocs_rot_noscale))
+            # print(np.linalg.det(nocs_dict["pred_RTs"][mask_id, 0:3, 0:3]))
+            # print(transform_cv)
+            # print(nocs_rot_noscale)
+            # print(transform_cv[0:3,0:3] @ np.array([1,0,0]))
+            # print(nocs_rot_noscale[0:3,0:3] @ np.array([1,0,0]))
+            # print(nocs_rot, nocs_rot_scale)
+            # print(nocs_dict["gt_RTs"][3])
+            # print(r_no_scale)
+            # print(np.linalg.det(r_no_scale))
 
             # TODO: store result
 
