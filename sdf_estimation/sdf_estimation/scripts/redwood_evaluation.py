@@ -17,7 +17,7 @@ data_path expected structure
     ...
     data_path/category_N/rgbd/31231/...
 
-See configs/real_evaluation.yaml for all supported arguments.
+See configs/redwood_evaluation.yaml for all supported arguments.
 See simple_setup for pipeline parameters.
 
 Specific parameters:
@@ -209,7 +209,7 @@ class Evaluator:
 
         Args:
             results_dict:
-                dictionary mapping num_views to metric statistics as returned by
+                dictionary mapping category to metric statistics as returned by
                 Evaluator._compute_metric_statistics
         """
         os.makedirs(self.base_config["out_folder"], exist_ok=True)
@@ -221,8 +221,8 @@ class Evaluator:
         combined_dict = {**self.base_config, "results": results_dict}
         yoco.save_config_to_file(out_path, combined_dict)
         print(f"Results saved to: {out_path}")
-        for num_views, metric_stats in results_dict.items():
-            print(f"\nResults for {num_views} view(s)")
+        for category, metric_stats in results_dict.items():
+            print(f"\nResults for {category}")
             print(tabulate([{"metric": k, **v} for k, v in metric_stats.items()]))
 
     @staticmethod

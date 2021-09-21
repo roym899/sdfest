@@ -1,4 +1,4 @@
-# Standalone config to use with real_evalution.py
+# Standalone config to use with redwood_evaluation.py
 config:
   - redwood.yaml
   - category_configs:
@@ -10,11 +10,6 @@ config:
 threshold: 0.005
 device: cuda
 
-init_view: first
-num_views: [1, 2, 3]
-mesh_scale: 0.1
-rel_scale: True
-camera_distance: 0.3
 max_iterations: 30
 samples: 20000
 visualize_optimization: False

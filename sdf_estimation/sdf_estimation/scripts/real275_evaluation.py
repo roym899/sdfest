@@ -43,6 +43,8 @@ def main() -> None:
         masks = nocs_dict["pred_mask"]  # (rows, cols, num_masks,), binary masks
         category_ids = nocs_dict["pred_class_ids"] - 1 # (num_masks,), class ids
 
+        print(nocs_dict["gt_handle_visibility"]) 
+
         for mask_id, category_id in enumerate(category_ids):
             category = categories[category_id]  # name of category
             mask = masks[:,:,mask_id]  # (rows, cols,)

@@ -1,8 +1,8 @@
 # Quantitative evaluation on annotated Redwood data
-python -m sdf_estimation.scripts.real_evaluation \
+python -m sdf_estimation.scripts.redwood_evaluation \
     --ann_path ./data/redwood_annotations/ \
     --data_path ./data/redwood/ \
-    --config sdf_estimation/configs/real_evaluation.yaml \
+    --config sdf_estimation/configs/redwood_evaluation.yaml \
     --out_folder ./results \
     --run_name redwood
 
