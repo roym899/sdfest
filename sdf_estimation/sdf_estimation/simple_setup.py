@@ -108,14 +108,15 @@ class SDFPipeline:
         # )
 
         loss_nn = 0
+
         # if pointcloud_outliers.shape[0] != 0:
-            # pass
-            # loss_nn += 0
-            # # TODO different gradients for point cloud (not derived by renderer)
-            # outlier_nn_d = losses.nn_loss(pointcloud_outliers, pointcloud_obs)
-            # # only use positive, because sqrt is not differentiable at 0
-            # outlier_nn_d = outlier_nn_d[outlier_nn_d > 0]
-            # loss_nn = loss_nn + torch.mean(torch.sqrt(outlier_nn_d))
+        # pass
+        # loss_nn += 0
+        # # TODO different gradients for point cloud (not derived by renderer)
+        # outlier_nn_d = losses.nn_loss(pointcloud_outliers, pointcloud_obs)
+        # # only use positive, because sqrt is not differentiable at 0
+        # outlier_nn_d = outlier_nn_d[outlier_nn_d > 0]
+        # loss_nn = loss_nn + torch.mean(torch.sqrt(outlier_nn_d))
 
         return loss_depth, loss_pc, loss_nn
 
@@ -476,22 +477,32 @@ class SDFPipeline:
                 shape (N, H, W)
             masks: the masks used for preprocessing, same shape as depth_images
         """
+        # shrink mask
+        masks = (
+            -torch.nn.functional.max_pool2d(
+                -masks.double(), kernel_size=5, stride=1, padding=2
+            )
+        ).bool()
+
         depth_images[~masks] = 0  # set outside of depth to 0
 
         # only consider available depth values for outlier detection
-        masks = torch.logical_and(masks, depth_images != 0)
+        # masks = torch.logical_and(masks, depth_images != 0)
+
+        # depth_images =
 
         # remove outliers based on median
-        for mask, depth_image in zip(masks, depth_images):
-            median = torch.median(depth_image[mask])
-            errors = torch.abs(depth_image[mask] - median)
+        # for mask, depth_image in zip(masks, depth_images):
+        #     median = torch.median(depth_image[mask])
+        #     errors = torch.abs(depth_image[mask] - median)
 
-            bins = 10
-            hist = torch.histc(errors, bins=bins)
-            zero_indices = torch.nonzero(hist == 0)
-            if len(zero_indices):
-                threshold = zero_indices[0] / bins * errors.max()
-                depth_image[torch.abs(depth_image - median) > threshold] = 0
+        #     bins = 20
+        #     hist = torch.histc(errors, bins=bins)
+        #     print(hist)
+        #     zero_indices = torch.nonzero(hist == 0)
+        #     if len(zero_indices):
+        #         threshold = zero_indices[0] / bins * errors.max()
+        #         depth_image[torch.abs(depth_image - median) > threshold] = 0
 
     def _nn_init(
         self,
