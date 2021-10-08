@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
+from tqdm import tqdm
 import yoco
 
 from sdf_estimation.simple_setup import SDFPipeline
@@ -46,7 +47,7 @@ def main() -> None:
 
     nocs_file_names = sorted(os.listdir(os.path.join(config["data_path"], "nocs_det")))
 
-    for nocs_file_name in nocs_file_names:
+    for nocs_file_name in tqdm(nocs_file_names):
         nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
         nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
         results_dict = copy.deepcopy(nocs_dict)
@@ -65,6 +66,7 @@ def main() -> None:
 
             # skip unsupported category
             if category not in pipeline_dict:
+                results_dict["pred_RTs_sdfest"][mask_id] = np.eye(4,4)
                 continue
 
             # apply estimation
@@ -120,7 +122,7 @@ def main() -> None:
             # print(np.linalg.det(r_no_scale))
 
             # store result
-            results_dict["pred_RTs_sdfest"] = transform_cv
+            results_dict["pred_RTs_sdfest"][mask_id] = transform_cv
 
         f = open(os.path.join(config["out_folder"], nocs_file_name), "wb")
         pickle.dump(results_dict, f, -1)  # Why -1 (from xuchen-ethz's repo)?
