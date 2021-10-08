@@ -140,6 +140,8 @@ class SDFPipeline:
             depth_images:
                 the depth map containing the distance along the camera's z-axis,
                 does not have to be masked, necessary preprocessing is done by pipeline,
+                will be masked and preprocessed in-place
+                (pass copy if full depth is used afterwards)
                 shape (N, H, W) or (H, W) for a single depth image
             masks:
                 binary mask of the object to estimate, same shape as depth_images

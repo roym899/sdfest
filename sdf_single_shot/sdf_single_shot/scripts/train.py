@@ -8,7 +8,7 @@ import time
 import numpy as np
 from sdf_vae.sdf_vae import SDFVAE
 import torch
-from torchinfo import summary
+import torchinfo
 import wandb
 import yoco
 
@@ -70,7 +70,8 @@ class Trainer:
             collate_fn=collate_pointsets,
         )
 
-        summary(sdf_pose_net, (1, 500, 3), device=device)
+        # print network summary
+        torchinfo.summary(sdf_pose_net, (1, 500, 3), device=device)
 
         # init optimizer
         optimizer = torch.optim.Adam(
