@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
+from tqdm import tqdm
 import yoco
 
 from sdf_estimation.simple_setup import SDFPipeline
@@ -31,6 +32,8 @@ def main() -> None:
     parser.add_argument("--out_folder", required=True)
     config = yoco.load_config_from_args(parser)
 
+    os.makedirs(config["out_folder"], exist_ok=True)
+
     categories = ["bottle", "bowl", "camera", "can", "laptop", "mug"]
     pipeline_dict = {}  # maps category to category-specific pipeline
 
@@ -44,9 +47,10 @@ def main() -> None:
 
     nocs_file_names = sorted(os.listdir(os.path.join(config["data_path"], "nocs_det")))
 
-    for nocs_file_name in nocs_file_names:
+    for nocs_file_name in tqdm(nocs_file_names):
         nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
         nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
+        results_dict = copy.deepcopy(nocs_dict)
         rgb_file_path = (
             nocs_dict["image_path"].replace("data/real/test", config["data_path"])
             + "_color.png"
@@ -54,6 +58,7 @@ def main() -> None:
         rgb, depth, _, _ = load_real275_rgbd(rgb_file_path)
         masks = nocs_dict["pred_mask"]  # (rows, cols, num_masks,), binary masks
         category_ids = nocs_dict["pred_class_ids"] - 1  # (num_masks,), class ids
+        results_dict["pred_RTs_sdfest"] = np.zeros_like(results_dict["pred_RTs"])
 
         for mask_id, category_id in enumerate(category_ids):
             category = categories[category_id]  # name of category
@@ -61,6 +66,7 @@ def main() -> None:
 
             # skip unsupported category
             if category not in pipeline_dict:
+                results_dict["pred_RTs_sdfest"][mask_id] = np.eye(4,4)
                 continue
 
             # apply estimation
@@ -78,12 +84,12 @@ def main() -> None:
 
             position = position.detach().cpu()
             rot_matrix = Rotation.from_quat(orientation.detach().cpu()).as_matrix()
-            print("my scale:", scale*2)
-            # for me: -1 to 1, scale being 0 to 1
-            # for them: 0 to 1, scale being 0 to 1
+
             transform_gl = np.eye(4)
             transform_gl[0:3, 0:3] = rot_matrix * scale.detach().cpu().numpy() * 2
             transform_gl[0:3, 3] = position
+
+            # TODO compute tight bounding box with marching cubes
 
             # OpenGL -> OpenCV convention
             transform_cv = transform_gl.copy()
@@ -115,7 +121,12 @@ def main() -> None:
             # print(r_no_scale)
             # print(np.linalg.det(r_no_scale))
 
-            # TODO: store result
+            # store result
+            results_dict["pred_RTs_sdfest"][mask_id] = transform_cv
+
+        f = open(os.path.join(config["out_folder"], nocs_file_name), "wb")
+        pickle.dump(results_dict, f, -1)  # Why -1 (from xuchen-ethz's repo)?
+
 
 
 if __name__ == "__main__":
