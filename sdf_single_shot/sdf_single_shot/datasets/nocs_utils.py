@@ -163,18 +163,23 @@ def _evaluate_model(
 def _estimate_similarity_umeyama(
     source_hom: np.ndarray, target_hom: np.ndarray
 ) -> tuple:
-    """Estimate similarity transform from 3D point correspondences.
+    """Calculate similarity transform from 3D point correspondences.
 
-    A similarity transform is estimated (i.e., isotropic scale, rotation and
-    translation) that transforms source points onto the target points.
+    A similarity transform is calculated (i.e., isotropic scale, rotation and
+    translation) that transforms source points such that squared Euclidean distance
+    between transformed source points and target points is minimized.
 
     Original algorithm from Least-squares estimation of transformation parameters
     between two point patterns, Umeyama, 1991.
     http://web.stanford.edu/class/cs273/refs/umeyama.pdf
 
+    The returned scale, rotation, translation, describe the same transformation as the
+    homogeneous transformation matrix as (np notation):
+        scale * rotation @ point + translation <=> transformation @ point_hom.
+
     Args:
-        source_hom: Homogeneous coordinates of 5 source points, shape (4,5).
-        target_hom: Homogeneous coordinates of 5 target points, shape (4,5).
+        source_hom: Homogeneous coordinates of 5 source points, shape (4,M).
+        target_hom: Homogeneous coordinates of 5 target points, shape (4,M).
     Returns:
         scales (np.ndarray):
             Scaling factors along each axis, to scale source to target, shape (3,).
@@ -184,16 +189,16 @@ def _estimate_similarity_umeyama(
         translation (np.ndarray): Translation to translate source to target, shape (3,).
         transform (np.ndarray): Homogeneous transformation matrix, shape (4,4).
     """
-    source_centroid = np.mean(source_hom[:3, :], axis=1)
-    target_centroid = np.mean(target_hom[:3, :], axis=1)
+    source_centroid = np.mean(source_hom[:3, :], axis=1)  # shape (3,)
+    target_centroid = np.mean(target_hom[:3, :], axis=1)  # shape (3,)
     n_points = source_hom.shape[1]
 
     centered_source = (
         source_hom[:3, :] - np.tile(source_centroid, (n_points, 1)).transpose()
-    )
+    )  # shape (3, N)
     centered_target = (
         target_hom[:3, :] - np.tile(target_centroid, (n_points, 1)).transpose()
-    )
+    )  # shape (3, N)
 
     cov_matrix = np.matmul(centered_target, np.transpose(centered_source)) / n_points
 
@@ -203,13 +208,14 @@ def _estimate_similarity_umeyama(
         print(target_hom.shape)
         raise RuntimeError("There are NANs in the input.")
 
-    u, diag, v = np.linalg.svd(cov_matrix, full_matrices=True)
-    d = (np.linalg.det(u) * np.linalg.det(v)) < 0.0
+    u, diag, vh = np.linalg.svd(cov_matrix, full_matrices=True)
+    d = (np.linalg.det(u) * np.linalg.det(vh)) < 0.0
     if d:
         diag[-1] = -diag[-1]
         u[:, -1] = -u[:, -1]
 
-    rotation = np.matmul(u, v).T  # Transpose is the one that works
+    rotation = np.matmul(u, vh).T  # Transpose is the one that works
+    # TODO check the transpose, different from paper
 
     var_p = np.var(source_hom[:3, :], axis=1).sum()
     scale_fact = 1 / var_p * np.sum(diag)  # scale factor
@@ -219,6 +225,7 @@ def _estimate_similarity_umeyama(
     translation = target_hom[:3, :].mean(axis=1) - source_hom[:3, :].mean(axis=1).dot(
         scale_fact * rotation
     )
+    # TODO check the translation, different from paper
 
     out_transform = np.identity(4)
     out_transform[:3, :3] = scale_matrix @ rotation
