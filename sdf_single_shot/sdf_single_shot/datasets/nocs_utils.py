@@ -30,10 +30,10 @@ def estimate_similarity_transform(
         target: Target points to which source will be aligned to, same shape as source.
         verbose: If true additional information will be printed.
     Returns:
-        scale:
-        translation:
-        rotation:
-        transform:
+        scales (np.ndarray):
+        rotation (np.ndarray):
+        translation (np.ndarray):
+        transform (np.ndarray):
     """
     # make points homogeneous
     source_hom = np.transpose(np.hstack([source, np.ones([source.shape[0], 1])]))  # 4,N
@@ -163,7 +163,27 @@ def _evaluate_model(
 def _estimate_similarity_umeyama(
     source_hom: np.ndarray, target_hom: np.ndarray
 ) -> tuple:
-    # Copy of original paper is at: http://web.stanford.edu/class/cs273/refs/umeyama.pdf
+    """Estimate similarity transform from 3D point correspondences.
+
+    A similarity transform is estimated (i.e., isotropic scale, rotation and
+    translation) that transforms source points onto the target points.
+
+    Original algorithm from Least-squares estimation of transformation parameters
+    between two point patterns, Umeyama, 1991.
+    http://web.stanford.edu/class/cs273/refs/umeyama.pdf
+
+    Args:
+        source_hom: Homogeneous coordinates of 5 source points, shape (4,5).
+        target_hom: Homogeneous coordinates of 5 target points, shape (4,5).
+    Returns:
+        scales (np.ndarray):
+            Scaling factors along each axis, to scale source to target, shape (3,).
+            This will always be three times the same value, since similarity transforms
+            only include isotropic scaling.
+        rotation (np.ndarray): Rotation to rotate source to target, shape (3,).
+        translation (np.ndarray): Translation to translate source to target, shape (3,).
+        transform (np.ndarray): Homogeneous transformation matrix, shape (4,4).
+    """
     source_centroid = np.mean(source_hom[:3, :], axis=1)
     target_centroid = np.mean(target_hom[:3, :], axis=1)
     n_points = source_hom.shape[1]
@@ -171,43 +191,40 @@ def _estimate_similarity_umeyama(
     centered_source = (
         source_hom[:3, :] - np.tile(source_centroid, (n_points, 1)).transpose()
     )
-    CenteredTarget = (
+    centered_target = (
         target_hom[:3, :] - np.tile(target_centroid, (n_points, 1)).transpose()
     )
 
-    CovMatrix = np.matmul(CenteredTarget, np.transpose(centered_source)) / n_points
+    cov_matrix = np.matmul(centered_target, np.transpose(centered_source)) / n_points
 
-    if np.isnan(CovMatrix).any():
+    if np.isnan(cov_matrix).any():
         print("nPoints:", n_points)
         print(source_hom.shape)
         print(target_hom.shape)
         raise RuntimeError("There are NANs in the input.")
 
-    U, D, Vh = np.linalg.svd(CovMatrix, full_matrices=True)
-    d = (np.linalg.det(U) * np.linalg.det(Vh)) < 0.0
+    u, diag, v = np.linalg.svd(cov_matrix, full_matrices=True)
+    d = (np.linalg.det(u) * np.linalg.det(v)) < 0.0
     if d:
-        D[-1] = -D[-1]
-        U[:, -1] = -U[:, -1]
+        diag[-1] = -diag[-1]
+        u[:, -1] = -u[:, -1]
 
-    Rotation = np.matmul(U, Vh).T  # Transpose is the one that works
+    rotation = np.matmul(u, v).T  # Transpose is the one that works
 
-    varP = np.var(source_hom[:3, :], axis=1).sum()
-    ScaleFact = 1 / varP * np.sum(D)  # scale factor
-    Scales = np.array([ScaleFact, ScaleFact, ScaleFact])
-    ScaleMatrix = np.diag(Scales)
+    var_p = np.var(source_hom[:3, :], axis=1).sum()
+    scale_fact = 1 / var_p * np.sum(diag)  # scale factor
+    scales = np.array([scale_fact, scale_fact, scale_fact])
+    scale_matrix = np.diag(scales)
 
-    Translation = target_hom[:3, :].mean(axis=1) - source_hom[:3, :].mean(axis=1).dot(
-        ScaleFact * Rotation
+    translation = target_hom[:3, :].mean(axis=1) - source_hom[:3, :].mean(axis=1).dot(
+        scale_fact * rotation
     )
 
-    OutTransform = np.identity(4)
-    OutTransform[:3, :3] = ScaleMatrix @ Rotation
-    OutTransform[:3, 3] = Translation
+    out_transform = np.identity(4)
+    out_transform[:3, :3] = scale_matrix @ rotation
+    out_transform[:3, 3] = translation
 
-    # # Check
-    # Diff = TargetHom - np.matmul(OutTransform, SourceHom)
-    # Residual = np.linalg.norm(Diff[:3, :], axis=0)
-    return Scales, Rotation, Translation, OutTransform
+    return scales, rotation, translation, out_transform
 
 
 # TODO following functions are only used for affine transform, delete if not needed
