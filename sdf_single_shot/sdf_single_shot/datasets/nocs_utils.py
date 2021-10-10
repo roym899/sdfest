@@ -146,12 +146,13 @@ def _evaluate_model(
         target_hom: Homogeneous coordinates of target points, shape (4,N).
         pass_threshold: Threshold at which a point correspondence is considered good.
     Returns:
-        residual:
-        inlier_ratio:
-        inlier_idx:
+        residual (float): The mean error between transformed source and target.
+        inlier_ratio (float):
+            Ratio between inliers and number of correspondences (i.e., N).
+        inlier_idx (np.ndarray): Array containing the indices of inliers, shape (M,).
     """
     diff = target_hom - np.matmul(out_transform, source_hom)
-    residual_vec = np.linalg.norm(diff[:3, :], axis=0)
+    residual_vec = np.linalg.norm(diff[:3, :], axis=0)  # shape (N,)
     residual = np.linalg.norm(residual_vec)
     inlier_idx = np.where(residual_vec < pass_threshold)
     n_inliers = np.count_nonzero(inlier_idx)
