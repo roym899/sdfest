@@ -214,18 +214,16 @@ def _estimate_similarity_umeyama(
         diag[-1] = -diag[-1]
         u[:, -1] = -u[:, -1]
 
-    rotation = np.matmul(u, vh).T  # Transpose is the one that works
-    # TODO check the transpose, different from paper
+    rotation = u @ vh
 
     var_p = np.var(source_hom[:3, :], axis=1).sum()
     scale_fact = 1 / var_p * np.sum(diag)  # scale factor
     scales = np.array([scale_fact, scale_fact, scale_fact])
     scale_matrix = np.diag(scales)
 
-    translation = target_hom[:3, :].mean(axis=1) - source_hom[:3, :].mean(axis=1).dot(
-        scale_fact * rotation
-    )
-    # TODO check the translation, different from paper
+    translation = target_hom[:3, :].mean(axis=1) - scale_matrix @ rotation @ source_hom[
+        :3, :
+    ].mean(axis=1)
 
     out_transform = np.identity(4)
     out_transform[:3, :3] = scale_matrix @ rotation
