@@ -193,12 +193,8 @@ def _estimate_similarity_umeyama(
     target_centroid = np.mean(target_hom[:3, :], axis=1)  # shape (3,)
     n_points = source_hom.shape[1]
 
-    centered_source = (
-        source_hom[:3, :] - np.tile(source_centroid, (n_points, 1)).transpose()
-    )  # shape (3, N)
-    centered_target = (
-        target_hom[:3, :] - np.tile(target_centroid, (n_points, 1)).transpose()
-    )  # shape (3, N)
+    centered_source = source_hom[:3, :] - source_centroid[:, None]  # shape (3, N)
+    centered_target = target_hom[:3, :] - target_centroid[:, None]  # shape (3, N)
 
     cov_matrix = np.matmul(centered_target, np.transpose(centered_source)) / n_points
 
@@ -208,25 +204,24 @@ def _estimate_similarity_umeyama(
         print(target_hom.shape)
         raise RuntimeError("There are NANs in the input.")
 
-    u, diag, vh = np.linalg.svd(cov_matrix, full_matrices=True)
-    d = (np.linalg.det(u) * np.linalg.det(vh)) < 0.0
-    if d:
-        diag[-1] = -diag[-1]
-        u[:, -1] = -u[:, -1]
+    u, diag_values, vh = np.linalg.svd(cov_matrix, full_matrices=True)
+    diag = np.diag(diag_values)
+    s = np.eye(3)
+    if np.linalg.det(cov_matrix) < 0.0:
+        s[-1, -1] = -1
 
-    rotation = u @ vh
+    rotation = u @ s @ vh
 
     var_p = np.var(source_hom[:3, :], axis=1).sum()
-    scale_fact = 1 / var_p * np.sum(diag)  # scale factor
+    scale_fact = 1 / var_p * np.trace(s @ diag)  # scale factor
     scales = np.array([scale_fact, scale_fact, scale_fact])
-    scale_matrix = np.diag(scales)
+    scales_matrix = np.diag(scales)
 
-    translation = target_hom[:3, :].mean(axis=1) - scale_matrix @ rotation @ source_hom[
-        :3, :
-    ].mean(axis=1)
+    translation = target_centroid - scales_matrix @ rotation @ source_centroid
 
+    # create homogeneous transformation from scale, rotation and translation
     out_transform = np.identity(4)
-    out_transform[:3, :3] = scale_matrix @ rotation
+    out_transform[:3, :3] = scales_matrix @ rotation
     out_transform[:3, 3] = translation
 
     return scales, rotation, translation, out_transform
