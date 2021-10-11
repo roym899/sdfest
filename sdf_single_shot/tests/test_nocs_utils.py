@@ -7,7 +7,24 @@ from sdf_single_shot.datasets import nocs_utils
 
 def test_estimate_similarity_transform() -> None:
     """Test estimation of similarity transform."""
-    pass
+    a = np.random.rand(4, 10)
+    a[3, :] = 1
+    r = Rotation.from_euler("xyz", np.array([100, 70, -30]), degrees=True).as_matrix()
+    s = 0.3
+    t = np.array([0.3, 1.0, 10.0])
+    transform = np.eye(4)
+    transform[:3, :3] = s * r
+    transform[:3, 3] = t
+    b = transform @ a
+    a_inhom = a[:3, :].T
+    b_inhom = b[:3, :].T
+    s_est, r_est, t_est, transform_est = nocs_utils.estimate_similarity_transform(
+        a_inhom, b_inhom
+    )
+    np.testing.assert_allclose(r, r_est, atol=1e-10)
+    np.testing.assert_allclose(s, s_est, atol=1e-10)
+    np.testing.assert_allclose(t, t_est, atol=1e-10)
+    np.testing.assert_allclose(transform, transform_est, atol=1e-10)
 
 
 def test_estimate_similarity_umeyama() -> None:
@@ -31,3 +48,4 @@ def test_estimate_similarity_umeyama() -> None:
     np.testing.assert_allclose(s, s_est, atol=1e-10)
     np.testing.assert_allclose(t, t_est, atol=1e-10)
     np.testing.assert_allclose(transform, transform_est, atol=1e-10)
+    np.testing.assert_allclose(transform_est @ a, b, atol=1e-10)

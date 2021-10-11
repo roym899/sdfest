@@ -27,13 +27,16 @@ def estimate_similarity_transform(
 
     Args:
         source: Source points that will be transformed, shape (N,3).
-        target: Target points to which source will be aligned to, same shape as source.
+        target: Target points to which source will be aligned to, shape (N,3).
         verbose: If true additional information will be printed.
     Returns:
         scales (np.ndarray):
-        rotation (np.ndarray):
-        translation (np.ndarray):
-        transform (np.ndarray):
+            Scaling factors along each axis, to scale source to target, shape (3,).
+            This will always be three times the same value, since similarity transforms
+            only include isotropic scaling.
+        rotation (np.ndarray): Rotation to rotate source to target, shape (3,).
+        translation (np.ndarray): Translation to translate source to target, shape (3,).
+        transform (np.ndarray): Homogeneous transformation matrix, shape (4,4).
     """
     # make points homogeneous
     source_hom = np.transpose(np.hstack([source, np.ones([source.shape[0], 1])]))  # 4,N
@@ -105,8 +108,11 @@ def _get_ransac_inliers(
     best_inlier_ratio = 0
     best_inlier_idx = np.arange(source_hom.shape[1])
     for _ in range(0, max_iterations):
-        # Pick 5 random (but corresponding) points from source and target
-        rand_idx = np.random.randint(source_hom.shape[1], size=5)
+        # Pick 5 random (but corresponding) points from source and target without repl.
+        rand_idx = np.random.choice(
+            np.arange(source_hom.shape[1]), size=5, replace=False
+        )
+        # rand_idx = np.random.randint(source_hom.shape[1], size=10)
         _, _, _, out_transform = _estimate_similarity_umeyama(
             source_hom[:, rand_idx], target_hom[:, rand_idx]
         )
@@ -256,7 +262,7 @@ def estimate_restricted_affine_transform(
     source_hom = np.transpose(np.hstack([source, np.ones([source.shape[0], 1])]))
     target_hom = np.transpose(np.hstack([target, np.ones([source.shape[0], 1])]))
 
-    ret_val, affine_trans, inliers = cv2.estimateAffine3D(source, target)
+    _, affine_trans, _ = cv2.estimateAffine3D(source, target)
 
     # We assume no shear in the affine matrix and decompose into rotation, non-uniform
     # scales, and translation
