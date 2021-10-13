@@ -1,24 +1,33 @@
 """Module providing dataset class for NOCS datasets (CAMERA / REAL)."""
 from glob import glob
-from typing import NamedTuple, Optional
+from typing import List, NamedTuple, Optional
 import os
 import pickle
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 import torch
-from torchvision.io import read_image
+from PIL import Image
+from sdf_differentiable_renderer import Camera
 
 
-class Sample(NamedTuple):
-    """Represents a single data sample."""
+class SampleSpecification(NamedTuple):
+    """Specifies a single sample item.
 
-    color: Optional[np.ndarray] = None
-    depth: Optional[np.ndarray] = None
-    mask: Optional[np.ndarray] = None
-    pointcloud: Optional[np.ndarray] = None
-    masked_pointcloud: Optional[np.ndarray] = None
+    Each returned sample is a dictionary of multiple sample items.
+
+    name:
+        Specifies the key in the sample dictionary.
+    type:
+        Specifies the data type. One of:
+            "color", "depth", "mask", "pointcloud"
+    options:
+        Data type specific options.
+    """
+
+    name: str
+    type: str
+    options: Optional[dict] = None
 
 
 class NOCSDataset(torch.utils.data.Dataset):
@@ -58,10 +67,12 @@ class NOCSDataset(torch.utils.data.Dataset):
     }
     category_str_to_id = {v: k for k, v in category_id_to_str.items()}
 
+    # TODO category filter
     def __init__(
         self,
         root_dir: str,
         split: str,
+        sample_specifications: List[SampleSpecification],
     ) -> None:
         """Initialize the dataset.
 
@@ -74,6 +85,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 "camera_val": 25000 images, synthetic foreground + real background
                 "real_train": 4300 images in 7 scenes, real
                 "real_test": 2750 images in 6 scenes, real
+            sample_specifications: Specification for a returned sample.
         """
         self._root_dir = root_dir
         self._split = split
@@ -81,22 +93,25 @@ class NOCSDataset(torch.utils.data.Dataset):
         if not os.path.isdir(self._preprocess_path):
             self._preprocess_dataset()
         self._sample_files = self._get_sample_files()
+        self._camera = self._get_split_camera()
+        self._sample_specifications = sample_specifications
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
         return len(self._sample_files)
 
-    def __getitem__(self, idx: int) -> Sample:
+    def __getitem__(self, idx: int) -> dict:
         """Return a sample of the dataset.
 
         Args:
             idx: Index of the instance.
         Returns:
-            inputs: Inputs to the network, as specified in the constructor.
-            targets: Targets for the given input, as specified in the constructor.
+            Sample containing the keys as specified by provided SampleSpecifications.
         """
-        # TODO load sample, and convert to desired input format
-        return Sample()
+        sample_file = self._sample_files[idx]
+        sample_data = pickle.load(open(sample_file, "rb"))
+        sample = self._sample_from_sample_data(sample_data)
+        return sample
 
     def _preprocess_dataset(self) -> None:
         """Create preprocessing files for the current split.
@@ -112,14 +127,14 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         color_files = self._get_color_files()
         counter = 0
-        for color_file in tqdm(color_files):
+        for color_file in color_files:
             depth_file = color_file.replace("color", "depth")
             mask_file = color_file.replace("color", "mask")
             meta_file = color_file.replace("color.png", "meta.txt")
             meta_data = pd.read_csv(meta_file, sep=" ", header=None)
-            mask_img = read_image(mask_file)
-            if mask_img.shape[0] == 4:  # CAMERA masks are RGBA
-                mask = mask_img.long()[0] + 256 * mask_img[1] + 65536 * mask_img[2]
+            mask_img = np.asarray(Image.open(mask_file), dtype=np.uint8)
+            if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
+                mask = mask_img[:, :, 0]  # use first channel only
             else:  # REAL masks are grayscale
                 mask = mask_img
             mask_ids = np.unique(mask).tolist()
@@ -135,9 +150,12 @@ class NOCSDataset(torch.utils.data.Dataset):
                 category_id = match.iloc[0, 1]
                 if category_id == 0:  # unknown / distractor object
                     continue
+                # TODO get transform, position, quaternion, scale
+                # TODO symmetry
+                # TODO canonical frame alignment (potentially different conventions)
                 sample_info = {
-                    "color": color_file,
-                    "depth": depth_file,
+                    "color_file": color_file,
+                    "depth_file": depth_file,
                     "mask_file": mask_file,
                     "mask_id": mask_id,
                     "category_id": category_id,
@@ -180,6 +198,71 @@ class NOCSDataset(torch.utils.data.Dataset):
         Sample files are generated by NOCSDataset._preprocess_dataset.
         """
         glob_pattern = os.path.join(self._preprocess_path, "*.pkl")
-        sample_files = glob(glob_pattern) 
+        sample_files = glob(glob_pattern)
         sample_files.sort()
         return sample_files
+
+    def _get_split_camera(self) -> None:
+        """Return camera information for selected split."""
+        # from: https://github.com/hughw19/NOCS_CVPR2019/blob/master/detect_eval.py
+        if self._split in ["real_train", "real_test"]:
+            return Camera(
+                width=640,
+                height=480,
+                fx=591.0125,
+                fy=590.16775,
+                cx=322.525,
+                cy=244.11084,
+                pixel_center=0.0,
+            )
+        elif self._split in ["camera_train", "camera_val"]:
+            return Camera(
+                width=640,
+                height=480,
+                fx=577.5,
+                fy=577.5,
+                cx=319.5,
+                cy=239.5,
+                pixel_center=0.0,
+            )
+
+    def _sample_from_sample_data(self, sample_data: dict) -> dict:
+        """Create dictionary containing sample items as specified."""
+        sample = {}
+        for sample_specification in self._sample_specifications:
+            sample.update(self._create_sample_item(sample_specification, sample_data))
+        return sample
+
+    def _create_sample_item(
+        self, sample_specification: SampleSpecification, sample_data: dict
+    ) -> dict:
+        """Create a single sample item based on specification and data."""
+        print(sample_data)
+        if sample_specification.type == "color":
+            color = np.asarray(Image.open(sample_data["color_file"]))
+            return {sample_specification.name: color}
+        elif sample_specification.type == "depth":
+            depth = (
+                np.asarray(
+                    Image.open(sample_data["depth_file"]), dtype=np.float64
+                )
+                * 0.001
+            )
+            return {sample_specification.name: depth}
+        elif sample_specification.type == "pointcloud":
+            # TODO support centering and masking of point cloud
+            # TODO support noisy mask
+            depth = (
+                np.asarray(
+                    Image.open(sample_data["depth_file"]), dtype=np.float64
+                )
+                * 0.001
+            )
+            raise NotImplementedError()
+        elif sample_specification.type == "mask":
+            mask = Image.open(sample_data["mask_file"])
+            return {sample_specification.name: mask}
+        else:
+            raise ValueError(
+                f"Unsupported SampleSpecification.type: {sample_specification.type}"
+            )
