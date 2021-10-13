@@ -19,7 +19,12 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
     real_test = NOCSDataset(root_dir=tmp_path, split="real_test")
 
     # check correct number of files
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_test"))) == 5
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_train"))) == 5
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_val"))) == 23
     assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_train"))) == 19
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_val"))) == 23
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_train"))) == 5
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_test"))) == 5
+
+    assert len(camera_train) == 19
+    assert len(camera_val) == 23
+    assert len(real_train) == 5
+    assert len(real_test) == 5
