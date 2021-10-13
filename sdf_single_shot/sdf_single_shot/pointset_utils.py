@@ -33,17 +33,16 @@ def depth_to_pointcloud(
     """Convert depth image to pointcloud.
 
     Args:
-        depth_image: The depth image to convert to pointcloud.
-        f: The focal length of the depth sensor.
+        depth_image: The depth image to convert to pointcloud, shape (H,W).
+        camera: The camera used to lift the points.
         normalize: Whether to normalize the pointcloud with 0 centroid.
-        mask: Only points with mask != 0 will be added to pointcloud
+        mask:
+            Only points with mask != 0 will be added to pointcloud.
+            No masking will be performed if None.
 
     Returns:
-        the pointcloud in the camera frame, in OpenGL convention
+        The pointcloud in the camera frame, in OpenGL convention, shape (N,3).
     """
-    width = depth_image.shape[1]
-    height = depth_image.shape[0]
-
     fx, fy, cx, cy, _ = camera.get_pinhole_camera_parameters(0.0)
 
     if mask is None:
