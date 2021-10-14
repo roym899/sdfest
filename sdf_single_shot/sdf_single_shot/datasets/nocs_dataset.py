@@ -10,24 +10,7 @@ import torch
 from PIL import Image
 from sdf_differentiable_renderer import Camera
 
-
-class SampleSpecification(NamedTuple):
-    """Specifies a single sample item.
-
-    Each returned sample is a dictionary of multiple sample items.
-
-    name:
-        Specifies the key in the sample dictionary.
-    type:
-        Specifies the data type. One of:
-            "color", "depth", "mask", "pointcloud"
-    options:
-        Data type specific options.
-    """
-
-    name: str
-    type: str
-    options: Optional[dict] = None
+from sdf_single_shot import pointset_utils
 
 
 class NOCSDataset(torch.utils.data.Dataset):
@@ -72,7 +55,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         self,
         root_dir: str,
         split: str,
-        sample_specifications: List[SampleSpecification],
+        mask_pointcloud: bool = False,
+        normalize_pointcloud: bool = False,
     ) -> None:
         """Initialize the dataset.
 
@@ -85,7 +69,10 @@ class NOCSDataset(torch.utils.data.Dataset):
                 "camera_val": 25000 images, synthetic foreground + real background
                 "real_train": 4300 images in 7 scenes, real
                 "real_test": 2750 images in 6 scenes, real
-            sample_specifications: Specification for a returned sample.
+            mask_pointcloud: Whether the returned pointcloud will be masked.
+            normalize_pointcloud:
+                Whether the returned pointcloud and position will be normalized, such
+                that pointcloud centroid is at the origin.
         """
         self._root_dir = root_dir
         self._split = split
@@ -94,7 +81,8 @@ class NOCSDataset(torch.utils.data.Dataset):
             self._preprocess_dataset()
         self._sample_files = self._get_sample_files()
         self._camera = self._get_split_camera()
-        self._sample_specifications = sample_specifications
+        self._mask_pointcloud = mask_pointcloud
+        self._normalize_pointcloud = normalize_pointcloud
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -106,7 +94,11 @@ class NOCSDataset(torch.utils.data.Dataset):
         Args:
             idx: Index of the instance.
         Returns:
-            Sample containing the keys as specified by provided SampleSpecifications.
+            Sample containing the following items:
+                "color"
+                "depth"
+                "mask"
+                "pointcloud"
         """
         sample_file = self._sample_files[idx]
         sample_data = pickle.load(open(sample_file, "rb"))
@@ -227,42 +219,28 @@ class NOCSDataset(torch.utils.data.Dataset):
             )
 
     def _sample_from_sample_data(self, sample_data: dict) -> dict:
-        """Create dictionary containing sample items as specified."""
-        sample = {}
-        for sample_specification in self._sample_specifications:
-            sample.update(self._create_sample_item(sample_specification, sample_data))
-        return sample
+        """Create dictionary containing a single sample."""
+        color = torch.from_numpy(np.asarray(Image.open(sample_data["color_file"])))
+        depth = torch.from_numpy(
+            np.asarray(Image.open(sample_data["depth_file"]), dtype=np.float64) * 0.001
+        )
+        # TODO support noisy mask
+        instances_mask = torch.from_numpy(
+            np.asarray(Image.open(sample_data["mask_file"]))
+        )
+        instance_mask = instances_mask == sample_data["mask_id"]
 
-    def _create_sample_item(
-        self, sample_specification: SampleSpecification, sample_data: dict
-    ) -> dict:
-        """Create a single sample item based on specification and data."""
-        if sample_specification.type == "color":
-            color = np.asarray(Image.open(sample_data["color_file"]))
-            return {sample_specification.name: color}
-        elif sample_specification.type == "depth":
-            depth = (
-                np.asarray(
-                    Image.open(sample_data["depth_file"]), dtype=np.float64
-                )
-                * 0.001
-            )
-            return {sample_specification.name: depth}
-        elif sample_specification.type == "pointcloud":
-            # TODO support centering and masking of point cloud
-            # TODO support noisy mask
-            depth = (
-                np.asarray(
-                    Image.open(sample_data["depth_file"]), dtype=np.float64
-                )
-                * 0.001
-            )
-            raise NotImplementedError()
-        elif sample_specification.type == "mask":
-            instances_mask = np.asarray(Image.open(sample_data["mask_file"]))
-            instance_mask = instances_mask == sample_data["mask_id"]
-            return {sample_specification.name: instance_mask}
-        else:
-            raise ValueError(
-                f"Unsupported SampleSpecification.type: {sample_specification.type}"
-            )
+        pointcloud_mask = instance_mask if self._mask_pointcloud else None
+        pointcloud = pointset_utils.depth_to_pointcloud(
+            depth, self._camera, mask=pointcloud_mask
+        )
+        if self._normalize_pointcloud:
+            pointcloud, centroid = pointset_utils.normalize_points(pointcloud)
+
+        sample = {
+            "color": color,
+            "depth": depth,
+            "pointcloud": pointcloud,
+            "mask": instance_mask,
+        }
+        return sample

@@ -2,37 +2,34 @@
 import os
 import shutil
 
+import matplotlib.pyplot as plt
 from pytest import FixtureRequest
+import torch
 
-from sdf_single_shot.datasets.nocs_dataset import NOCSDataset, SampleSpecification
+from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 
 
 def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> None:
     """Test preprocessing of different NOCS dataset splits."""
     # create copy of NOCS test directory
-    sample_specifications = []
     root_dir = request.fspath.dirname
     nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
     shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
     camera_train = NOCSDataset(
         root_dir=tmp_path,
         split="camera_train",
-        sample_specifications=sample_specifications,
     )
     camera_val = NOCSDataset(
         root_dir=tmp_path,
         split="camera_val",
-        sample_specifications=sample_specifications,
     )
     real_train = NOCSDataset(
         root_dir=tmp_path,
         split="real_train",
-        sample_specifications=sample_specifications,
     )
     real_test = NOCSDataset(
         root_dir=tmp_path,
         split="real_test",
-        sample_specifications=sample_specifications,
     )
 
     # check correct number of files
@@ -55,15 +52,10 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     real_train = NOCSDataset(
         root_dir=tmp_path,
         split="real_train",
-        sample_specifications=[
-            SampleSpecification(type="color", name="rgb"),
-            SampleSpecification(type="depth", name="depth"),
-            SampleSpecification(type="mask", name="mask"),
-        ],
     )
     sample = real_train[0]
-    assert sample["rgb"].shape == (480, 640, 3)
+    assert sample["color"].shape == (480, 640, 3)
     assert sample["depth"].shape == (480, 640)
     assert sample["mask"].shape == (480, 640)
-
-
+    valid_depth_points = torch.sum(sample["depth"] != 0)
+    assert sample["pointcloud"].shape == (valid_depth_points, 3)

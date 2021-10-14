@@ -11,13 +11,15 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
 
     Args:
         points:
-            the pointsets which will be modified in place, shape (N, M, D),
-            or shape (M, D), N pointsets with M points of dimension D
+            The pointsets which will be normalized,
+            shape (N, M, D) or shape (M, D), N pointsets with M points of dimension D.
 
     Return:
+        normalized_points:
+            The normalized pointset, same shape as points.
         centroids:
-            the means of the pointclouds used to normalize points
-            shape (N, D) or (D,), for (N, M, D) and (M, D) inputs, respectively
+            The means of the pointclouds used to normalize points.
+            Shape (N, D) or (D,), for (N, M, D) and (M, D) inputs, respectively.
     """
     centroids = torch.mean(points, dim=-2, keepdim=True)
     normalized_points = points - centroids
