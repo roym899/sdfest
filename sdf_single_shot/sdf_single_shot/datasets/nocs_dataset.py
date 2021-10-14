@@ -120,7 +120,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         color_files = self._get_color_files()
         counter = 0
         for color_file in color_files:
-            depth_file = color_file.replace("color", "depth")
+            depth_file = self._depth_file_from_color_file(color_file)
             mask_file = color_file.replace("color", "mask")
             meta_file = color_file.replace("color.png", "meta.txt")
             meta_data = pd.read_csv(meta_file, sep=" ", header=None)
@@ -217,6 +217,8 @@ class NOCSDataset(torch.utils.data.Dataset):
                 cy=239.5,
                 pixel_center=0.0,
             )
+        else:
+            raise ValueError(f"Specified split {self._split} is not supported.")
 
     def _sample_from_sample_data(self, sample_data: dict) -> dict:
         """Create dictionary containing a single sample."""
@@ -244,3 +246,17 @@ class NOCSDataset(torch.utils.data.Dataset):
             "mask": instance_mask,
         }
         return sample
+
+    def _depth_file_from_color_file(self, color_file: str) -> str:
+        """Return path to depth file from path to color file."""
+        if self._split in ["real_train", "real_test"]:
+            depth_file = color_file.replace("color", "depth")
+        elif self._split in ["camera_train"]:
+            depth_file = color_file.replace("color", "composed")
+            depth_file = depth_file.replace("/train/", "/camera_full_depths/train/")
+        elif self._split in ["camera_val"]:
+            depth_file = color_file.replace("color", "composed")
+            depth_file = depth_file.replace("/val/", "/camera_full_depths/val/")
+        else:
+            raise ValueError(f"Specified split {self._split} is not supported.")
+        return depth_file

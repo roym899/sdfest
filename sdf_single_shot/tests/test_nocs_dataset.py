@@ -59,3 +59,14 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     assert sample["mask"].shape == (480, 640)
     valid_depth_points = torch.sum(sample["depth"] != 0)
     assert sample["pointcloud"].shape == (valid_depth_points, 3)
+
+    camera_train = NOCSDataset(
+        root_dir=tmp_path,
+        split="camera_train",
+    )
+    camera_val = NOCSDataset(
+        root_dir=tmp_path,
+        split="camera_val",
+    )
+    assert camera_train[0]["depth"].shape == (480, 640)
+    assert camera_val[0]["depth"].shape == (480, 640)
