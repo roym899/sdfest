@@ -70,3 +70,26 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     )
     assert camera_train[0]["depth"].shape == (480, 640)
     assert camera_val[0]["depth"].shape == (480, 640)
+
+
+def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
+    """Test generation of ground truth path from color path."""
+    root_dir = request.fspath.dirname
+    nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
+    shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
+    real_test = NOCSDataset(
+        root_dir=tmp_path,
+        split="real_test",
+    )
+    gts_path = real_test._get_gts_path(
+        os.path.join(root_dir, "real_test", "scene_1", "0000_color.png")
+    )
+    assert os.path.isfile(gts_path)
+    camera_val = NOCSDataset(
+        root_dir=tmp_path,
+        split="camera_val",
+    )
+    gts_path = camera_val._get_gts_path(
+        os.path.join(root_dir, "val", "00000", "0000_color.png")
+    )
+    assert os.path.isfile(gts_path)

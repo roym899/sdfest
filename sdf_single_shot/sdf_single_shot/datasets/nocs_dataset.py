@@ -1,8 +1,8 @@
 """Module providing dataset class for NOCS datasets (CAMERA / REAL)."""
 from glob import glob
-from typing import List, NamedTuple, Optional
 import os
 import pickle
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -145,6 +145,9 @@ class NOCSDataset(torch.utils.data.Dataset):
                 # TODO get transform, position, quaternion, scale
                 # TODO symmetry
                 # TODO canonical frame alignment (potentially different conventions)
+                position, orientation, scale, nocs_transform = self._get_pose_and_scale(
+                    color_file, mask_id
+                )
                 sample_info = {
                     "color_file": color_file,
                     "depth_file": depth_file,
@@ -154,10 +157,10 @@ class NOCSDataset(torch.utils.data.Dataset):
                     # "shapenet_synset": mask_file,
                     # "shapenet_id": mask_file,
                     # "real_object_id": mask_file,
-                    # "transform": transform,
-                    # "position": position,
-                    # "quaternion": orientation,
-                    # "scale": scale,
+                    "nocs_transform": nocs_transform,
+                    "position": position,
+                    "quaternion": orientation,
+                    "scale": scale,
                 }
                 out_file = os.path.join(self._preprocess_path, f"{counter:08}.pkl")
                 pickle.dump(sample_info, open(out_file, "wb"))
@@ -260,3 +263,33 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
         return depth_file
+
+    def _get_pose_and_scale(self, color_file: str, mask_id: int) -> tuple:
+        """Return position, orientation, scale and NOCS transform."""
+        gts_path = self._get_gts_path(color_file)
+        if gts_path is None:
+            # TODO compute new ground truth information from nocs map
+            pass
+        else:
+            # TODO convert GT information from information in file
+            pass
+        return None, None, None, None
+
+    def _get_gts_path(self, color_file: str) -> Optional[str]:
+        """Return path to gts file for a color_file.
+
+        Return None if split does not have ground truth information.
+        """
+        if self._split == "real_test":
+            gts_folder = os.path.join(self._root_dir, "gts", "real_test")
+        elif self._split == "camera_val":
+            gts_folder = os.path.join(self._root_dir, "gts", "val")
+        else:
+            return None
+
+        path = os.path.normpath(color_file)
+        split_path = path.split(os.sep)
+        number = path[-14:-10]
+        gts_file_name = f"results_{split_path[-3]}_{split_path[-2]}_{number}.pkl"
+        gts_file = os.path.join(gts_folder, gts_file_name)
+        return gts_file
