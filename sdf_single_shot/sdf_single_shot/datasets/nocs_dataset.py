@@ -237,7 +237,6 @@ class NOCSDataset(torch.utils.data.Dataset):
         self, sample_specification: SampleSpecification, sample_data: dict
     ) -> dict:
         """Create a single sample item based on specification and data."""
-        print(sample_data)
         if sample_specification.type == "color":
             color = np.asarray(Image.open(sample_data["color_file"]))
             return {sample_specification.name: color}
@@ -260,8 +259,9 @@ class NOCSDataset(torch.utils.data.Dataset):
             )
             raise NotImplementedError()
         elif sample_specification.type == "mask":
-            mask = Image.open(sample_data["mask_file"])
-            return {sample_specification.name: mask}
+            instances_mask = np.asarray(Image.open(sample_data["mask_file"]))
+            instance_mask = instances_mask == sample_data["mask_id"]
+            return {sample_specification.name: instance_mask}
         else:
             raise ValueError(
                 f"Unsupported SampleSpecification.type: {sample_specification.type}"

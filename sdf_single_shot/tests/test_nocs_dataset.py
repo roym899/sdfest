@@ -58,8 +58,12 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         sample_specifications=[
             SampleSpecification(type="color", name="rgb"),
             SampleSpecification(type="depth", name="depth"),
+            SampleSpecification(type="mask", name="mask"),
         ],
     )
     sample = real_train[0]
-    # assert sample["rgb"].shape == (3, 480, 640)
-    # assert sample["depth"].shape == (480, 640)
+    assert sample["rgb"].shape == (480, 640, 3)
+    assert sample["depth"].shape == (480, 640)
+    assert sample["mask"].shape == (480, 640)
+
+
