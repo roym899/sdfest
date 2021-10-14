@@ -233,6 +233,25 @@ def _estimate_similarity_umeyama(
     return scales, rotation, translation, out_transform
 
 
+def nocs_to_position_orientation_scale(nocs_transform) -> tuple:
+    """Convert transform from camera to NOCS coordinates into its components.
+
+    Args:
+        nocs_transform:
+            The homogeneous transformation matrix which maps camera points to
+            normalized objects coordinates.
+
+    Returns:
+        position:
+        orientation:
+        scale:
+    """
+    pass
+
+
+def position_orientation_scale_to_nocs() -> np.ndarray:
+    pass
+
 # TODO following functions are only used for affine transform, delete if not needed
 
 # TODO this function doesn't seems to enforce zero shear in its current form

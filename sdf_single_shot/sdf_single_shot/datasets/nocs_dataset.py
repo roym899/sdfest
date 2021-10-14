@@ -130,6 +130,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             else:  # REAL masks are grayscale
                 mask = mask_img
             mask_ids = np.unique(mask).tolist()
+            gt_id = 0  # GT only contains valid objects of interests and is 0-indexed
             for mask_id in mask_ids:
                 if mask_id == 255:  # 255 is background
                     continue
@@ -146,7 +147,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 # TODO symmetry
                 # TODO canonical frame alignment (potentially different conventions)
                 position, orientation, scale, nocs_transform = self._get_pose_and_scale(
-                    color_file, mask_id
+                    color_file, gt_id
                 )
                 sample_info = {
                     "color_file": color_file,
@@ -165,6 +166,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 out_file = os.path.join(self._preprocess_path, f"{counter:08}.pkl")
                 pickle.dump(sample_info, open(out_file, "wb"))
                 counter += 1
+                gt_id += 1
 
     def _get_color_files(self) -> list:
         """Return list of paths of color images of the selected split."""
@@ -264,16 +266,26 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise ValueError(f"Specified split {self._split} is not supported.")
         return depth_file
 
-    def _get_pose_and_scale(self, color_file: str, mask_id: int) -> tuple:
+    def _get_pose_and_scale(self, color_file: str, gt_id: int) -> tuple:
         """Return position, orientation, scale and NOCS transform."""
         gts_path = self._get_gts_path(color_file)
         if gts_path is None:
             # TODO compute new ground truth information from nocs map
-            pass
+            position = rotation = scale = nocs_transformation = None
         else:
-            # TODO convert GT information from information in file
-            pass
-        return None, None, None, None
+            gts_data = pickle.load(open(gts_path, "rb"))
+            nocs_transformation = gts_data["gt_RTs"][gt_id]
+            position = nocs_transformation[0:3, 3]
+            rot_scale = nocs_transformation[0:3, 0:3]
+            scale = np.sqrt(np.sum(rot_scale ** 2, axis=0))
+            rotation = rot_scale / scale[:, None]
+            if "test/scene_1/0000_color.png" in color_file:
+                # print(gts_data["gt_RTs"].shape)
+                # print(nocs_transformation)
+                print(np.diag(scale) @ rotation)
+                print(rot_scale)
+                print(scale)
+        return position, rotation, scale, nocs_transformation
 
     def _get_gts_path(self, color_file: str) -> Optional[str]:
         """Return path to gts file for a color_file.
