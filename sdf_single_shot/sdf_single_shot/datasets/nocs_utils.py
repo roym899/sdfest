@@ -25,17 +25,19 @@ def estimate_similarity_transform(
     A similarity transform is estimated (i.e., isotropic scale, rotation and
     translation) that transforms source points onto the target points.
 
+    Note that the returned values fulfill the following equations
+        transform @ source_points = scale * rotation_matrix @ source_points + position
+    when ignoring homogeneous coordinate for left-hand side.
+
     Args:
         source: Source points that will be transformed, shape (N,3).
         target: Target points to which source will be aligned to, shape (N,3).
         verbose: If true additional information will be printed.
     Returns:
-        scales (np.ndarray):
-            Scaling factors along each axis, to scale source to target, shape (3,).
-            This will always be three times the same value, since similarity transforms
-            only include isotropic scaling.
-        rotation (np.ndarray): Rotation to rotate source to target, shape (3,).
-        translation (np.ndarray): Translation to translate source to target, shape (3,).
+        position (np.ndarray): Translation to translate source to target, shape (3,).
+        rotation_matrix (np.ndarray): Rotation to rotate source to target, shape (3,3).
+        scale (float):
+            Scaling factor along each axis, to scale source to target.
         transform (np.ndarray): Homogeneous transformation matrix, shape (4,4).
     """
     # make points homogeneous
@@ -48,9 +50,9 @@ def estimate_similarity_transform(
     ratio_ts = target_norm / source_norm
     ratio_st = source_norm / target_norm
     pass_t = ratio_st if (ratio_st > ratio_ts) else ratio_ts
-    pass_t *= 0.01
+    pass_t *= 0.01  # tighter bound
     stop_t = pass_t / 100
-    n_iter = 500
+    n_iter = 100
     if verbose:
         print("Pass threshold: ", pass_t)
         print("Stop threshold: ", stop_t)
@@ -70,17 +72,18 @@ def estimate_similarity_transform(
         )
         return None, None, None, None
 
-    scales, rotation, translation, out_transform = _estimate_similarity_umeyama(
+    scales, rotation_matrix, position, out_transform = _estimate_similarity_umeyama(
         source_inliers_hom, target_inliers_hom
     )
+    scale = scales[0]
 
     if verbose:
         print("BestInlierRatio:", best_inlier_ratio)
-        print("Rotation:\n", rotation)
-        print("Translation:\n", translation)
+        print("Rotation:\n", rotation_matrix)
+        print("Position:\n", position)
         print("Scales:", scales)
 
-    return scales, rotation, translation, out_transform
+    return position, rotation_matrix, scale, out_transform
 
 
 def _get_ransac_inliers(
@@ -252,6 +255,7 @@ def nocs_to_position_orientation_scale(nocs_transform) -> tuple:
 
 def position_orientation_scale_to_nocs() -> np.ndarray:
     pass
+
 
 # TODO following functions are only used for affine transform, delete if not needed
 

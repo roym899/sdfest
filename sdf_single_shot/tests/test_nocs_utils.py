@@ -18,12 +18,12 @@ def test_estimate_similarity_transform() -> None:
     b = transform @ a
     a_inhom = a[:3, :].T
     b_inhom = b[:3, :].T
-    s_est, r_est, t_est, transform_est = nocs_utils.estimate_similarity_transform(
+    t_est, r_est, s_est, transform_est = nocs_utils.estimate_similarity_transform(
         a_inhom, b_inhom
     )
+    np.testing.assert_allclose(t, t_est, atol=1e-10)
     np.testing.assert_allclose(r, r_est, atol=1e-10)
     np.testing.assert_allclose(s, s_est, atol=1e-10)
-    np.testing.assert_allclose(t, t_est, atol=1e-10)
     np.testing.assert_allclose(transform, transform_est, atol=1e-10)
 
 
