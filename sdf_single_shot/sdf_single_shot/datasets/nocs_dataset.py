@@ -124,8 +124,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         counter = 0
         for color_path in color_paths:
             depth_path = self._depth_path_from_color_path(color_path)
-            mask_path = color_path.replace("color", "mask")
-            meta_path = color_path.replace("color.png", "meta.txt")
+            mask_path = self._mask_path_from_color_path(color_path)
+            meta_path = self._meta_path_from_color_path(color_path)
             meta_data = pd.read_csv(
                 meta_path, sep=" ", header=None, converters={2: lambda x: str(x)}
             )
@@ -235,9 +235,7 @@ class NOCSDataset(torch.utils.data.Dataset):
     def _sample_from_sample_data(self, sample_data: dict) -> dict:
         """Create dictionary containing a single sample."""
         color = torch.from_numpy(np.asarray(Image.open(sample_data["color_path"])))
-        depth = torch.from_numpy(
-            np.asarray(Image.open(sample_data["depth_path"]), dtype=np.float64) * 0.001
-        )
+        depth = self._load_depth(sample_data["depth_path"])
         # TODO support noisy mask
         instances_mask = self._load_mask(sample_data["mask_path"])
         instance_mask = instances_mask == sample_data["mask_id"]
@@ -258,7 +256,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         return sample
 
     def _depth_path_from_color_path(self, color_path: str) -> str:
-        """Return path to depth file from path to color file."""
+        """Return path to depth file from color filepath."""
         if self._split in ["real_train", "real_test"]:
             depth_path = color_path.replace("color", "depth")
         elif self._split in ["camera_train"]:
@@ -270,6 +268,16 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
         return depth_path
+
+    def _mask_path_from_color_path(self, color_path: str) -> str:
+        """Return path to mask file from color filepath."""
+        mask_path = color_path.replace("color", "mask")
+        return mask_path
+
+    def _meta_path_from_color_path(self, color_path: str) -> str:
+        """Return path to meta file from color filepath."""
+        meta_path = color_path.replace("color.png", "meta.txt")
+        return meta_path
 
     def _get_pose_and_scale(
         self, color_path: str, gt_id: int, meta_row: pd.Series
@@ -304,9 +312,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         if gts_path is None:  # camera_train and real_train
             # use ground truth NOCS mask to perform alignment
             depth_path = self._depth_path_from_color_path(color_path)
-            depth = torch.from_numpy(
-                np.asarray(Image.open(depth_path), dtype=np.float64) * 0.001
-            )
+            depth = self._load_depth(depth_path)
             # nocs_path =
 
             position = (
@@ -393,3 +399,10 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:  # REAL masks are grayscale
             instances_mask = mask_img
         return instances_mask
+
+    def _load_depth(self, depth_path: str) -> torch.Tensor:
+        """Load depth from depth filepath."""
+        depth = torch.from_numpy(
+            np.asarray(Image.open(depth_path), dtype=np.float64) * 0.001
+        )
+        return depth
