@@ -124,7 +124,9 @@ class NOCSDataset(torch.utils.data.Dataset):
             depth_file = self._depth_file_from_color_file(color_file)
             mask_file = color_file.replace("color", "mask")
             meta_file = color_file.replace("color.png", "meta.txt")
-            meta_data = pd.read_csv(meta_file, sep=" ", header=None)
+            meta_data = pd.read_csv(
+                meta_file, sep=" ", header=None, converters={2: lambda x: str(x)}
+            )
             mask_img = np.asarray(Image.open(mask_file), dtype=np.uint8)
             if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
                 mask = mask_img[:, :, 0]  # use first channel only
@@ -141,7 +143,8 @@ class NOCSDataset(torch.utils.data.Dataset):
                 elif match.shape[0] != 1:
                     print(f"Warning: mask {mask_id} not unique in {meta_file}")
 
-                category_id = match.iloc[0, 1]
+                meta_row = match.iloc[0]
+                category_id = meta_row.iloc[1]
                 if category_id == 0:  # unknown / distractor object
                     continue
                 # TODO get transform, position, quaternion, scale
@@ -153,7 +156,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                     max_extent,
                     nocs_scale,
                     nocs_transform,
-                ) = self._get_pose_and_scale(color_file, gt_id)
+                ) = self._get_pose_and_scale(color_file, gt_id, meta_row)
                 sample_info = {
                     "color_file": color_file,
                     "depth_file": depth_file,
@@ -272,8 +275,17 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise ValueError(f"Specified split {self._split} is not supported.")
         return depth_file
 
-    def _get_pose_and_scale(self, color_file: str, gt_id: int) -> tuple:
+    def _get_pose_and_scale(
+        self, color_file: str, gt_id: int, meta_row: pd.Series
+    ) -> tuple:
         """Return position, orientation, scale and NOCS transform.
+
+        Args:
+            color_file: Path to the color file.
+            gt_id:
+                Ground truth id. This is 0-indexed id of valid instances in meta file.
+            meta_row:
+                Matching row of meta file. Contains necessary information about mesh.
 
         Returns:
             position (np.ndarray):
@@ -290,6 +302,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         # TODO OpenGL / CV camera convention?
         gts_path = self._get_gts_path(color_file)
+        mesh_path = self._get_obj_path(meta_row)
         if gts_path is None:
             # TODO compute new ground truth information from nocs map
             position = (
@@ -304,6 +317,12 @@ class NOCSDataset(torch.utils.data.Dataset):
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
             orientation = Rotation.from_matrix(rotation_matrix).as_quat()
+            if "gt_scales" in gts_data:
+                gt_scales = gts_data["gt_scales"]  # tight bounding box size in NOCS
+                max_extent = np.max(gt_scales) * nocs_scale
+            else:
+                pass
+                # print(color_file, gt_id, nocs_scale)
             max_extent = None
 
         return position, orientation, max_extent, nocs_scale, nocs_transformation
@@ -326,3 +345,25 @@ class NOCSDataset(torch.utils.data.Dataset):
         gts_file_name = f"results_{split_path[-3]}_{split_path[-2]}_{number}.pkl"
         gts_file = os.path.join(gts_folder, gts_file_name)
         return gts_file
+
+    def _get_obj_path(self, meta_row: pd.Series) -> str:
+        """Return path to object file from meta data row."""
+        if "camera" in self._split:  # ShapeNet mesh
+            synset_id = meta_row.iloc[2]
+            object_id = meta_row.iloc[3]
+            obj_path = os.path.join(
+                self._root_dir,
+                "obj_models",
+                self._split.replace("camera_", ""),
+                synset_id,
+                object_id,
+                "model.obj",
+            )
+        elif "real" in self._split:  # REAL mesh
+            object_id = meta_row.iloc[2]
+            obj_path = os.path.join(
+                self._root_dir, "obj_models", self._split, object_id + ".obj"
+            )
+        else:
+            raise ValueError(f"Specified split {self._split} is not supported.")
+        return obj_path

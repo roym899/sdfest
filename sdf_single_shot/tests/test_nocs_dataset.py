@@ -2,6 +2,7 @@
 import os
 import shutil
 
+import pandas as pd
 from pytest import FixtureRequest
 import torch
 
@@ -104,3 +105,24 @@ def test_nocsdataset_get_pose_and_scale(request: FixtureRequest, tmp_path: str) 
     camera_train, camera_val, real_train, real_test = _create_datasets(
         request.fspath.dirname, tmp_path
     )
+    # check that all datasets return correct data
+
+
+def test_nocsdataset_get_obj_path(request: FixtureRequest, tmp_path: str) -> None:
+    """Test getting pose and scale from NOCS dataset."""
+    camera_train, camera_val, real_train, real_test = _create_datasets(
+        request.fspath.dirname, tmp_path
+    )
+    # check that all datasets return correct data
+    assert os.path.isfile(camera_train._get_obj_path(
+        pd.Series([0, 0, "02876657", "ab6792cddc7c4c83afbf338b16b43f53"])
+    ))
+    assert os.path.isfile(camera_val._get_obj_path(
+        pd.Series([0, 0, "03642806", "fdec2b8af5dd988cef56c22fd326c67"])
+    ))
+    assert os.path.isfile(real_train._get_obj_path(
+        pd.Series([0, 0, "mug2_scene3_norm"])
+    ))
+    assert os.path.isfile(real_test._get_obj_path(
+        pd.Series([0, 0, "bowl_white_small_norm"])
+    ))
