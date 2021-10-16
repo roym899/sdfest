@@ -13,6 +13,7 @@ from PIL import Image
 from sdf_differentiable_renderer import Camera
 
 from sdf_single_shot import pointset_utils
+from sdf_single_shot.datasets import nocs_utils
 
 
 class NOCSDataset(torch.utils.data.Dataset):
@@ -119,49 +120,45 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         os.makedirs(self._preprocess_path)
 
-        color_files = self._get_color_files()
+        color_paths = self._get_color_files()
         counter = 0
-        for color_file in color_files:
-            depth_file = self._depth_file_from_color_file(color_file)
-            mask_file = color_file.replace("color", "mask")
-            meta_file = color_file.replace("color.png", "meta.txt")
+        for color_path in color_paths:
+            depth_path = self._depth_path_from_color_path(color_path)
+            mask_path = color_path.replace("color", "mask")
+            meta_path = color_path.replace("color.png", "meta.txt")
             meta_data = pd.read_csv(
-                meta_file, sep=" ", header=None, converters={2: lambda x: str(x)}
+                meta_path, sep=" ", header=None, converters={2: lambda x: str(x)}
             )
-            mask_img = np.asarray(Image.open(mask_file), dtype=np.uint8)
-            if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
-                mask = mask_img[:, :, 0]  # use first channel only
-            else:  # REAL masks are grayscale
-                mask = mask_img
-            mask_ids = np.unique(mask).tolist()
+            instances_mask = self._load_mask(mask_path)
+            mask_ids = np.unique(instances_mask).tolist()
             gt_id = 0  # GT only contains valid objects of interests and is 0-indexed
             for mask_id in mask_ids:
                 if mask_id == 255:  # 255 is background
                     continue
                 match = meta_data[meta_data.iloc[:, 0] == mask_id]
                 if match.empty:
-                    print(f"Warning: mask {mask_id} not found in {meta_file}")
+                    print(f"Warning: mask {mask_id} not found in {meta_path}")
                 elif match.shape[0] != 1:
-                    print(f"Warning: mask {mask_id} not unique in {meta_file}")
+                    print(f"Warning: mask {mask_id} not unique in {meta_path}")
 
                 meta_row = match.iloc[0]
                 category_id = meta_row.iloc[1]
                 if category_id == 0:  # unknown / distractor object
                     continue
-                # TODO get transform, position, quaternion, scale
                 # TODO symmetry
                 # TODO canonical frame alignment (potentially different conventions)
+
                 (
                     position,
                     orientation,
                     max_extent,
                     nocs_scale,
                     nocs_transform,
-                ) = self._get_pose_and_scale(color_file, gt_id, meta_row)
+                ) = self._get_pose_and_scale(color_path, gt_id, meta_row)
                 sample_info = {
-                    "color_file": color_file,
-                    "depth_file": depth_file,
-                    "mask_file": mask_file,
+                    "color_path": color_path,
+                    "depth_path": depth_path,
+                    "mask_path": mask_path,
                     "mask_id": mask_id,
                     "category_id": category_id,
                     # "shapenet_synset": mask_file,
@@ -237,14 +234,12 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     def _sample_from_sample_data(self, sample_data: dict) -> dict:
         """Create dictionary containing a single sample."""
-        color = torch.from_numpy(np.asarray(Image.open(sample_data["color_file"])))
+        color = torch.from_numpy(np.asarray(Image.open(sample_data["color_path"])))
         depth = torch.from_numpy(
-            np.asarray(Image.open(sample_data["depth_file"]), dtype=np.float64) * 0.001
+            np.asarray(Image.open(sample_data["depth_path"]), dtype=np.float64) * 0.001
         )
         # TODO support noisy mask
-        instances_mask = torch.from_numpy(
-            np.asarray(Image.open(sample_data["mask_file"]))
-        )
+        instances_mask = self._load_mask(sample_data["mask_path"])
         instance_mask = instances_mask == sample_data["mask_id"]
 
         pointcloud_mask = instance_mask if self._mask_pointcloud else None
@@ -262,27 +257,29 @@ class NOCSDataset(torch.utils.data.Dataset):
         }
         return sample
 
-    def _depth_file_from_color_file(self, color_file: str) -> str:
+    def _depth_path_from_color_path(self, color_path: str) -> str:
         """Return path to depth file from path to color file."""
         if self._split in ["real_train", "real_test"]:
-            depth_file = color_file.replace("color", "depth")
+            depth_path = color_path.replace("color", "depth")
         elif self._split in ["camera_train"]:
-            depth_file = color_file.replace("color", "composed")
-            depth_file = depth_file.replace("/train/", "/camera_full_depths/train/")
+            depth_path = color_path.replace("color", "composed")
+            depth_path = depth_path.replace("/train/", "/camera_full_depths/train/")
         elif self._split in ["camera_val"]:
-            depth_file = color_file.replace("color", "composed")
-            depth_file = depth_file.replace("/val/", "/camera_full_depths/val/")
+            depth_path = color_path.replace("color", "composed")
+            depth_path = depth_path.replace("/val/", "/camera_full_depths/val/")
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
-        return depth_file
+        return depth_path
 
     def _get_pose_and_scale(
-        self, color_file: str, gt_id: int, meta_row: pd.Series
+        self, color_path: str, gt_id: int, meta_row: pd.Series
     ) -> tuple:
         """Return position, orientation, scale and NOCS transform.
 
+        All of those follow OpenCV (x right, y down, z forward) convention.
+
         Args:
-            color_file: Path to the color file.
+            color_path: Path to the color file.
             gt_id:
                 Ground truth id. This is 0-indexed id of valid instances in meta file.
             meta_row:
@@ -302,10 +299,16 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Transformation from centered [-0.5,0.5]^3 NOCS coordinates to camera.
         """
         # TODO OpenGL / CV camera convention?
-        gts_path = self._get_gts_path(color_file)
+        gts_path = self._get_gts_path(color_path)
         obj_path = self._get_obj_path(meta_row)
         if gts_path is None:  # camera_train and real_train
-            # TODO compute new ground truth information from nocs map
+            # use ground truth NOCS mask to perform alignment
+            depth_path = self._depth_path_from_color_path(color_path)
+            depth = torch.from_numpy(
+                np.asarray(Image.open(depth_path), dtype=np.float64) * 0.001
+            )
+            # nocs_path =
+
             position = (
                 orientation
             ) = max_extent = nocs_scale = nocs_transformation = None
@@ -329,8 +332,8 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         return position, orientation, max_extent, nocs_scale, nocs_transformation
 
-    def _get_gts_path(self, color_file: str) -> Optional[str]:
-        """Return path to gts file for a color_file.
+    def _get_gts_path(self, color_path: str) -> Optional[str]:
+        """Return path to gts file from color filepath.
 
         Return None if split does not have ground truth information.
         """
@@ -341,12 +344,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             return None
 
-        path = os.path.normpath(color_file)
+        path = os.path.normpath(color_path)
         split_path = path.split(os.sep)
         number = path[-14:-10]
-        gts_file_name = f"results_{split_path[-3]}_{split_path[-2]}_{number}.pkl"
-        gts_file = os.path.join(gts_folder, gts_file_name)
-        return gts_file
+        gts_filename = f"results_{split_path[-3]}_{split_path[-2]}_{number}.pkl"
+        gts_path = os.path.join(gts_folder, gts_filename)
+        return gts_path
 
     def _get_obj_path(self, meta_row: pd.Series) -> str:
         """Return path to object file from meta data row."""
@@ -371,7 +374,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         return obj_path
 
     def _get_max_extent_from_obj(self, obj_path: str) -> float:
-        """Return maximum extent of bounding box of obj file.
+        """Return maximum extent of bounding box from obj filepath.
 
         Note that this is normalized extent (with diagonal == 1) in the case of CAMERA
         dataset, and unnormalized (i.e., metric) extent in the case of REAL dataset.
@@ -381,3 +384,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         extents = np.max(vertices, axis=0) - np.min(vertices, axis=0)
         max_extent = np.max(extents)
         return max_extent
+
+    def _load_mask(self, mask_path: str) -> np.ndarray:
+        """Load mask from mask filepath."""
+        mask_img = np.asarray(Image.open(mask_path), dtype=np.uint8)
+        if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
+            instances_mask = mask_img[:, :, 0]  # use first channel only
+        else:  # REAL masks are grayscale
+            instances_mask = mask_img
+        return instances_mask
