@@ -6,6 +6,7 @@ from typing import Optional
 
 from scipy.spatial.transform import Rotation
 import numpy as np
+import open3d as o3d
 import pandas as pd
 import torch
 from PIL import Image
@@ -302,13 +303,13 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         # TODO OpenGL / CV camera convention?
         gts_path = self._get_gts_path(color_file)
-        mesh_path = self._get_obj_path(meta_row)
-        if gts_path is None:
+        obj_path = self._get_obj_path(meta_row)
+        if gts_path is None:  # camera_train and real_train
             # TODO compute new ground truth information from nocs map
             position = (
                 orientation
             ) = max_extent = nocs_scale = nocs_transformation = None
-        else:
+        else:  # camera_val and real_test
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transformation = gts_data["gt_RTs"][gt_id]
             position = nocs_transformation[0:3, 3]
@@ -317,13 +318,14 @@ class NOCSDataset(torch.utils.data.Dataset):
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
             orientation = Rotation.from_matrix(rotation_matrix).as_quat()
-            if "gt_scales" in gts_data:
-                gt_scales = gts_data["gt_scales"]  # tight bounding box size in NOCS
+            if "gt_scales" in gts_data:  # camera val
+                # CAMERA / ShapeNet meshes are normalized s.t. diagonal == 1
+                gt_scales = gts_data["gt_scales"][gt_id]
                 max_extent = np.max(gt_scales) * nocs_scale
-            else:
-                pass
-                # print(color_file, gt_id, nocs_scale)
-            max_extent = None
+                # this is the same as _get_max_extent_from_obj would return
+            else:  # real test
+                # REAL object meshes are not (!) normalized
+                max_extent = self._get_max_extent_from_obj(obj_path)
 
         return position, orientation, max_extent, nocs_scale, nocs_transformation
 
@@ -367,3 +369,15 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
         return obj_path
+
+    def _get_max_extent_from_obj(self, obj_path: str) -> float:
+        """Return maximum extent of bounding box of obj file.
+
+        Note that this is normalized extent (with diagonal == 1) in the case of CAMERA
+        dataset, and unnormalized (i.e., metric) extent in the case of REAL dataset.
+        """
+        mesh = o3d.io.read_triangle_mesh(obj_path)
+        vertices = np.asarray(mesh.vertices)
+        extents = np.max(vertices, axis=0) - np.min(vertices, axis=0)
+        max_extent = np.max(extents)
+        return max_extent
