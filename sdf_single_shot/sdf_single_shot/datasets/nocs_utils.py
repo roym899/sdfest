@@ -48,8 +48,9 @@ def estimate_similarity_transform(
     ratio_ts = target_norm / source_norm
     ratio_st = source_norm / target_norm
     pass_t = ratio_st if (ratio_st > ratio_ts) else ratio_ts
+    pass_t *= 0.01
     stop_t = pass_t / 100
-    n_iter = 100
+    n_iter = 500
     if verbose:
         print("Pass threshold: ", pass_t)
         print("Stop threshold: ", stop_t)

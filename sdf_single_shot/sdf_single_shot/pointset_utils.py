@@ -31,6 +31,7 @@ def depth_to_pointcloud(
     camera: Camera,
     normalize: bool = False,
     mask: Optional[torch.Tensor] = None,
+    convention: str = "opengl",
 ) -> torch.Tensor:
     """Convert depth image to pointcloud.
 
@@ -41,7 +42,10 @@ def depth_to_pointcloud(
         mask:
             Only points with mask != 0 will be added to pointcloud.
             No masking will be performed if None.
-
+        convention:
+            The camera frame convention to use. One of:
+                "opengl": x right, y up, z back
+                "opencv": x right, y down, z forward
     Returns:
         The pointcloud in the camera frame, in OpenGL convention, shape (N,3).
     """
@@ -61,11 +65,18 @@ def depth_to_pointcloud(
         dim=1,
     )
 
-    # OpenGL coordinate system
-    final_points = torch.empty_like(points)
-    final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
-    final_points[:, 1] = - (points[:, 1] - cy) * points[:, 2] / fy
-    final_points[:, 2] = - points[:, 2]
+    if convention == "opengl":
+        final_points = torch.empty_like(points)
+        final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
+        final_points[:, 1] = - (points[:, 1] - cy) * points[:, 2] / fy
+        final_points[:, 2] = - points[:, 2]
+    elif convention == "opencv":
+        final_points = torch.empty_like(points)
+        final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
+        final_points[:, 1] = (points[:, 1] - cy) * points[:, 2] / fy
+        final_points[:, 2] = points[:, 2]
+    else:
+        raise ValueError(f"Unsupported camera convention {convention}.")
 
     if normalize:
         final_points, _ = normalize_points(final_points)

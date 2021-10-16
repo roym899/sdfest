@@ -3,6 +3,7 @@ from glob import glob
 import os
 import pickle
 from typing import Optional
+import matplotlib.pyplot as plt
 
 from scipy.spatial.transform import Rotation
 import numpy as np
@@ -79,11 +80,11 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         self._root_dir = root_dir
         self._split = split
+        self._camera = self._get_split_camera()
         self._preprocess_path = os.path.join(root_dir, "sdfest_pre", split)
         if not os.path.isdir(self._preprocess_path):
             self._preprocess_dataset()
         self._sample_files = self._get_sample_files()
-        self._camera = self._get_split_camera()
         self._mask_pointcloud = mask_pointcloud
         self._normalize_pointcloud = normalize_pointcloud
 
@@ -154,7 +155,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                     max_extent,
                     nocs_scale,
                     nocs_transform,
-                ) = self._get_pose_and_scale(color_path, gt_id, meta_row)
+                ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
                 sample_info = {
                     "color_path": color_path,
                     "depth_path": depth_path,
@@ -279,8 +280,13 @@ class NOCSDataset(torch.utils.data.Dataset):
         meta_path = color_path.replace("color.png", "meta.txt")
         return meta_path
 
+    def _nocs_map_path_from_color_path(self, color_path: str) -> str:
+        """Return NOCS map filepath from color filepath."""
+        nocs_map_path = color_path.replace("color.png", "coord.png")
+        return nocs_map_path
+
     def _get_pose_and_scale(
-        self, color_path: str, gt_id: int, meta_row: pd.Series
+        self, color_path: str, mask_id: int, gt_id: int, meta_row: pd.Series
     ) -> tuple:
         """Return position, orientation, scale and NOCS transform.
 
@@ -288,6 +294,7 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         Args:
             color_path: Path to the color file.
+            mask_id: Instance id in the instances mask.
             gt_id:
                 Ground truth id. This is 0-indexed id of valid instances in meta file.
             meta_row:
@@ -311,9 +318,15 @@ class NOCSDataset(torch.utils.data.Dataset):
         obj_path = self._get_obj_path(meta_row)
         if gts_path is None:  # camera_train and real_train
             # use ground truth NOCS mask to perform alignment
-            depth_path = self._depth_path_from_color_path(color_path)
-            depth = self._load_depth(depth_path)
-            # nocs_path =
+            # scales, rotation, translations, tf = self._estimate_object(color_path, mask_id)
+
+            # print(scales)
+            # print(translations)
+            # print(rotation)
+            # print(tf)
+
+            # plt.imshow(nocs_map)
+            # plt.show()
 
             position = (
                 orientation
@@ -331,6 +344,15 @@ class NOCSDataset(torch.utils.data.Dataset):
                 # CAMERA / ShapeNet meshes are normalized s.t. diagonal == 1
                 gt_scales = gts_data["gt_scales"][gt_id]
                 max_extent = np.max(gt_scales) * nocs_scale
+                scales, rotation, translations, tf = self._estimate_object(
+                    color_path, mask_id, nocs_transformation
+                )
+                print("next")
+                print(translations)
+                print(position)
+                # print(rotation, rotation_matrix)
+                # print(translations, position)
+                # print(tf, nocs_transformation)
                 # this is the same as _get_max_extent_from_obj would return
             else:  # real test
                 # REAL object meshes are not (!) normalized
@@ -391,14 +413,14 @@ class NOCSDataset(torch.utils.data.Dataset):
         max_extent = np.max(extents)
         return max_extent
 
-    def _load_mask(self, mask_path: str) -> np.ndarray:
+    def _load_mask(self, mask_path: str) -> torch.Tensor:
         """Load mask from mask filepath."""
         mask_img = np.asarray(Image.open(mask_path), dtype=np.uint8)
         if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
             instances_mask = mask_img[:, :, 0]  # use first channel only
         else:  # REAL masks are grayscale
             instances_mask = mask_img
-        return instances_mask
+        return torch.from_numpy(instances_mask)
 
     def _load_depth(self, depth_path: str) -> torch.Tensor:
         """Load depth from depth filepath."""
@@ -406,3 +428,62 @@ class NOCSDataset(torch.utils.data.Dataset):
             np.asarray(Image.open(depth_path), dtype=np.float64) * 0.001
         )
         return depth
+
+    def _load_nocs_map(self, nocs_map_path: str) -> torch.Tensor:
+        """Load NOCS map from NOCS map filepath.
+
+        Returns:
+            NOCS map where each channel corresponds to one dimension in NOCS.
+            Coordinates are normalized to [0,1], shape (H,W,3).
+        """
+        nocs_map = torch.from_numpy(
+            np.asarray(Image.open(nocs_map_path), dtype=np.float64) / 255
+        )
+        return nocs_map[:, :, :3]
+
+    def _estimate_object(self, color_path: str, mask_id: int, gt) -> tuple:
+        """Estimate pose and scale through ground truth NOCS map."""
+        depth_path = self._depth_path_from_color_path(color_path)
+        depth = self._load_depth(depth_path)
+        # plt.imshow(depth)
+        # plt.show()
+        mask_path = self._mask_path_from_color_path(color_path)
+        instances_mask = self._load_mask(mask_path)
+        instance_mask = instances_mask == mask_id
+        nocs_map_path = self._nocs_map_path_from_color_path(color_path)
+        nocs_map = self._load_nocs_map(nocs_map_path)
+        valid_instance_mask = instance_mask * depth != 0
+        nocs_map[~valid_instance_mask] = 0
+        centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
+        measured_points = pointset_utils.depth_to_pointcloud(
+            depth, self._camera, mask=valid_instance_mask, convention="opencv"
+        )
+        # fig = plt.figure()
+        # ax = fig.add_subplot(projection="3d")
+        # ax.scatter(
+        #     centered_nocs_points[:, 0],
+        #     centered_nocs_points[:, 1],
+        #     centered_nocs_points[:, 2],
+        # )
+        # ax.scatter(measured_points[:, 0], measured_points[:, 1], measured_points[:, 2])
+        # plt.show()
+        a, b, c, t = nocs_utils.estimate_similarity_transform(
+            centered_nocs_points, measured_points, verbose=False
+        )
+        hp = torch.ones(len(centered_nocs_points), 4)
+        hp[:, :3] = centered_nocs_points
+        print("test")
+        print(type(hp.dtype))
+        print(type(t.dtype))
+        hp[:, 0:2] *= -1
+        p = (torch.from_numpy(t) @ hp.double().t()).t()
+        fig = plt.figure()
+        ax = fig.add_subplot(projection="3d")
+        ax.scatter(
+            p[:, 0],
+            p[:, 1],
+            p[:, 2],
+        )
+        ax.scatter(measured_points[:, 0], measured_points[:, 1], measured_points[:, 2])
+        plt.show()
+        return a, b, c, t
