@@ -2,17 +2,13 @@
 import os
 import shutil
 
-import matplotlib.pyplot as plt
 from pytest import FixtureRequest
 import torch
 
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 
 
-def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> None:
-    """Test preprocessing of different NOCS dataset splits."""
-    # create copy of NOCS test directory
-    root_dir = request.fspath.dirname
+def _create_datasets(root_dir: str, tmp_path: str) -> tuple:
     nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
     shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
     camera_train = NOCSDataset(
@@ -30,6 +26,14 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
     real_test = NOCSDataset(
         root_dir=tmp_path,
         split="real_test",
+    )
+    return camera_train, camera_val, real_train, real_test
+
+
+def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> None:
+    """Test preprocessing of different NOCS dataset splits."""
+    camera_train, camera_val, real_train, real_test = _create_datasets(
+        request.fspath.dirname, tmp_path
     )
 
     # check correct number of files
@@ -93,3 +97,10 @@ def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
         os.path.join(root_dir, "val", "00000", "0000_color.png")
     )
     assert os.path.isfile(gts_path)
+
+
+def test_nocsdataset_get_pose_and_scale(request: FixtureRequest, tmp_path: str) -> None:
+    """Test getting pose and scale from NOCS dataset."""
+    camera_train, camera_val, real_train, real_test = _create_datasets(
+        request.fspath.dirname, tmp_path
+    )

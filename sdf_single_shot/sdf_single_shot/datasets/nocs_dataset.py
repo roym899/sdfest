@@ -4,6 +4,7 @@ import os
 import pickle
 from typing import Optional
 
+from scipy.spatial.transform import Rotation
 import numpy as np
 import pandas as pd
 import torch
@@ -146,9 +147,13 @@ class NOCSDataset(torch.utils.data.Dataset):
                 # TODO get transform, position, quaternion, scale
                 # TODO symmetry
                 # TODO canonical frame alignment (potentially different conventions)
-                position, orientation, scale, nocs_transform = self._get_pose_and_scale(
-                    color_file, gt_id
-                )
+                (
+                    position,
+                    orientation,
+                    max_extent,
+                    nocs_scale,
+                    nocs_transform,
+                ) = self._get_pose_and_scale(color_file, gt_id)
                 sample_info = {
                     "color_file": color_file,
                     "depth_file": depth_file,
@@ -161,7 +166,8 @@ class NOCSDataset(torch.utils.data.Dataset):
                     "nocs_transform": nocs_transform,
                     "position": position,
                     "quaternion": orientation,
-                    "scale": scale,
+                    "nocs_scale": nocs_scale,
+                    "max_extent": max_extent,
                 }
                 out_file = os.path.join(self._preprocess_path, f"{counter:08}.pkl")
                 pickle.dump(sample_info, open(out_file, "wb"))
@@ -267,25 +273,40 @@ class NOCSDataset(torch.utils.data.Dataset):
         return depth_file
 
     def _get_pose_and_scale(self, color_file: str, gt_id: int) -> tuple:
-        """Return position, orientation, scale and NOCS transform."""
+        """Return position, orientation, scale and NOCS transform.
+
+        Returns:
+            position (np.ndarray):
+                Position of object center in camera frame. Shape (3,).
+            orientation (np.ndarray):
+                Orientation of object in camera frame.
+                Scalar-last quaternion, shape (4,).
+            max_extent (float):
+                Maximum side length of bounding box.
+            nocs_scale (float):
+                Diagonal of NOCS bounding box.
+            nocs_transformation:
+                Transformation from centered [-0.5,0.5]^3 NOCS coordinates to camera.
+        """
+        # TODO OpenGL / CV camera convention?
         gts_path = self._get_gts_path(color_file)
         if gts_path is None:
             # TODO compute new ground truth information from nocs map
-            position = rotation = scale = nocs_transformation = None
+            position = (
+                orientation
+            ) = max_extent = nocs_scale = nocs_transformation = None
         else:
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transformation = gts_data["gt_RTs"][gt_id]
             position = nocs_transformation[0:3, 3]
             rot_scale = nocs_transformation[0:3, 0:3]
-            scale = np.sqrt(np.sum(rot_scale ** 2, axis=0))
-            rotation = rot_scale / scale[:, None]
-            if "test/scene_1/0000_color.png" in color_file:
-                # print(gts_data["gt_RTs"].shape)
-                # print(nocs_transformation)
-                print(np.diag(scale) @ rotation)
-                print(rot_scale)
-                print(scale)
-        return position, rotation, scale, nocs_transformation
+            nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
+            rotation_matrix = rot_scale / nocs_scales[:, None]
+            nocs_scale = nocs_scales[0]
+            orientation = Rotation.from_matrix(rotation_matrix).as_quat()
+            max_extent = None
+
+        return position, orientation, max_extent, nocs_scale, nocs_transformation
 
     def _get_gts_path(self, color_file: str) -> Optional[str]:
         """Return path to gts file for a color_file.
