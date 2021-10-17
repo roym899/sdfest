@@ -20,8 +20,8 @@ from tqdm import tqdm
 import torch
 
 from sdf_estimation.simple_setup import SDFPipeline
-from sdf_estimation import synthetic, quaternion
-from sdf_single_shot import pointset_utils
+from sdf_estimation import synthetic
+from sdf_single_shot import pointset_utils, quaternion
 
 reset = False
 realtime = True

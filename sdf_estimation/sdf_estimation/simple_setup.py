@@ -14,12 +14,13 @@ from skimage.measure import marching_cubes
 from sdf_vae.sdf_vae import SDFVAE
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import pointset_utils
+from sdf_single_shot import pointset_utils, quaternion
 from sdf_differentiable_renderer import Camera, render_depth_gpu
 import torch
 import yoco
 
-from sdf_estimation import synthetic, losses, quaternion
+from sdf_estimation import synthetic, losses
+
 
 INIT_MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
 

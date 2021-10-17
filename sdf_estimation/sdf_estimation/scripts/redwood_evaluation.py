@@ -63,8 +63,8 @@ from tabulate import tabulate
 import torch
 import yoco
 
-
-from sdf_estimation import synthetic, quaternion
+from sdf_single_shot import quaternion
+from sdf_estimation import synthetic
 from sdf_differentiable_renderer import Camera
 from sdf_estimation.simple_setup import SDFPipeline
 

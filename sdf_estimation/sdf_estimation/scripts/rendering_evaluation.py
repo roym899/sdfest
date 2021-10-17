@@ -48,14 +48,14 @@ import random
 import time
 from typing import Dict, List, Optional
 
-import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 import torch
 from tqdm import tqdm
 import yoco
 
-from sdf_estimation import synthetic, quaternion
+from sdf_single_shot import quaternion
+from sdf_estimation import synthetic
 from sdf_differentiable_renderer import Camera
 from sdf_estimation.simple_setup import SDFPipeline
 
@@ -271,10 +271,6 @@ class Evaluator:
         inputs = self._generate_views(gt_mesh, num_views)
 
         log_path = self._get_log_path()
-
-        # for d in inputs["depth_images"]:
-        #     plt.imshow(d.cpu().detach().numpy())
-        #     plt.show()
 
         position, orientation, scale, shape = self.pipeline(
             **inputs,
