@@ -93,9 +93,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         camera_convention: str
         up_axis: str
 
-    # TODO add support for up_axis
-    # TODO add support for camera convention
+    # TODO add support for up_axis, canonical frame alignment (to allow different
+    #      conventions between dataset and model)
+    # TODO add support for camera convention (OpenGL / OpenCV)
     # TODO add support for scale convention
+    # TODO add support for different orientation representations
+    # TODO symmetry
 
     default_config: Config = {
         "root_dir": None,
@@ -105,8 +108,7 @@ class NOCSDataset(torch.utils.data.Dataset):
     }
 
     # TODO category filter
-    # TODO use config dict for dataset
-    # TODO uniform dataset code, adapt generated_dataset
+    # TODO unify dataset code, adapt generated_dataset
     def __init__(
         self,
         config: Config,
@@ -187,8 +189,6 @@ class NOCSDataset(torch.utils.data.Dataset):
                 category_id = meta_row.iloc[1]
                 if category_id == 0:  # unknown / distractor object
                     continue
-                # TODO symmetry
-                # TODO canonical frame alignment (potentially different conventions)
                 (
                     position,
                     orientation_q,
@@ -287,15 +287,18 @@ class NOCSDataset(torch.utils.data.Dataset):
         )
         if self._normalize_pointcloud:
             pointcloud, centroid = pointset_utils.normalize_points(pointcloud)
+            position = sample_data["position"] - centroid
+        else:
+            position = sample_data["position"]
 
         sample = {
             "color": color,
             "depth": depth,
             "pointcloud": pointcloud,
             "mask": instance_mask,
-            "position": sample_data["position"],
-            "orientation": sample_data["orientation_q"],  # TODO orientation repr
-            "scale": sample_data["max_extent"],  # TODO scale repr
+            "position": position,
+            "orientation": sample_data["orientation_q"],
+            "scale": sample_data["max_extent"],
         }
         return sample
 
@@ -356,7 +359,6 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_transformation:
                 Transformation from centered [-0.5,0.5]^3 NOCS coordinates to camera.
         """
-        # TODO OpenGL / CV camera convention?
         gts_path = self._get_gts_path(color_path)
         obj_path = self._get_obj_path(meta_row)
         if gts_path is None:  # camera_train and real_train
