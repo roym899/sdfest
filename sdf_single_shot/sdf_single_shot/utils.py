@@ -2,9 +2,7 @@
 import torch
 
 
-def save_checkpoint(
-    path: str, model: torch.nn.Module, optimizer, iteration, run_name
-):
+def save_checkpoint(path: str, model: torch.nn.Module, optimizer, iteration, run_name):
     """Save a checkpoint during training."""
     torch.save(
         {

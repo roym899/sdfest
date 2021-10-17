@@ -105,6 +105,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         "split": None,
         "mask_pointcloud": False,
         "normalize_pointcloud": False,
+        "camera_convention": "opengl",
     }
 
     # TODO category filter

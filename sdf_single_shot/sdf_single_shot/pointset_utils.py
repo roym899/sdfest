@@ -3,6 +3,8 @@ import torch
 from typing import Optional
 from sdf_differentiable_renderer import Camera
 
+from sdf_single_shot import quaternion
+
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
     """Normalize pointset to have zero mean.
@@ -68,8 +70,8 @@ def depth_to_pointcloud(
     if convention == "opengl":
         final_points = torch.empty_like(points)
         final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
-        final_points[:, 1] = - (points[:, 1] - cy) * points[:, 2] / fy
-        final_points[:, 2] = - points[:, 2]
+        final_points[:, 1] = -(points[:, 1] - cy) * points[:, 2] / fy
+        final_points[:, 2] = -points[:, 2]
     elif convention == "opencv":
         final_points = torch.empty_like(points)
         final_points[:, 0] = (points[:, 0] - cx) * points[:, 2] / fx
@@ -82,3 +84,102 @@ def depth_to_pointcloud(
         final_points, _ = normalize_points(final_points)
 
     return final_points
+
+
+def change_transform_camera_convention(
+    in_transform: torch.Tensor, in_convention: str, out_convention: str
+) -> torch.Tensor:
+    """Change the camera convention for a frame A -> camera frame transform.
+
+    Args:
+        in_transform:
+            Transformtion matrix(es) from coordinate frame A to in_convention camera
+            frame.  Shape (...,4,4).
+        in_convention:
+            Camera convention for the in_transform. One of "opengl", "opencv".
+        out_convention:
+            Camera convention for the returned transform. One of "opengl", "opencv".
+    Returns:
+        Transformtion matrix(es) from coordinate frame A to out_convention camera frame.
+        Same shape as in_transform.
+    """
+    # check whether valild convention was provided
+    if in_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"In camera convention {in_convention} not supported.")
+    if out_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"Out camera convention {in_convention} not supported.")
+
+    if in_convention == out_convention:
+        return in_transform
+    else:
+        gl2cv_transform = torch.diag(
+            in_transform.new_tensor([1.0, -1.0, -1.0, 1.0])
+        )  # == cv2gl_transform
+        return gl2cv_transform @ in_transform
+
+
+def change_position_camera_convention(
+    in_position: torch.Tensor,
+    in_convention: str,
+    out_convention: str,
+) -> tuple:
+    """Change the camera convention for a position in a camera frame.
+
+    Args:
+        in_position:
+            Position(s) of coordinate frame A in in_convention camera frame.
+            Shape (...,3).
+        in_convention:
+            Camera convention for the in_position. One of "opengl", "opencv".
+        out_convention:
+            Camera convention for the returned transform. One of "opengl", "opencv".
+    Returns:
+        Position(s) of coordinate frame A in out_convention camera frame. Shape (...,3).
+    """
+    # check whether valild convention was provided
+    if in_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"In camera convention {in_convention} not supported.")
+    if out_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"Out camera convention {in_convention} not supported.")
+
+    if in_convention == out_convention:
+        return in_position
+    else:
+        gl2cv = in_position.new_tensor([1.0, -1.0, -1.0])  # == cv2gl
+        return gl2cv * in_position
+
+
+def change_orientation_camera_convention(
+    in_orientation_q: torch.Tensor,
+    in_convention: str,
+    out_convention: str,
+) -> tuple:
+    """Change the camera convention for an orientation in a camera frame.
+
+    Orientation is represented as a quaternion, that rotates points from a
+    coordinate frame A to a camera frame (if those frames had the same origin).
+
+    Args:
+        in_orientation_q:
+            Quaternion(s) which transforms from coordinate frame A to in_convention
+            camera frame. Scalar-last convention. Shape (...,4).
+        in_convention:
+            Camera convention for the in_transform. One of "opengl", "opencv".
+        out_convention:
+            Camera convention for the returned transform. One of "opengl", "opencv".
+    Returns:
+        Quaternion(s) which transforms from coordinate frame A to in_convention camera
+        frame. Scalar-last convention. Same shape as in_orientation_q.
+    """
+    # check whether valild convention was provided
+    if in_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"In camera convention {in_convention} not supported.")
+    if out_convention not in ["opengl", "opencv"]:
+        raise ValueError(f"Out camera convention {in_convention} not supported.")
+
+    if in_convention == out_convention:
+        return in_orientation_q
+    else:
+        # rotate 180deg around x direction
+        gl2cv_q = in_orientation_q.new_tensor([1.0, 0, 0, 0])  # == cv2gl
+        return quaternion.quaternion_multiply(gl2cv_q, in_orientation_q)

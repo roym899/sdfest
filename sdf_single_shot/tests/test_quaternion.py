@@ -2,7 +2,7 @@
 
 import torch
 
-from sdf_estimation import quaternion
+from sdf_single_shot import quaternion
 
 
 def test_quaternion_invert() -> None:

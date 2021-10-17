@@ -12,9 +12,6 @@ def quaternion_multiply(
 ) -> torch.Tensor:
     """Multiply two quaternions representing rotations.
 
-    The returning quaternion will represent the composition of the
-    passed quaternions.
-
     Normal broadcasting rules apply.
 
     Args:
@@ -22,6 +19,8 @@ def quaternion_multiply(
             normalized quaternions of shape (..., 4), scalar-last convention
         quaternions_2:
             normalized quaternions of shape (..., 4), scalar-last convention
+    Returns:
+        Composition of passed quaternions.
     """
     ax, ay, az, aw = torch.unbind(quaternions_1, -1)
     bx, by, bz, bw = torch.unbind(quaternions_2, -1)
@@ -35,8 +34,6 @@ def quaternion_multiply(
 def quaternion_apply(quaternions: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
     """Rotate points by quaternions representing rotations.
 
-    The returned points are rotated by the rotations representing quaternions.
-
     Normal broadcasting rules apply.
 
     Args:
@@ -44,6 +41,8 @@ def quaternion_apply(quaternions: torch.Tensor, points: torch.Tensor) -> torch.T
             normalized quaternions of shape (..., 4), scalar-last convention
         points:
             points of shape (..., 3)
+    Returns:
+        Points rotated by the rotations representing quaternions.
     """
     points_as_quaternions = points.new_zeros(points.shape[:-1] + (4,))
     points_as_quaternions[..., :-1] = points
@@ -58,8 +57,8 @@ def quaternion_invert(quaternions: torch.Tensor) -> torch.Tensor:
 
     Args:
         quaternions:
-            the quaternions to invert, shape (..., 4), scalar-last convention
+            The quaternions to invert, shape (..., 4), scalar-last convention.
     Returns:
-        inverted quaternions, same shape as quaternions
+        Inverted quaternions, same shape as quaternions.
     """
     return quaternions * quaternions.new_tensor([-1, -1, -1, 1])
