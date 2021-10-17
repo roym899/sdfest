@@ -2,8 +2,8 @@
 from glob import glob
 import os
 import pickle
-from typing import Optional
-import matplotlib.pyplot as plt
+from typing import TypedDict, Optional
+
 from scipy.spatial.transform import Rotation
 import numpy as np
 import open3d as o3d
@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from sdf_differentiable_renderer import Camera
+import yoco
 
 from sdf_single_shot import pointset_utils
 from sdf_single_shot.datasets import nocs_utils
@@ -53,39 +54,80 @@ class NOCSDataset(torch.utils.data.Dataset):
     }
     category_str_to_id = {v: k for k, v in category_id_to_str.items()}
 
-    # TODO category filter
-    def __init__(
-        self,
-        root_dir: str,
-        split: str,
-        mask_pointcloud: bool = False,
-        normalize_pointcloud: bool = False,
-    ) -> None:
-        """Initialize the dataset.
+    class Config(TypedDict, total=False):
+        """Configuration dictionary for NOCSDataset.
 
-        Args:
+        Attributes:
             root_dir:
-                Root dir of dataset. See class documentation for further information.
             split:
                 The dataset split. The following strings are supported:
-                "camera_train": 275000 images, synthetic foreground + real background
-                "camera_val": 25000 images, synthetic foreground + real background
-                "real_train": 4300 images in 7 scenes, real
-                "real_test": 2750 images in 6 scenes, real
+                    "camera_train": 275000 images, synthetic objects + real background
+                    "camera_val": 25000 images, synthetic objects + real background
+                    "real_train": 4300 images in 7 scenes, real
+                    "real_test": 2750 images in 6 scenes, real
             mask_pointcloud: Whether the returned pointcloud will be masked.
             normalize_pointcloud:
                 Whether the returned pointcloud and position will be normalized, such
                 that pointcloud centroid is at the origin.
+            scale_convention:
+                Which scale is returned. The following strings are supported:
+                    "diagonal": Length of bounding box' diagonal.
+                    "max": Maximum side length of bounding box.
+                    "half_max": Half maximum side length of bounding box.
+            camera_convention:
+                Which camera convention is used for position and orientation. One of:
+                    "opengl": x right, y up, z back
+                    "opencv": x right, y down, z forward
+                Note that this does not influence how the dataset is processed, only the
+                returned position and quaternion.
+            up_axis:
+                Which object axis corresponds to up axis in samples.
+                One of: "x", "y", "z".
         """
-        self._root_dir = root_dir
-        self._split = split
+
+        root_dir: str
+        split: str
+        mask_pointcloud: bool
+        normalize_pointcloud: bool
+        scale_convention: str
+        camera_convention: str
+        up_axis: str
+
+    # TODO add support for up_axis
+    # TODO add support for camera convention
+    # TODO add support for scale convention
+
+    default_config: Config = {
+        "root_dir": None,
+        "split": None,
+        "mask_pointcloud": False,
+        "normalize_pointcloud": False,
+    }
+
+    # TODO category filter
+    # TODO use config dict for dataset
+    # TODO uniform dataset code, adapt generated_dataset
+    def __init__(
+        self,
+        config: Config,
+    ) -> None:
+        """Initialize the dataset.
+
+        Args:
+            config:
+                Root dir of dataset. Provided dictionary will be merged with
+                default_dict. See NOCSDataset.Config for supported keys.
+        """
+        self._config = yoco.load_config(config, default_dict=NOCSDataset.default_config)
+        self._root_dir = self._config["root_dir"]
+        self._split = self._config["split"]
         self._camera = self._get_split_camera()
-        self._preprocess_path = os.path.join(root_dir, "sdfest_pre", split)
+        self._preprocess_path = os.path.join(self._root_dir, "sdfest_pre", self._split)
         if not os.path.isdir(self._preprocess_path):
             self._preprocess_dataset()
         self._sample_files = self._get_sample_files()
-        self._mask_pointcloud = mask_pointcloud
-        self._normalize_pointcloud = normalize_pointcloud
+        self._mask_pointcloud = self._config["mask_pointcloud"]
+        self._normalize_pointcloud = self._config["normalize_pointcloud"]
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -147,26 +189,25 @@ class NOCSDataset(torch.utils.data.Dataset):
                     continue
                 # TODO symmetry
                 # TODO canonical frame alignment (potentially different conventions)
-
                 (
                     position,
-                    orientation,
+                    orientation_q,
                     max_extent,
                     nocs_scale,
                     nocs_transform,
                 ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
+
+                obj_path = self._get_obj_path(meta_row)
                 sample_info = {
                     "color_path": color_path,
                     "depth_path": depth_path,
                     "mask_path": mask_path,
                     "mask_id": mask_id,
                     "category_id": category_id,
-                    # "shapenet_synset": mask_file,
-                    # "shapenet_id": mask_file,
-                    # "real_object_id": mask_file,
+                    "obj_path": obj_path,
                     "nocs_transform": nocs_transform,
                     "position": position,
-                    "quaternion": orientation,
+                    "orientation_q": orientation_q,
                     "nocs_scale": nocs_scale,
                     "max_extent": max_extent,
                 }
@@ -252,6 +293,9 @@ class NOCSDataset(torch.utils.data.Dataset):
             "depth": depth,
             "pointcloud": pointcloud,
             "mask": instance_mask,
+            "position": sample_data["position"],
+            "orientation": sample_data["orientation_q"],  # TODO orientation repr
+            "scale": sample_data["max_extent"],  # TODO scale repr
         }
         return sample
 
@@ -302,7 +346,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         Returns:
             position (np.ndarray):
                 Position of object center in camera frame. Shape (3,).
-            orientation (np.ndarray):
+            quaternion (np.ndarray):
                 Orientation of object in camera frame.
                 Scalar-last quaternion, shape (4,).
             max_extent (float):
@@ -317,9 +361,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         obj_path = self._get_obj_path(meta_row)
         if gts_path is None:  # camera_train and real_train
             # use ground truth NOCS mask to perform alignment
-            position, rotation_matrix, nocs_scale, nocs_transform = self._estimate_object(
-                color_path, mask_id
-            )
+            (
+                position,
+                rotation_matrix,
+                nocs_scale,
+                nocs_transform,
+            ) = self._estimate_object(color_path, mask_id)
             orientation = Rotation.from_matrix(rotation_matrix).as_quat()
             max_extent = self._get_max_extent_from_obj(obj_path)
         else:  # camera_val and real_test
@@ -421,7 +468,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             np.asarray(Image.open(nocs_map_path), dtype=np.float64) / 255
         )
         # z-coordinate has to be flipped
-        # see https://github.com/hughw19/NOCS_CVPR2019/blob/14dbce775c3c7c45bb7b19269bd53d68efb8f73f/dataset.py#L327
+        # see https://github.com/hughw19/NOCS_CVPR2019/blob/14dbce775c3c7c45bb7b19269bd53d68efb8f73f/dataset.py#L327 # noqa: E501
         nocs_map[:, :, 2] = 1 - nocs_map[:, :, 2]
         return nocs_map[:, :, :3]
 
