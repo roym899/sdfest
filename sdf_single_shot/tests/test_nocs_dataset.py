@@ -1,6 +1,7 @@
 """Tests for nocs_dataset module."""
 import os
 import shutil
+from typing import Optional
 
 import pandas as pd
 from pytest import FixtureRequest
@@ -9,31 +10,37 @@ import torch
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 
 
-def _create_datasets(root_dir: str, tmp_path: str) -> tuple:
+def _create_datasets(
+    root_dir: str, tmp_path: str, category_str: Optional[str] = None
+) -> tuple:
     nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
     shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
     camera_train = NOCSDataset(
         {
             "root_dir": tmp_path,
             "split": "camera_train",
+            "category_str": category_str,
         }
     )
     camera_val = NOCSDataset(
         {
             "root_dir": tmp_path,
             "split": "camera_val",
+            "category_str": category_str,
         }
     )
     real_train = NOCSDataset(
         {
             "root_dir": tmp_path,
             "split": "real_train",
+            "category_str": category_str,
         }
     )
     real_test = NOCSDataset(
         {
             "root_dir": tmp_path,
             "split": "real_test",
+            "category_str": category_str,
         }
     )
     return camera_train, camera_val, real_train, real_test
@@ -57,11 +64,21 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
     assert len(real_test) == 5
 
 
+def test_nocsdataset_category_filtering(request: FixtureRequest, tmp_path: str) -> None:
+    """Test category-based filtering of datasets."""
+    camera_train, camera_val, real_train, real_test = _create_datasets(
+        request.fspath.dirname, tmp_path, category_str="mug"
+    )
+
+    assert len(camera_train) == 1
+    assert len(camera_val) == 0
+    assert len(real_train) == 1
+    assert len(real_test) == 1
+
+
 def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting different samples from NOCS dataset."""
-    datasets = _create_datasets(
-        request.fspath.dirname, tmp_path
-    )
+    datasets = _create_datasets(request.fspath.dirname, tmp_path)
     for dataset in datasets:
         sample = dataset[0]
         assert sample["color"].shape == (480, 640, 3)
@@ -96,9 +113,7 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
     """Test generation of ground truth path from color path."""
     root_dir = request.fspath.dirname
-    _, camera_val, _, real_test = _create_datasets(
-        root_dir, tmp_path
-    )
+    _, camera_val, _, real_test = _create_datasets(root_dir, tmp_path)
 
     gts_path = real_test._get_gts_path(
         os.path.join(root_dir, "real_test", "scene_1", "0000_color.png")
