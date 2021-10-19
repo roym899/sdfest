@@ -59,19 +59,24 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
 
 def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting different samples from NOCS dataset."""
-    camera_train, camera_val, real_train, real_test = _create_datasets(
+    datasets = _create_datasets(
         request.fspath.dirname, tmp_path
     )
-    sample = real_train[0]
-    assert sample["color"].shape == (480, 640, 3)
-    assert sample["depth"].shape == (480, 640)
-    assert sample["mask"].shape == (480, 640)
-    valid_depth_points = torch.sum(sample["depth"] != 0)
-    assert sample["pointcloud"].shape == (valid_depth_points, 3)
+    for dataset in datasets:
+        sample = dataset[0]
+        assert sample["color"].shape == (480, 640, 3)
+        assert sample["depth"].shape == (480, 640)
+        assert sample["mask"].shape == (480, 640)
+        valid_depth_points = torch.sum(sample["depth"] != 0)
+        assert sample["pointcloud"].shape == (valid_depth_points, 3)
 
-    assert camera_train[0]["depth"].shape == (480, 640)
-    assert camera_val[0]["depth"].shape == (480, 640)
-    assert real_test[0]["depth"].shape == (480, 640)
+        # test camera convention
+        dataset._camera_convention = "opencv"
+        sample_cv = dataset[0]
+        dataset._camera_convention = "opengl"
+        sample_gl = dataset[0]
+        assert sample_cv["position"][2] > 0
+        assert sample_gl["position"][2] < 0
 
 
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:

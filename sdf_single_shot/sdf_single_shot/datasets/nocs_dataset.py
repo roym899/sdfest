@@ -95,7 +95,6 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     # TODO add support for up_axis, canonical frame alignment (to allow different
     #      conventions between dataset and model)
-    # TODO add support for camera convention (OpenGL / OpenCV)
     # TODO add support for scale convention
     # TODO add support for different orientation representations
     # TODO symmetry
@@ -121,16 +120,17 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Root dir of dataset. Provided dictionary will be merged with
                 default_dict. See NOCSDataset.Config for supported keys.
         """
-        self._config = yoco.load_config(config, default_dict=NOCSDataset.default_config)
-        self._root_dir = self._config["root_dir"]
-        self._split = self._config["split"]
+        config = yoco.load_config(config, default_dict=NOCSDataset.default_config)
+        self._root_dir = config["root_dir"]
+        self._split = config["split"]
+        self._camera_convention = config["camera_convention"]
         self._camera = self._get_split_camera()
         self._preprocess_path = os.path.join(self._root_dir, "sdfest_pre", self._split)
         if not os.path.isdir(self._preprocess_path):
             self._preprocess_dataset()
         self._sample_files = self._get_sample_files()
-        self._mask_pointcloud = self._config["mask_pointcloud"]
-        self._normalize_pointcloud = self._config["normalize_pointcloud"]
+        self._mask_pointcloud = config["mask_pointcloud"]
+        self._normalize_pointcloud = config["normalize_pointcloud"]
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -297,8 +297,12 @@ class NOCSDataset(torch.utils.data.Dataset):
             "depth": depth,
             "pointcloud": pointcloud,
             "mask": instance_mask,
-            "position": position,
-            "orientation": sample_data["orientation_q"],
+            "position": pointset_utils.change_position_camera_convention(
+                position, "opencv", self._camera_convention
+            ),
+            "orientation": pointset_utils.change_orientation_camera_convention(
+                sample_data["orientation_q"], "opencv", self._camera_convention
+            ),
             "scale": sample_data["max_extent"],
         }
         return sample
@@ -348,9 +352,9 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Matching row of meta file. Contains necessary information about mesh.
 
         Returns:
-            position (np.ndarray):
+            position (torch.Tensor):
                 Position of object center in camera frame. Shape (3,).
-            quaternion (np.ndarray):
+            quaternion (torch.Tensor):
                 Orientation of object in camera frame.
                 Scalar-last quaternion, shape (4,).
             max_extent (float):
@@ -370,7 +374,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 nocs_scale,
                 nocs_transform,
             ) = self._estimate_object(color_path, mask_id)
-            orientation = Rotation.from_matrix(rotation_matrix).as_quat()
+            orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
             max_extent = self._get_max_extent_from_obj(obj_path)
         else:  # camera_val and real_test
             gts_data = pickle.load(open(gts_path, "rb"))
@@ -380,7 +384,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
-            orientation = Rotation.from_matrix(rotation_matrix).as_quat()
+            orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
             if "gt_scales" in gts_data:  # camera val
                 # CAMERA / ShapeNet meshes are normalized s.t. diagonal == 1
                 gt_scales = gts_data["gt_scales"][gt_id]
@@ -389,7 +393,9 @@ class NOCSDataset(torch.utils.data.Dataset):
                 # REAL object meshes are not (!) normalized
                 max_extent = self._get_max_extent_from_obj(obj_path)
 
-        return position, orientation, max_extent, nocs_scale, nocs_transform
+        position = torch.from_numpy(position)
+        orientation_q = torch.from_numpy(orientation_q)
+        return position, orientation_q, max_extent, nocs_scale, nocs_transform
 
     def _get_gts_path(self, color_path: str) -> Optional[str]:
         """Return path to gts file from color filepath.
