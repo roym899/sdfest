@@ -14,6 +14,7 @@ from sdf_differentiable_renderer import Camera
 import yoco
 
 from sdf_single_shot import pointset_utils
+from sdf_single_shot import quaternion
 from sdf_single_shot.datasets import nocs_utils
 
 
@@ -82,8 +83,15 @@ class NOCSDataset(torch.utils.data.Dataset):
                     "opencv": x right, y down, z forward
                 Note that this does not influence how the dataset is processed, only the
                 returned position and quaternion.
-            up_axis:
-                Which object axis corresponds to up axis in samples.
+            remap_y_axis:
+                If not None, the original y-axis will be mapped to the provided axis.
+                Resulting coordinate system will always be right-handed.
+                This is typically the up-axis.
+                One of: "x", "y", "z", "-x", "-y", "-z"
+            remap_x_axis:
+                If not None, the original x-axis will be mapped to the provided axis.
+                Resulting coordinate system will always be right-handed.
+                This is typically the front-axis.
                 One of: "x", "y", "z", "-x", "-y", "-z"
             category_str:
                 If not None, only samples from the matching category will be returned.
@@ -96,13 +104,13 @@ class NOCSDataset(torch.utils.data.Dataset):
         normalize_pointcloud: bool
         scale_convention: str
         camera_convention: str
-        up_axis: str
+        remap_y_axis: Optional[str]
+        remap_x_axis: Optional[str]
         category_str: Optional[str]
 
-    # TODO add support for up_axis, canonical frame alignment (to allow different
-    #      conventions between dataset and model)
     # TODO add support for different orientation representations
     # TODO symmetry
+    # TODO unify dataset code, adapt generated_dataset
 
     default_config: Config = {
         "root_dir": None,
@@ -112,9 +120,10 @@ class NOCSDataset(torch.utils.data.Dataset):
         "camera_convention": "opengl",
         "scale_convention": "half_max",
         "category_str": None,
+        "remap_y_axis": None,
+        "remap_x_axis": None,
     }
 
-    # TODO unify dataset code, adapt generated_dataset
     def __init__(
         self,
         config: Config,
@@ -138,6 +147,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         self._normalize_pointcloud = config["normalize_pointcloud"]
         self._scale_convention = config["scale_convention"]
         self._sample_files = self._get_sample_files(config["category_str"])
+        self._remap_y_axis = config["remap_y_axis"]
+        self._remap_x_axis = config["remap_x_axis"]
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -301,7 +312,6 @@ class NOCSDataset(torch.utils.data.Dataset):
         """Create dictionary containing a single sample."""
         color = torch.from_numpy(np.asarray(Image.open(sample_data["color_path"])))
         depth = self._load_depth(sample_data["depth_path"])
-        # TODO support noisy mask
         instances_mask = self._load_mask(sample_data["mask_path"])
         instance_mask = instances_mask == sample_data["mask_id"]
 
@@ -315,19 +325,27 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             position = sample_data["position"]
 
-        scale = self._get_scale_from_sample_data(sample_data)
+        # position
+        position = pointset_utils.change_position_camera_convention(
+            position, "opencv", self._camera_convention
+        )
+
+        # orientation / scale
+        orientation_q, extents = self._change_axis_convention(
+            sample_data["orientation_q"], sample_data["extents"]
+        )
+        orientation_q = pointset_utils.change_orientation_camera_convention(
+            orientation_q, "opencv", self._camera_convention
+        )
+        scale = self._get_scale(sample_data, extents)
 
         sample = {
             "color": color,
             "depth": depth,
             "pointcloud": pointcloud,
             "mask": instance_mask,
-            "position": pointset_utils.change_position_camera_convention(
-                position, "opencv", self._camera_convention
-            ),
-            "orientation": pointset_utils.change_orientation_camera_convention(
-                sample_data["orientation_q"], "opencv", self._camera_convention
-            ),
+            "position": position,
+            "orientation": orientation_q,
             "scale": scale,
         }
         return sample
@@ -525,8 +543,10 @@ class NOCSDataset(torch.utils.data.Dataset):
             centered_nocs_points, measured_points, verbose=False
         )
 
-    def _get_scale_from_sample_data(self, sample_data: dict) -> float:
-        """Return scale from stored sample data based on chosen scale convention."""
+    def _get_scale(
+        self, sample_data: dict, extents: torch.Tensor
+    ) -> float:
+        """Return scale from stored sample data and extents."""
         if self._scale_convention == "diagonal":
             return sample_data["nocs_scale"]
         elif self._scale_convention == "max":
@@ -534,8 +554,71 @@ class NOCSDataset(torch.utils.data.Dataset):
         elif self._scale_convention == "half_max":
             return 0.5 * sample_data["max_extent"]
         elif self._scale_convention == "full":
-            return sample_data["extents"]
+            return extents
         else:
             raise ValueError(
                 f"Specified scale convention {self._scale_convnetion} not supported."
             )
+
+    def _change_axis_convention(
+        self, orientation_q: torch.Tensor, extents: torch.Tensor
+    ) -> tuple:
+        """Adjust up-axis for orientation and extents.
+
+        Returns:
+            Tuple of position, orienation_q and extents, with specified up-axis.
+        """
+        if self._remap_y_axis is None and self._remap_x_axis is None:
+            return orientation_q, extents
+        elif self._remap_y_axis is None or self._remap_x_axis is None:
+            raise ValueError("Either both or none of remap_{y,x}_axis have to be None.")
+
+        rotation_o2n = np.zeros((3, 3))  # original to new object convention
+        if self._remap_y_axis == "x":
+            rotation_o2n[0, 1] = 1
+        elif self._remap_y_axis == "-x":
+            rotation_o2n[0, 1] = -1
+        elif self._remap_y_axis == "y":
+            rotation_o2n[1, 1] = 1
+        elif self._remap_y_axis == "-y":
+            rotation_o2n[1, 1] = -1
+        elif self._remap_y_axis == "z":
+            rotation_o2n[2, 1] = 1
+        elif self._remap_y_axis == "-z":
+            rotation_o2n[2, 1] = -1
+        else:
+            raise ValueError("Unsupported remap_y_axis {self.remap_y}")
+
+        if self._remap_x_axis == "x":
+            rotation_o2n[0, 0] = 1
+        elif self._remap_x_axis == "-x":
+            rotation_o2n[0, 0] = -1
+        elif self._remap_x_axis == "y":
+            rotation_o2n[1, 0] = 1
+        elif self._remap_x_axis == "-y":
+            rotation_o2n[1, 0] = -1
+        elif self._remap_x_axis == "z":
+            rotation_o2n[2, 0] = 1
+        elif self._remap_x_axis == "-z":
+            rotation_o2n[2, 0] = -1
+        else:
+            raise ValueError("Unsupported remap_x_axis {self.remap_y}")
+
+        # infer last column
+        rotation_o2n[:, 2] = 1 - np.abs(np.sum(rotation_o2n, 1))  # rows must sum to +-1
+        rotation_o2n[:, 2] *= np.linalg.det(rotation_o2n)  # make special orthogonal
+        if np.linalg.det(rotation_o2n) != 1.0:  # check if special orthogonal
+            raise ValueError("Unsupported combination of remap_{y,x}_axis. det != 1")
+        remapped_extents = torch.abs(torch.from_numpy(rotation_o2n) @ extents)
+
+        # quaternion so far: original -> camera
+        # we want a quaternion: new -> camera
+        rotation_n2o = rotation_o2n.T
+
+        quaternion_n2o = torch.from_numpy(Rotation.from_matrix(rotation_n2o).as_quat())
+
+        remapped_orientation_q = quaternion.quaternion_multiply(
+            orientation_q, quaternion_n2o
+        )  # new -> original -> camera
+
+        return remapped_orientation_q, remapped_extents

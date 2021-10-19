@@ -8,6 +8,7 @@ from pytest import FixtureRequest
 import torch
 
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
+from sdf_single_shot import quaternion
 
 
 def _create_datasets(
@@ -108,6 +109,26 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         assert max_scale == torch.max(full_scale)
         assert half_max_scale == 0.5 * max_scale
         assert diagonal_scale == torch.linalg.norm(full_scale)
+
+        # test axis convention
+        dataset._scale_convention = "full"  # to check permutation of extents
+        dataset._remap_y_axis = "y"
+        dataset._remap_x_axis = "x"
+        scales = dataset[0]["scale"]
+        orientation_q = dataset[0]["orientation"]
+        dataset._remap_y_axis = "x"
+        dataset._remap_x_axis = "-y"
+        scales_2 = dataset[0]["scale"]
+        orientation_q_2 = dataset[0]["orientation"]
+        assert torch.allclose(scales[[1, 0, 2]], scales_2)
+        # object point in first convention
+        test_point = torch.tensor([0.1, 0.5, 0.7])
+        # same object point in second convention
+        test_point_2 = torch.tensor([0.5, -0.1, 0.7])
+        # transform both points to camera
+        cam_point = quaternion.quaternion_apply(orientation_q, test_point)
+        cam_point_2 = quaternion.quaternion_apply(orientation_q_2, test_point_2)
+        assert torch.allclose(cam_point, cam_point_2)
 
 
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
