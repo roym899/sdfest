@@ -71,9 +71,11 @@ class NOCSDataset(torch.utils.data.Dataset):
                 that pointcloud centroid is at the origin.
             scale_convention:
                 Which scale is returned. The following strings are supported:
-                    "diagonal": Length of bounding box' diagonal.
+                    "diagonal":
+                        Length of bounding box' diagonal. This is what NOCS uses.
                     "max": Maximum side length of bounding box.
                     "half_max": Half maximum side length of bounding box.
+                    "full": Bounding box side lengths. Shape (3,).
             camera_convention:
                 Which camera convention is used for position and orientation. One of:
                     "opengl": x right, y up, z back
@@ -95,7 +97,6 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     # TODO add support for up_axis, canonical frame alignment (to allow different
     #      conventions between dataset and model)
-    # TODO add support for scale convention
     # TODO add support for different orientation representations
     # TODO symmetry
 
@@ -105,6 +106,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         "mask_pointcloud": False,
         "normalize_pointcloud": False,
         "camera_convention": "opengl",
+        "scale_convention": "half_max",
     }
 
     # TODO category filter
@@ -131,6 +133,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         self._sample_files = self._get_sample_files()
         self._mask_pointcloud = config["mask_pointcloud"]
         self._normalize_pointcloud = config["normalize_pointcloud"]
+        self._scale_convention = config["scale_convention"]
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -193,8 +196,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 (
                     position,
                     orientation_q,
-                    max_extent,
-                    nocs_scale,
+                    extents,
                     nocs_transform,
                 ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
 
@@ -209,8 +211,9 @@ class NOCSDataset(torch.utils.data.Dataset):
                     "nocs_transform": nocs_transform,
                     "position": position,
                     "orientation_q": orientation_q,
-                    "nocs_scale": nocs_scale,
-                    "max_extent": max_extent,
+                    "extents": extents,
+                    "nocs_scale": torch.linalg.norm(extents),
+                    "max_extent": torch.max(extents),
                 }
                 out_file = os.path.join(self._preprocess_path, f"{counter:08}.pkl")
                 pickle.dump(sample_info, open(out_file, "wb"))
@@ -292,6 +295,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             position = sample_data["position"]
 
+        scale = self._get_scale_from_sample_data(sample_data)
+
         sample = {
             "color": color,
             "depth": depth,
@@ -303,7 +308,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "orientation": pointset_utils.change_orientation_camera_convention(
                 sample_data["orientation_q"], "opencv", self._camera_convention
             ),
-            "scale": sample_data["max_extent"],
+            "scale": scale,
         }
         return sample
 
@@ -357,10 +362,8 @@ class NOCSDataset(torch.utils.data.Dataset):
             quaternion (torch.Tensor):
                 Orientation of object in camera frame.
                 Scalar-last quaternion, shape (4,).
-            max_extent (float):
-                Maximum side length of bounding box.
-            nocs_scale (float):
-                Diagonal of NOCS bounding box.
+            extents (torch.Tensor):
+                Bounding box side lengths.
             nocs_transformation:
                 Transformation from centered [-0.5,0.5]^3 NOCS coordinates to camera.
         """
@@ -374,8 +377,6 @@ class NOCSDataset(torch.utils.data.Dataset):
                 nocs_scale,
                 nocs_transform,
             ) = self._estimate_object(color_path, mask_id)
-            orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
-            max_extent = self._get_max_extent_from_obj(obj_path)
         else:  # camera_val and real_test
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transform = gts_data["gt_RTs"][gt_id]
@@ -384,18 +385,23 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
-            orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
-            if "gt_scales" in gts_data:  # camera val
-                # CAMERA / ShapeNet meshes are normalized s.t. diagonal == 1
-                gt_scales = gts_data["gt_scales"][gt_id]
-                max_extent = np.max(gt_scales) * nocs_scale
-            else:  # real test
-                # REAL object meshes are not (!) normalized
-                max_extent = self._get_max_extent_from_obj(obj_path)
+
+        orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
+        mesh_extents = self._get_mesh_extents_from_obj(obj_path)
+
+        if "camera" in self._split:
+            # CAMERA / ShapeNet meshes are normalized s.t. diagonal == 1
+            # get metric extents by scaling with the diagonal
+            extents = nocs_scale * mesh_extents
+        elif "real" in self._split:
+            # REAL object meshes are not normalized
+            extents = mesh_extents
+        else:
+            raise ValueError(f"Specified split {self._split} is not supported.")
 
         position = torch.from_numpy(position)
         orientation_q = torch.from_numpy(orientation_q)
-        return position, orientation_q, max_extent, nocs_scale, nocs_transform
+        return position, orientation_q, extents, nocs_transform
 
     def _get_gts_path(self, color_path: str) -> Optional[str]:
         """Return path to gts file from color filepath.
@@ -438,7 +444,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise ValueError(f"Specified split {self._split} is not supported.")
         return obj_path
 
-    def _get_max_extent_from_obj(self, obj_path: str) -> float:
+    def _get_mesh_extents_from_obj(self, obj_path: str) -> torch.Tensor:
         """Return maximum extent of bounding box from obj filepath.
 
         Note that this is normalized extent (with diagonal == 1) in the case of CAMERA
@@ -447,8 +453,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         mesh = o3d.io.read_triangle_mesh(obj_path)
         vertices = np.asarray(mesh.vertices)
         extents = np.max(vertices, axis=0) - np.min(vertices, axis=0)
-        max_extent = np.max(extents)
-        return max_extent
+        return torch.from_numpy(extents)
 
     def _load_mask(self, mask_path: str) -> torch.Tensor:
         """Load mask from mask filepath."""
@@ -499,3 +504,18 @@ class NOCSDataset(torch.utils.data.Dataset):
         return nocs_utils.estimate_similarity_transform(
             centered_nocs_points, measured_points, verbose=False
         )
+
+    def _get_scale_from_sample_data(self, sample_data: dict) -> float:
+        """Return scale from stored sample data based on chosen scale convention."""
+        if self._scale_convention == "diagonal":
+            return sample_data["nocs_scale"]
+        elif self._scale_convention == "max":
+            return sample_data["max_extent"]
+        elif self._scale_convention == "half_max":
+            return 0.5 * sample_data["max_extent"]
+        elif self._scale_convention == "full":
+            return sample_data["extents"]
+        else:
+            raise ValueError(
+                f"Specified scale convention {self._scale_convnetion} not supported."
+            )

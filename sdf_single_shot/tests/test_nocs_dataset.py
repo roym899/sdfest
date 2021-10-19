@@ -78,6 +78,20 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         assert sample_cv["position"][2] > 0
         assert sample_gl["position"][2] < 0
 
+        # test scale conventions
+        dataset._scale_convention = "full"
+        full_scale = dataset[0]["scale"]
+        dataset._scale_convention = "max"
+        max_scale = dataset[0]["scale"]
+        dataset._scale_convention = "half_max"
+        half_max_scale = dataset[0]["scale"]
+        dataset._scale_convention = "diagonal"
+        diagonal_scale = dataset[0]["scale"]
+        assert full_scale.shape == (3,)
+        assert max_scale == torch.max(full_scale)
+        assert half_max_scale == 0.5 * max_scale
+        assert diagonal_scale == torch.linalg.norm(full_scale)
+
 
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
     """Test generation of ground truth path from color path."""
