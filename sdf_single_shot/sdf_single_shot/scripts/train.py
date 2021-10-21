@@ -12,7 +12,10 @@ import torchinfo
 import wandb
 import yoco
 
-from sdf_single_shot.generated_dataset import SDFVAEViewDataset, collate_pointsets
+from sdf_single_shot.datasets.generated_dataset import (
+    SDFVAEViewDataset,
+    collate_pointsets,
+)
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
 from sdf_single_shot import sdf_utils, utils

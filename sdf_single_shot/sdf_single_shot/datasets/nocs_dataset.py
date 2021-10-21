@@ -177,7 +177,10 @@ class NOCSDataset(torch.utils.data.Dataset):
                 "color"
                 "depth"
                 "mask"
-                "pointcloud"
+                "pointset"
+                "position"
+                "orientation"
+                "scale"
         """
         sample_file = self._sample_files[idx]
         sample_data = pickle.load(open(sample_file, "rb"))
@@ -356,7 +359,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         sample = {
             "color": color,
             "depth": depth,
-            "pointcloud": pointcloud,
+            "pointset": pointcloud,
             "mask": instance_mask,
             "position": position,
             "orientation": orientation,

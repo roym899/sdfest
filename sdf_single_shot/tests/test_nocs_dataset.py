@@ -11,7 +11,7 @@ from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot import quaternion, so3grid
 
 
-def _create_datasets(
+def create_datasets(
     root_dir: str, tmp_path: str, category_str: Optional[str] = None
 ) -> tuple:
     nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
@@ -49,7 +49,7 @@ def _create_datasets(
 
 def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> None:
     """Test preprocessing of different NOCS dataset splits."""
-    camera_train, camera_val, real_train, real_test = _create_datasets(
+    camera_train, camera_val, real_train, real_test = create_datasets(
         request.fspath.dirname, tmp_path
     )
 
@@ -67,7 +67,7 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
 
 def test_nocsdataset_category_filtering(request: FixtureRequest, tmp_path: str) -> None:
     """Test category-based filtering of datasets."""
-    camera_train, camera_val, real_train, real_test = _create_datasets(
+    camera_train, camera_val, real_train, real_test = create_datasets(
         request.fspath.dirname, tmp_path, category_str="mug"
     )
 
@@ -79,14 +79,14 @@ def test_nocsdataset_category_filtering(request: FixtureRequest, tmp_path: str) 
 
 def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting different samples from NOCS dataset."""
-    datasets = _create_datasets(request.fspath.dirname, tmp_path)
+    datasets = create_datasets(request.fspath.dirname, tmp_path)
     for dataset in datasets:
         sample = dataset[0]
         assert sample["color"].shape == (480, 640, 3)
         assert sample["depth"].shape == (480, 640)
         assert sample["mask"].shape == (480, 640)
         valid_depth_points = torch.sum(sample["depth"] != 0)
-        assert sample["pointcloud"].shape == (valid_depth_points, 3)
+        assert sample["pointset"].shape == (valid_depth_points, 3)
 
         # test camera convention
         dataset._camera_convention = "opencv"
@@ -143,7 +143,7 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
     """Test generation of ground truth path from color path."""
     root_dir = request.fspath.dirname
-    _, camera_val, _, real_test = _create_datasets(root_dir, tmp_path)
+    _, camera_val, _, real_test = create_datasets(root_dir, tmp_path)
 
     gts_path = real_test._get_gts_path(
         os.path.join(root_dir, "real_test", "scene_1", "0000_color.png")
@@ -158,7 +158,7 @@ def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
 
 def test_nocsdataset_get_pose_and_scale(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting pose and scale from NOCS dataset."""
-    camera_train, camera_val, real_train, real_test = _create_datasets(
+    camera_train, camera_val, real_train, real_test = create_datasets(
         request.fspath.dirname, tmp_path
     )
     # TODO check that all datasets return correct data
@@ -166,7 +166,7 @@ def test_nocsdataset_get_pose_and_scale(request: FixtureRequest, tmp_path: str) 
 
 def test_nocsdataset_get_obj_path(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting pose and scale from NOCS dataset."""
-    camera_train, camera_val, real_train, real_test = _create_datasets(
+    camera_train, camera_val, real_train, real_test = create_datasets(
         request.fspath.dirname, tmp_path
     )
     # check that all datasets return correct data

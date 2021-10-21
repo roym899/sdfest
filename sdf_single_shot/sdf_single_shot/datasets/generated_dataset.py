@@ -68,7 +68,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         z_max: float,
         extent_mean: float,
         extent_std: float,
-        pointcloud: bool,
+        pointset: bool,
         normalize_pose: bool,
         render_threshold: float,
         orientation_repr: Optional[str] = "quaternion",
@@ -95,10 +95,10 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
                 Extent is the total size of an SDF.
             extent_std:
                 Standard deviation of the SDF scale.
-            pointcloud: Whether to generate pointcloud or depth image.
+            pointset: Whether to generate pointset or depth image.
             normalize_pose:
-                Whether to center the augmented pointcloud at 0,0,0.
-                Ignored if pointcloud=False
+                Whether to center the augmented pointset at 0,0,0.
+                Ignored if pointset=False
             orientation_repr:
                 The orientation representation used for the target.
                 One of "quaternion"|"discretized".
@@ -124,7 +124,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._scale_sampler = lambda: random.gauss(extent_mean, extent_std) / 2.0
         self._mask_noise = mask_noise
         self._mask_noise_sampler = lambda: random.uniform(mask_noise_min, mask_noise_max)
-        self._pointcloud = pointcloud
+        self._pointset = pointset
         self._normalize_pose = normalize_pose
         self._render_threshold = render_threshold
         self._orientation_repr = orientation_repr
@@ -162,9 +162,9 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
 
     def is_valid(self, inp: torch.Tensor) -> bool:
         """Check whether a generated input is empty or only zero."""
-        if self._pointcloud and inp.shape[0] == 0:
+        if self._pointset and inp.shape[0] == 0:
             return False
-        elif not self._pointcloud and inp.max() == 0:
+        elif not self._pointset and inp.max() == 0:
             return False
         return True
 
@@ -232,7 +232,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
                 perturbed_mask = self._perturb_mask(mask)
                 depth_image[mask * (mask != perturbed_mask)] = self._mask_noise_sampler()
 
-            if self._pointcloud:
+            if self._pointset:
                 indices = torch.nonzero(depth_image, as_tuple=True)
                 depth_values = depth_image[indices]
                 points = torch.cat(
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     vae.load_state_dict(state_dict)
     z = vae.sample()
     sdf = vae.decode(z)
-    pointcloud = False
+    pointset = False
     normalize_pose = True
     vae_dataset = SDFVAEViewDataset(
         vae,
@@ -312,7 +312,7 @@ if __name__ == "__main__":
         z_max=0.5,
         extent_mean=0.11,
         extent_std=0.01,
-        pointcloud=pointcloud,
+        pointset=pointset,
         normalize_pose=normalize_pose,
         render_threshold=0.01,
         orientation_repr="discretized",
@@ -320,15 +320,15 @@ if __name__ == "__main__":
         mask_noise=True,
     )
     vae_dataset_iter = iter(vae_dataset)
-    if pointcloud:
-        for pointcloud, _ in vae_dataset:
+    if pointset:
+        for pointset, _ in vae_dataset:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection="3d")
-            pointcloud = pointcloud.detach().cpu().numpy()
+            pointset = pointset.detach().cpu().numpy()
             ax.scatter(
-                pointcloud[:, 0],
-                pointcloud[:, 1],
-                pointcloud[:, 2],
+                pointset[:, 0],
+                pointset[:, 1],
+                pointset[:, 2],
                 s=0.5,
                 c="b",
             )
