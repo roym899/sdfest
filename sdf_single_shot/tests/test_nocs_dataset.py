@@ -8,7 +8,7 @@ from pytest import FixtureRequest
 import torch
 
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
-from sdf_single_shot import quaternion
+from sdf_single_shot import quaternion, so3grid
 
 
 def _create_datasets(
@@ -129,6 +129,15 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         cam_point = quaternion.quaternion_apply(orientation_q, test_point)
         cam_point_2 = quaternion.quaternion_apply(orientation_q_2, test_point_2)
         assert torch.allclose(cam_point, cam_point_2)
+
+        # test orientation representation
+        dataset._orientation_repr = "quaternion"
+        orientation_q = dataset[0]["orientation"]
+        assert orientation_q.shape == (4,)
+        dataset._orientation_repr = "discretized"
+        dataset._orientation_grid = so3grid.SO3Grid(3)
+        orientation_d = dataset[0]["orientation"]
+        assert orientation_d.shape == ()
 
 
 def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:

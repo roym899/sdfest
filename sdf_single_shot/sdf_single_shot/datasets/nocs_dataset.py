@@ -13,8 +13,7 @@ from PIL import Image
 from sdf_differentiable_renderer import Camera
 import yoco
 
-from sdf_single_shot import pointset_utils
-from sdf_single_shot import quaternion
+from sdf_single_shot import pointset_utils, quaternion, so3grid
 from sdf_single_shot.datasets import nocs_utils
 
 
@@ -83,6 +82,13 @@ class NOCSDataset(torch.utils.data.Dataset):
                     "opencv": x right, y down, z forward
                 Note that this does not influence how the dataset is processed, only the
                 returned position and quaternion.
+            orientation_repr:
+                Which orientation representation is used. One of:
+                    "quaternion"
+                    "discretized"
+            orientation_grid_resolution:
+                Resolution of the orientation grid.
+                Only used if orientation_repr is "discretized".
             remap_y_axis:
                 If not None, the original y-axis will be mapped to the provided axis.
                 Resulting coordinate system will always be right-handed.
@@ -104,11 +110,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         normalize_pointcloud: bool
         scale_convention: str
         camera_convention: str
+        orientation_repr: str
+        orientation_grid_resolution: str
         remap_y_axis: Optional[str]
         remap_x_axis: Optional[str]
         category_str: Optional[str]
 
-    # TODO add support for different orientation representations
     # TODO symmetry
     # TODO unify dataset code, adapt generated_dataset
 
@@ -122,6 +129,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         "category_str": None,
         "remap_y_axis": None,
         "remap_x_axis": None,
+        "orientation_repr": "quaternion",
     }
 
     def __init__(
@@ -149,6 +157,11 @@ class NOCSDataset(torch.utils.data.Dataset):
         self._sample_files = self._get_sample_files(config["category_str"])
         self._remap_y_axis = config["remap_y_axis"]
         self._remap_x_axis = config["remap_x_axis"]
+        self._orientation_repr = config["orientation_repr"]
+        if self._orientation_repr == "discretized":
+            self._orientation_grid = so3grid.SO3Grid(
+                config["orientation_grid_resolution"]
+            )
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -337,6 +350,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         orientation_q = pointset_utils.change_orientation_camera_convention(
             orientation_q, "opencv", self._camera_convention
         )
+        orientation = self._quat_to_orientation_repr(orientation_q)
         scale = self._get_scale(sample_data, extents)
 
         sample = {
@@ -345,7 +359,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "pointcloud": pointcloud,
             "mask": instance_mask,
             "position": position,
-            "orientation": orientation_q,
+            "orientation": orientation,
             "scale": scale,
         }
         return sample
@@ -543,9 +557,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             centered_nocs_points, measured_points, verbose=False
         )
 
-    def _get_scale(
-        self, sample_data: dict, extents: torch.Tensor
-    ) -> float:
+    def _get_scale(self, sample_data: dict, extents: torch.Tensor) -> float:
         """Return scale from stored sample data and extents."""
         if self._scale_convention == "diagonal":
             return sample_data["nocs_scale"]
@@ -622,3 +634,26 @@ class NOCSDataset(torch.utils.data.Dataset):
         )  # new -> original -> camera
 
         return remapped_orientation_q, remapped_extents
+
+    def _quat_to_orientation_repr(self, quaternion: torch.Tensor) -> torch.Tensor:
+        """Convert quaternion to selected orientation representation.
+
+        Args:
+            quaternion:
+                The quaternion to convert, scalar-last, shape (4,).
+        Returns:
+            The same orientation as represented by the quaternion in the chosen
+            orientation representation.
+        """
+        if self._orientation_repr == "quaternion":
+            return quaternion
+        elif self._orientation_repr == "discretized":
+            index = self._orientation_grid.quat_to_index(quaternion.numpy())
+            return torch.tensor(
+                index,
+                dtype=torch.long,
+            )
+        else:
+            raise NotImplementedError(
+                f"Orientation representation {self._orientation_repr} is not supported."
+            )
