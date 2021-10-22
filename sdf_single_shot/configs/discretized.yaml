@@ -10,6 +10,11 @@ position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
 
+# Dataset specific config
+generated_dataset:
+    orientation_repr: discretized
+    orientation_grid_resolution: 1 # only for discretized orientation repr.
+
 # Network params
 backbone_type: VanillaPointNet
 backbone:

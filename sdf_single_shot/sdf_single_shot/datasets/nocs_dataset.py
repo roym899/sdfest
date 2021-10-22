@@ -111,7 +111,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         scale_convention: str
         camera_convention: str
         orientation_repr: str
-        orientation_grid_resolution: str
+        orientation_grid_resolution: int
         remap_y_axis: Optional[str]
         remap_x_axis: Optional[str]
         category_str: Optional[str]
@@ -126,10 +126,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         "normalize_pointcloud": False,
         "camera_convention": "opengl",
         "scale_convention": "half_max",
+        "orientation_repr": "quaternion",
+        "orientation_grid_resolution": None,
         "category_str": None,
         "remap_y_axis": None,
         "remap_x_axis": None,
-        "orientation_repr": "quaternion",
+        "category_str": None,
     }
 
     def __init__(
@@ -140,8 +142,8 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         Args:
             config:
-                Root dir of dataset. Provided dictionary will be merged with
-                default_dict. See NOCSDataset.Config for supported keys.
+                Configuration dictionary of dataset. Provided dictionary will be merged
+                with default_dict. See NOCSDataset.Config for supported keys.
         """
         config = yoco.load_config(config, default_dict=NOCSDataset.default_config)
         self._root_dir = config["root_dir"]

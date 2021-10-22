@@ -60,12 +60,10 @@ class Trainer:
         torch.manual_seed(0)
         random.seed(torch.initial_seed())  # to get deterministic examples
 
+        print(self.config)
         dataset = SDFVAEViewDataset(
-            vae,
-            device,
-            orientation_repr=self.config["head"]["orientation_repr"],
-            orientation_grid=sdf_pose_net._head._grid,
-            **self.config["generated_dataset"],
+            config=self.config["generated_dataset"],
+            vae=vae,
         )
         data_loader = torch.utils.data.DataLoader(
             dataset=dataset,
