@@ -72,8 +72,8 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             z_max:
                 Maximum z value (i.e., distance from camera) for the SDF.
             extent_mean:
-                Mean scale of the SDF.
-                Extent is the total size of an SDF.
+                Mean extent of the SDF.
+                Extent is the total side length of an SDF.
             extent_std:
                 Standard deviation of the SDF scale.
             pointcloud: Whether to generate pointcloud or depth image.
@@ -108,7 +108,7 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         extent_mean: float
         extent_std: float
         pointcloud: bool
-        normalize_pose: bool
+        normalize_pose: Optional[bool]
         render_threshold: float
         orientation_repr: str
         orientation_grid_resolution: Optional[int]
@@ -118,6 +118,11 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
 
     default_config: Config = {
         "device": "cuda",
+        "width": 640,
+        "height": 480,
+        "fov_deg": 90,
+        "render_threshold": 0.001,
+        "normalize_pose": None,
         "orientation_repr": "quaternion",
         "orientation_grid_resolution": None,
         "mask_noise": False,
@@ -144,11 +149,17 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._width = config["width"]
         self._height = config["height"]
         self._fov_deg = config["fov_deg"]
-        self._z_sampler = lambda: random.uniform(config["z_min"], config["z_max"])
+        self._z_min = config["z_min"]
+        self._z_max = config["z_max"]
+        self._z_sampler = lambda: random.uniform(self._z_min, self._z_max)
+        self._extent_mean = config["extent_mean"]
+        self._extent_std = config["extent_std"]
         self._scale_sampler = (
-            lambda: random.gauss(config["extent_mean"], config["extent_std"]) / 2.0
+            lambda: random.gauss(self._extent_mean, self._extent_std) / 2.0
         )
         self._mask_noise = config["mask_noise"]
+        self._mask_noise_min = config["mask_noise_min"]
+        self._mask_noise_max = config["mask_noise_max"]
         self._mask_noise_sampler = lambda: random.uniform(
             config["mask_noise_min"], config["mask_noise_max"]
         )
