@@ -112,6 +112,7 @@ class Trainer:
         program_starts = time.time()
         while current_iteration <= self.config["iterations"]:
             for inp, targets in data_loader:
+                print(current_iteration)
                 out = sdf_pose_net(inp)
 
                 loss = self.compute_loss(out, targets, current_iteration)

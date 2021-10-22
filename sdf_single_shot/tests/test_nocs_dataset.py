@@ -14,6 +14,7 @@ from sdf_single_shot import quaternion, so3grid
 def create_datasets(
     root_dir: str, tmp_path: str, category_str: Optional[str] = None
 ) -> tuple:
+    """Create NOCS dataset for all different splits."""
     nocs_dataset_dir = os.path.join(root_dir, "nocs_data")
     shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
     camera_train = NOCSDataset(
