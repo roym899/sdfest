@@ -13,7 +13,7 @@ from PIL import Image
 from sdf_differentiable_renderer import Camera
 import yoco
 
-from sdf_single_shot import pointset_utils, quaternion, so3grid
+from sdf_single_shot import pointset_utils, quaternion_utils, so3grid
 from sdf_single_shot.datasets import nocs_utils
 
 
@@ -366,7 +366,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "mask": instance_mask,
             "position": position,
             "orientation": orientation,
-            "quaternion": quaternion,
+            "quaternion": orientation_q,
             "scale": scale,
         }
         return sample
@@ -636,7 +636,7 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         quaternion_n2o = torch.from_numpy(Rotation.from_matrix(rotation_n2o).as_quat())
 
-        remapped_orientation_q = quaternion.quaternion_multiply(
+        remapped_orientation_q = quaternion_utils.quaternion_multiply(
             orientation_q, quaternion_n2o
         )  # new -> original -> camera
 

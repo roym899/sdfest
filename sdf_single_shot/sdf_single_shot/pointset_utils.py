@@ -3,7 +3,7 @@ import torch
 from typing import Optional
 from sdf_differentiable_renderer import Camera
 
-from sdf_single_shot import quaternion
+from sdf_single_shot import quaternion_utils
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
@@ -182,4 +182,4 @@ def change_orientation_camera_convention(
     else:
         # rotate 180deg around x direction
         gl2cv_q = in_orientation_q.new_tensor([1.0, 0, 0, 0])  # == cv2gl
-        return quaternion.quaternion_multiply(gl2cv_q, in_orientation_q)
+        return quaternion_utils.quaternion_multiply(gl2cv_q, in_orientation_q)

@@ -54,7 +54,7 @@ import torch
 from tqdm import tqdm
 import yoco
 
-from sdf_single_shot import quaternion
+from sdf_single_shot import quaternion_utils
 from sdf_estimation import synthetic
 from sdf_differentiable_renderer import Camera
 from sdf_estimation.simple_setup import SDFPipeline
@@ -209,18 +209,18 @@ class Evaluator:
             while True:
                 # OpenGL convention camera
                 camera_orientation = generate_uniform_quaternion()  # ogl to world
-                camera_position = mesh_position - quaternion.quaternion_apply(
+                camera_position = mesh_position - quaternion_utils.quaternion_apply(
                     camera_orientation,
                     torch.tensor([0, 0, -self.base_config["camera_distance"]]),
                 )  # transform camera position s.t. object lies on principal axis
 
                 # Transform mesh into camera frame, now with Open3D convention camera
-                camera_orientation_o3d = quaternion.quaternion_multiply(
+                camera_orientation_o3d = quaternion_utils.quaternion_multiply(
                     camera_orientation,  # ogl to world
                     torch.tensor([1.0, 0, 0, 0]),  # o3d to ogl
                 )  # quaternion: o3d to world
-                mesh_orientation_cam = quaternion.quaternion_multiply(
-                    quaternion.quaternion_invert(
+                mesh_orientation_cam = quaternion_utils.quaternion_multiply(
+                    quaternion_utils.quaternion_invert(
                         camera_orientation_o3d
                     ),  # world to o3d
                     mesh_orientation,  # obj to world

@@ -8,7 +8,7 @@ from pytest import FixtureRequest
 import torch
 
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
-from sdf_single_shot import quaternion, so3grid
+from sdf_single_shot import quaternion_utils, so3grid
 
 
 def create_datasets(
@@ -127,8 +127,8 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         # same object point in second convention
         test_point_2 = torch.tensor([0.5, -0.1, 0.7])
         # transform both points to camera
-        cam_point = quaternion.quaternion_apply(orientation_q, test_point)
-        cam_point_2 = quaternion.quaternion_apply(orientation_q_2, test_point_2)
+        cam_point = quaternion_utils.quaternion_apply(orientation_q, test_point)
+        cam_point_2 = quaternion_utils.quaternion_apply(orientation_q_2, test_point_2)
         assert torch.allclose(cam_point, cam_point_2)
 
         # test orientation representation

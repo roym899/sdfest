@@ -63,7 +63,7 @@ from tabulate import tabulate
 import torch
 import yoco
 
-from sdf_single_shot import quaternion
+from sdf_single_shot import quaternion_utils
 from sdf_estimation import synthetic
 from sdf_differentiable_renderer import Camera
 from sdf_estimation.simple_setup import SDFPipeline
@@ -71,6 +71,7 @@ from sdf_estimation.simple_setup import SDFPipeline
 stop_vis = False
 reconstruction_vis = 1
 update_vis = True
+
 
 def toggle_reconstruction(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     """Schedule ox."""
@@ -326,13 +327,15 @@ class Evaluator:
 
         # Convert output from OpenGL to Open3D convention (same as gt meshes)
         out_mesh.position = (
-            quaternion.quaternion_apply(torch.tensor([1.0, 0, 0, 0]), position[0])
+            quaternion_utils.quaternion_apply(torch.tensor([1.0, 0, 0, 0]), position[0])
             .detach()
             .cpu()
             .numpy()
         )
         out_mesh.orientation = (
-            quaternion.quaternion_multiply(torch.tensor([1.0, 0, 0, 0]), orientation[0])
+            quaternion_utils.quaternion_multiply(
+                torch.tensor([1.0, 0, 0, 0]), orientation[0]
+            )
             .detach()
             .cpu()
             .numpy()
@@ -365,7 +368,7 @@ class Evaluator:
         mesh_est: o3d.geometry.TriangleMesh,
         pts_gt: o3d.geometry.PointCloud,
         pts_est: o3d.geometry.PointCloud,
-        pc: o3d.geometry.PointCloud
+        pc: o3d.geometry.PointCloud,
     ) -> None:
         """Visualize result of a single evaluation.
 

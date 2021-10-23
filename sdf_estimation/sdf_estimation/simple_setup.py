@@ -14,7 +14,7 @@ from skimage.measure import marching_cubes
 from sdf_vae.sdf_vae import SDFVAE
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import pointset_utils, quaternion
+from sdf_single_shot import pointset_utils, quaternion_utils
 from sdf_differentiable_renderer import Camera, render_depth_gpu
 import torch
 import yoco
@@ -274,11 +274,13 @@ class SDFPipeline:
                 depth_images, camera_positions, camera_orientations
             ):
                 # transform object to camera frame
-                q_w2c = quaternion.quaternion_invert(camera_orientation)
-                position_c = quaternion.quaternion_apply(
+                q_w2c = quaternion_utils.quaternion_invert(camera_orientation)
+                position_c = quaternion_utils.quaternion_apply(
                     q_w2c, position - camera_position
                 )
-                orientation_c = quaternion.quaternion_multiply(q_w2c, norm_orientation)
+                orientation_c = quaternion_utils.quaternion_multiply(
+                    q_w2c, norm_orientation
+                )
 
                 depth_estimate = self.render(
                     sdf[0, 0], position_c[0], orientation_c[0], scale_inv[0]
@@ -333,11 +335,13 @@ class SDFPipeline:
                     current_iteration % 10 == 1
                     or current_iteration == self.config["max_iterations"]
                 ):
-                    q_w2c = quaternion.quaternion_invert(camera_orientations[0])
-                    position_c = quaternion.quaternion_apply(
+                    q_w2c = quaternion_utils.quaternion_invert(camera_orientations[0])
+                    position_c = quaternion_utils.quaternion_apply(
                         q_w2c, position - camera_positions[0]
                     )
-                    orientation_c = quaternion.quaternion_multiply(q_w2c, orientation)
+                    orientation_c = quaternion_utils.quaternion_multiply(
+                        q_w2c, orientation
+                    )
 
                     current_depth = self.render(
                         sdf[0, 0], position_c, orientation_c, scale_inv
@@ -573,10 +577,10 @@ class SDFPipeline:
 
             # output are in camera frame, transform to world frame
             position_world = (
-                quaternion.quaternion_apply(camera_orientation, position)
+                quaternion_utils.quaternion_apply(camera_orientation, position)
                 + camera_position
             )
-            orientation_world = quaternion.quaternion_multiply(
+            orientation_world = quaternion_utils.quaternion_multiply(
                 camera_orientation, orientation_camera
             )
 
