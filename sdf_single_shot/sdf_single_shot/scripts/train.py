@@ -16,41 +16,11 @@ from sdf_single_shot.datasets.dataset_utils import collate_samples
 from sdf_single_shot.datasets.generated_dataset import SDFVAEViewDataset
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import sdf_utils, utils
+from sdf_single_shot import quaternion_utils, sdf_utils, utils
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 
 MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
-
-
-def geodesic_distance(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
-    """Compute mean geodesic_distance between quaternions.
-
-    Args:
-        q1: First set of quaterions, shape (N,4).
-        q2: Second set of quaternions, shape (N,4).
-    Returns:
-        Mean distance between the quaternions, scalar.
-    """
-    abs_q1q2 = torch.clip(torch.abs(torch.sum(q1 * q2, dim=1)), 0, 1)
-    geodesic_distances = 2 * torch.acos(abs_q1q2)
-    geodesic_distance = torch.mean(geodesic_distances)
-    return geodesic_distance
-
-
-def simple_quaternion_loss(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
-    """Compute distance measure between quaternions not involving trig functions.
-
-    From:
-        https://math.stackexchange.com/a/90098
-
-    Args:
-        q1: First set of quaterions, shape (N,4).
-        q2: Second set of quaternions, shape (N,4).
-    Returns:
-        Mean distance between the quaternions, scalar.
-    """
-    return torch.mean(1 - torch.sum(q1 * q2, 1) ** 2)
 
 
 class Trainer:
@@ -170,7 +140,7 @@ class Trainer:
                         f"{self.config['head']['orientation_repr']}"
                         " is not supported"
                     )
-                geodesic_error = geodesic_distance(
+                geodesic_error = quaternion_utils.geodesic_distance(
                     target_quaternions, predicted_quaternions
                 )
                 wandb.log(
@@ -338,7 +308,7 @@ class Trainer:
 
         if "orientation" in samples:
             if self.config["head"]["orientation_repr"] == "quaternion":
-                loss_orientation = simple_quaternion_loss(
+                loss_orientation = quaternion_utils.simple_quaternion_loss(
                     predictions["orientation"], samples["orientation"]
                 )
             elif self.config["head"]["orientation_repr"] == "discretized":
