@@ -182,6 +182,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 "pointset"
                 "position"
                 "orientation"
+                "quaternion"
                 "scale"
         """
         sample_file = self._sample_files[idx]
@@ -365,6 +366,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "mask": instance_mask,
             "position": position,
             "orientation": orientation,
+            "quaternion": quaternion,
             "scale": scale,
         }
         return sample

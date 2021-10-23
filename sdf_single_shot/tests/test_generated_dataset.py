@@ -49,7 +49,7 @@ def test_sdf_vae_view_dataset(request: FixtureRequest) -> None:
 
 
 def test_data_generation(request: FixtureRequest) -> None:
-    """Test sample output from SDFVAEViewDataset."""
+    """Test sample output from SDFVAEViewDataset for various settings."""
     if not torch.cuda.is_available():
         warnings.warn("CUDA not available. Skipping SDFVAEViewDataset tests.")
         return
@@ -69,9 +69,9 @@ def test_data_generation(request: FixtureRequest) -> None:
     )
     # depth
     sample = next(iter(dataset))
-    assert sample[0].shape == (480, 640)
+    assert sample["depth"].shape == (480, 640)
 
     # pointcloud
     dataset._pointcloud = True
     sample = next(iter(dataset))
-    assert sample[0].shape[1] == 3
+    assert sample["pointset"].shape[1] == 3

@@ -12,10 +12,8 @@ import torchinfo
 import wandb
 import yoco
 
-from sdf_single_shot.datasets.generated_dataset import (
-    SDFVAEViewDataset,
-    collate_pointsets,
-)
+from sdf_single_shot.datasets.dataset_utils import collate_samples
+from sdf_single_shot.datasets.generated_dataset import SDFVAEViewDataset
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
 from sdf_single_shot import sdf_utils, utils
@@ -23,6 +21,36 @@ from sdf_single_shot import sdf_utils, utils
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 
 MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
+
+
+def geodesic_distance(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Compute mean geodesic_distance between quaternions.
+
+    Args:
+        q1: First set of quaterions, shape (N,4).
+        q2: Second set of quaternions, shape (N,4).
+    Returns:
+        Mean distance between the quaternions, scalar.
+    """
+    abs_q1q2 = torch.clip(torch.abs(torch.sum(q1 * q2, dim=1)), 0, 1)
+    geodesic_distances = 2 * torch.acos(abs_q1q2)
+    geodesic_distance = torch.mean(geodesic_distances)
+    return geodesic_distance
+
+
+def simple_quaternion_loss(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
+    """Compute distance measure between quaternions not involving trig functions.
+
+    From:
+        https://math.stackexchange.com/a/90098
+
+    Args:
+        q1: First set of quaterions, shape (N,4).
+        q2: Second set of quaternions, shape (N,4).
+    Returns:
+        Mean distance between the quaternions, scalar.
+    """
+    return torch.mean(1 - torch.sum(q1 * q2, 1) ** 2)
 
 
 class Trainer:
@@ -60,7 +88,6 @@ class Trainer:
         torch.manual_seed(0)
         random.seed(torch.initial_seed())  # to get deterministic examples
 
-        print(self.config)
         dataset = SDFVAEViewDataset(
             config=self.config["generated_dataset"],
             vae=vae,
@@ -68,7 +95,7 @@ class Trainer:
         data_loader = torch.utils.data.DataLoader(
             dataset=dataset,
             batch_size=self.config["batch_size"],
-            collate_fn=collate_pointsets,
+            collate_fn=collate_samples,
         )
 
         # print network summary
@@ -108,115 +135,110 @@ class Trainer:
         yoco.save_config_to_file(config_path, self.config)
 
         program_starts = time.time()
-        while current_iteration <= self.config["iterations"]:
-            for inp, targets in data_loader:
-                print(current_iteration)
-                out = sdf_pose_net(inp)
+        for samples in data_loader:
+            latent_shape, position, scale, orientation = sdf_pose_net(
+                samples["pointset"]
+            )
+            predictions = {
+                "latent_shape": latent_shape,
+                "position": position,
+                "scale": scale,
+                "orientation": orientation,
+            }
 
-                loss = self.compute_loss(out, targets, current_iteration)
+            loss = self._compute_loss(predictions, samples, current_iteration)
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-                # compute metrics / i.e., loss and representation independent metrics
-                with torch.no_grad():
-                    # extract quaternion from orientation representation
-                    target_quaternions = targets[4]
+            # compute metrics / i.e., loss and representation independent metrics
+            with torch.no_grad():
+                # extract quaternion from orientation representation
+                target_quaternions = samples["quaternion"]
+                if self.config["head"]["orientation_repr"] == "quaternion":
+                    predicted_quaternions = predictions["orientation"]
+                elif self.config["head"]["orientation_repr"] == "discretized":
+                    predicted_quaternions = torch.empty_like(target_quaternions)
+                    for i, v in enumerate(predictions["orientation"]):
+                        index = v.argmax().item()
+                        quat = sdf_pose_net._head._grid.index_to_quat(index)
+                        predicted_quaternions[i, :] = torch.tensor(quat)
+                else:
+                    raise NotImplementedError(
+                        "Orientation representation "
+                        f"{self.config['head']['orientation_repr']}"
+                        " is not supported"
+                    )
+                geodesic_error = geodesic_distance(
+                    target_quaternions, predicted_quaternions
+                )
+                wandb.log(
+                    {
+                        "metric geodesic distance": geodesic_error.item(),
+                    },
+                    step=current_iteration,
+                )
+
+            current_iteration += 1
+
+            # generate visualizations
+            with torch.no_grad():
+                if current_iteration % 5000 == 0:
+                    # generate unseen input and target
+                    test_inp, _ = next(iter(data_loader))
+                    test_out = sdf_pose_net(test_inp)
+                    input_pointcloud = test_inp[0].detach().cpu().numpy()
+                    input_pointcloud = np.hstack(
+                        (
+                            input_pointcloud,
+                            np.full((input_pointcloud.shape[0], 1), 0),
+                        )
+                    )
+                    output_sdfs = vae.decode(test_out[0])
+                    output_sdf = output_sdfs[0][0].detach().cpu().numpy()
+                    output_position = test_out[1][0].detach().cpu().numpy()
+                    output_scale = test_out[2][0].detach().cpu().numpy()
                     if self.config["head"]["orientation_repr"] == "quaternion":
-                        predicted_quaternions = out[3]
+                        quat = test_out[3][0].detach().cpu().numpy()
                     elif self.config["head"]["orientation_repr"] == "discretized":
-                        predicted_quaternions = torch.empty_like(target_quaternions)
-                        for i, v in enumerate(out[3]):
-                            index = v.argmax().item()
-                            quat = sdf_pose_net._head._grid.index_to_quat(index)
-                            predicted_quaternions[i, :] = torch.tensor(quat)
+                        quat = sdf_pose_net._head._grid.index_to_quat(
+                            test_out[3][0].argmax()
+                        )
                     else:
                         raise NotImplementedError(
                             "Orientation representation "
                             f"{self.config['head']['orientation_repr']}"
                             " is not supported"
                         )
-                    geodesic_error = torch.mean(
-                        torch.acos(
-                            torch.clip(
-                                torch.abs(
-                                    torch.sum(
-                                        target_quaternions * predicted_quaternions,
-                                        dim=1,
-                                    )
-                                ),
-                                0,
-                                1,
-                            )
+                    output_pointcloud = sdf_utils.sdf_to_pointcloud(
+                        output_sdf, output_position, quat, output_scale
+                    )
+                    output_pointcloud = np.hstack(
+                        (
+                            output_pointcloud,
+                            np.full((output_pointcloud.shape[0], 1), 1),
                         )
                     )
+                    pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+
                     wandb.log(
-                        {
-                            "metric geodesic distance": geodesic_error.item(),
-                        },
+                        {"point_cloud": wandb.Object3D(pointcloud)},
                         step=current_iteration,
                     )
 
-                current_iteration += 1
-                with torch.no_grad():
-                    if current_iteration % 5000 == 0:
-                        # generate unseen input and target
-                        test_inp, _ = next(iter(data_loader))
-                        test_out = sdf_pose_net(test_inp)
-                        input_pointcloud = test_inp[0].detach().cpu().numpy()
-                        input_pointcloud = np.hstack(
-                            (
-                                input_pointcloud,
-                                np.full((input_pointcloud.shape[0], 1), 0),
-                            )
-                        )
-                        output_sdfs = vae.decode(test_out[0])
-                        output_sdf = output_sdfs[0][0].detach().cpu().numpy()
-                        output_position = test_out[1][0].detach().cpu().numpy()
-                        output_scale = test_out[2][0].detach().cpu().numpy()
-                        if self.config["head"]["orientation_repr"] == "quaternion":
-                            quat = test_out[3][0].detach().cpu().numpy()
-                        elif self.config["head"]["orientation_repr"] == "discretized":
-                            quat = sdf_pose_net._head._grid.index_to_quat(
-                                test_out[3][0].argmax()
-                            )
-                        else:
-                            raise NotImplementedError(
-                                "Orientation representation "
-                                f"{self.config['head']['orientation_repr']}"
-                                " is not supported"
-                            )
-                        output_pointcloud = sdf_utils.sdf_to_pointcloud(
-                            output_sdf, output_position, quat, output_scale
-                        )
-                        output_pointcloud = np.hstack(
-                            (
-                                output_pointcloud,
-                                np.full((output_pointcloud.shape[0], 1), 1),
-                            )
-                        )
-                        pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+                if current_iteration % 100000 == 0:
+                    checkpoint_path = os.path.join(
+                        model_base_path, f"{current_iteration}.ckp"
+                    )
+                    utils.save_checkpoint(
+                        path=checkpoint_path,
+                        model=sdf_pose_net,
+                        optimizer=optimizer,
+                        iteration=current_iteration,
+                        run_name=run_name,
+                    )
 
-                        wandb.log(
-                            {"point_cloud": wandb.Object3D(pointcloud)},
-                            step=current_iteration,
-                        )
-
-                    if current_iteration % 100000 == 0:
-                        checkpoint_path = os.path.join(
-                            model_base_path, f"{current_iteration}.ckp"
-                        )
-                        utils.save_checkpoint(
-                            path=checkpoint_path,
-                            model=sdf_pose_net,
-                            optimizer=optimizer,
-                            iteration=current_iteration,
-                            run_name=run_name,
-                        )
-
-                if current_iteration > self.config["iterations"]:
-                    break
             if current_iteration > self.config["iterations"]:
                 break
 
@@ -260,52 +282,82 @@ class Trainer:
         vae.load_state_dict(state_dict)
         return vae
 
-    def compute_loss(
-        self, out: tuple, targets: tuple, current_iteration: int
+    def _compute_loss(
+        self,
+        predictions: dict,
+        samples: dict,
+        current_iteration: int,
     ) -> torch.Tensor:
-        """Compute , loss_componentstotal weighed loss.
+        """Compute total loss.
 
         Args:
-            out: Output of SDFPoseNet.
-            targets: Tuple of targets:
-                - latent shape, shape (N,D),
-                - position, shape (N,3),
-                - scale, shape (N,),
-                - orientation, shape (N,M) (depends on orientation representation).
+            predictions: Dictionary containing the following keys:
+                "latent_shape": Shape (N,D).
+                "position": Shape (N,3).
+                "scale": Shape (N,).
+                "orientation":
+                    Shape (N,4) for quaternion representation.
+                    Shape (N,R) for discretized representation.
+            samples:
+                Samples dictionary containing a subset of the following keys:
+                    "latent_shape": Shape (N,D).
+                    "position": Shape (N,3).
+                    "scale": Shape (N,).
+                    "orientation":
+                        Shape (N,4) for quaternion representation.
+                        Shape (N,) for discretized representation.
             current_iteration:
                 Current trainig iteration. Used to log loss terms to wandb.
         Returns:
-            The combined loss. Shape (1,).
+            The combined loss. Scalar.
         """
-        loss_latent_l2 = torch.nn.functional.mse_loss(out[0], targets[0])
-        loss_position_l2 = torch.nn.functional.mse_loss(out[1], targets[1])
-        loss_scale_l2 = torch.nn.functional.mse_loss(out[2], targets[2])
-        if self.config["head"]["orientation_repr"] == "quaternion":
-            loss_orientation = torch.mean(1 - torch.sum((out[3] * targets[3]), 1) ** 2)
-        elif self.config["head"]["orientation_repr"] == "discretized":
-            loss_orientation = torch.nn.functional.cross_entropy(out[3], targets[3])
-        else:
-            raise NotImplementedError(
-                "Orientation repr "
-                f"{self.config['head']['orientation_repr']}"
-                " not supported."
-            )
+        log_dict = {}
 
-        loss = (
-            loss_latent_l2
-            + self.config["position_weight"] * loss_position_l2
-            + self.config["scale_weight"] * loss_scale_l2
-            + self.config["orientation_weight"] * loss_orientation
-        )
+        loss = 0
+
+        if "latent_shape" in samples:
+            loss_latent_l2 = torch.nn.functional.mse_loss(
+                predictions["latent_shape"], samples["latent_shape"]
+            )
+            log_dict["loss latent"] = loss_latent_l2.item()
+            loss = loss + loss_latent_l2
+
+        if "position" in samples:
+            loss_position_l2 = torch.nn.functional.mse_loss(
+                predictions["position"], samples["position"]
+            )
+            log_dict["loss position"] = loss_position_l2.item()
+            loss = loss + self.config["position_weight"] * loss_position_l2
+
+        if "scale" in samples:
+            loss_scale_l2 = torch.nn.functional.mse_loss(
+                predictions["scale"], samples["scale"]
+            )
+            log_dict["loss scale"] = loss_scale_l2.item()
+            loss = loss + self.config["scale_weight"] * loss_scale_l2
+
+        if "orientation" in samples:
+            if self.config["head"]["orientation_repr"] == "quaternion":
+                loss_orientation = simple_quaternion_loss(
+                    predictions["orientation"], samples["orientation"]
+                )
+            elif self.config["head"]["orientation_repr"] == "discretized":
+                loss_orientation = torch.nn.functional.cross_entropy(
+                    predictions["orientation"], samples["orientation"]
+                )
+            else:
+                raise NotImplementedError(
+                    "Orientation repr "
+                    f"{self.config['head']['orientation_repr']}"
+                    " not supported."
+                )
+            log_dict["loss orientation"] = loss_orientation.item()
+            loss = loss + self.config["orientation_weight"] * loss_orientation
+
+        log_dict["total loss"] = loss.item()
 
         wandb.log(
-            {
-                "total loss": loss.item(),
-                "loss latent": loss_latent_l2.item(),
-                "loss position": loss_position_l2.item(),
-                "loss scale": loss_scale_l2.item(),
-                "loss orientation": loss_orientation.item(),
-            },
+            log_dict,
             step=current_iteration,
         )
 
