@@ -1,6 +1,8 @@
 config:
     - vae: "../vae_models/mug.yaml"
-    - generated_dataset: "./generated_dataset.yaml"
+    - datasets:
+        generated_dataset: 
+            config_dict: "./generated_dataset.yaml"
 
 # Training params
 batch_size: 32
@@ -9,6 +11,10 @@ learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
+datasets: 
+    generated_dataset:
+        type: SDFVAEViewDataset
+        probability: 1.0
 
 # Network params
 backbone_type: VanillaPointNet

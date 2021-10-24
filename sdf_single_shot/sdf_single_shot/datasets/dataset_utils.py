@@ -1,7 +1,8 @@
 """Utility functions to handle various datasets."""
 import random
-from typing import List
+from typing import Iterator, List
 
+import numpy as np
 import torch
 
 
@@ -49,3 +50,30 @@ def collate_samples(samples: List[dict]) -> dict:
             batch[key] = torch.stack([s[key] for s in samples])
 
     return batch
+
+
+class MultiDataLoader:
+    """Wrapper for multiple dataloaders."""
+
+    def __init__(
+        self,
+        data_loaders: List[torch.utils.data.DataLoader],
+        probabilities: List[float],
+    ) -> None:
+        """Initialize the class."""
+        self._data_loaders = data_loaders
+        self._data_loader_iterators = [iter(dl) for dl in self._data_loaders]
+        self._probabilities = probabilities
+        assert len(self._data_loaders) == len(self._probabilities)
+
+    def __iter__(self) -> Iterator:
+        """Return infinite iterator which returns samples from sampled data_loader."""
+        while True:
+            i = np.random.choice(
+                np.arange(len(self._probabilities)), p=self._probabilities
+            )
+            try:
+                yield next(self._data_loader_iterators[i])
+            except StopIteration:
+                self._data_loader_iterators[i] = iter(self._data_loaders[i])
+                yield next(self._data_loader_iterators[i])

@@ -12,7 +12,7 @@ import torchinfo
 import wandb
 import yoco
 
-from sdf_single_shot.datasets.dataset_utils import collate_samples
+from sdf_single_shot.datasets import dataset_utils
 from sdf_single_shot.datasets.generated_dataset import SDFVAEViewDataset
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
@@ -41,7 +41,7 @@ class Trainer:
         device = self.get_device()
 
         # init dataset and dataloader
-        vae = self.create_sdfvae()
+        self.vae = self.create_sdfvae()
 
         # init model to train
         sdf_pose_net = SDFPoseNet(
@@ -57,16 +57,6 @@ class Trainer:
         # can have varying number of parameters)
         torch.manual_seed(0)
         random.seed(torch.initial_seed())  # to get deterministic examples
-
-        dataset = SDFVAEViewDataset(
-            config=self.config["generated_dataset"],
-            vae=vae,
-        )
-        data_loader = torch.utils.data.DataLoader(
-            dataset=dataset,
-            batch_size=self.config["batch_size"],
-            collate_fn=collate_samples,
-        )
 
         # print network summary
         torchinfo.summary(sdf_pose_net, (1, 500, 3), device=device)
@@ -99,13 +89,15 @@ class Trainer:
 
         model_base_path = os.path.join(os.getcwd(), "models", run_name)
 
+        multi_data_loader = self._create_multi_data_loader()
+
         # backup config to model directory
         os.makedirs(model_base_path, exist_ok=True)
         config_path = os.path.join(model_base_path, "config.yaml")
         yoco.save_config_to_file(config_path, self.config)
 
         program_starts = time.time()
-        for samples in data_loader:
+        for samples in multi_data_loader:
             latent_shape, position, scale, orientation = sdf_pose_net(
                 samples["pointset"]
             )
@@ -332,6 +324,28 @@ class Trainer:
         )
 
         return loss
+
+    def _create_multi_data_loader(self) -> dataset_utils.MultiDataLoader:
+        data_loaders = []
+        probabilities = []
+        for dataset_dict in self.config["datasets"].values():
+            if dataset_dict["type"] == "SDFVAEViewDataset":
+                dataset = SDFVAEViewDataset(
+                    config=dataset_dict["config_dict"],
+                    vae=self.vae,
+                )
+            else:
+                raise NotImplementedError(
+                    f"Dataset type {dataset_dict['type']} not supported."
+                )
+            probabilities.append(dataset_dict["probability"])
+            data_loader = torch.utils.data.DataLoader(
+                dataset=dataset,
+                batch_size=self.config["batch_size"],
+                collate_fn=dataset_utils.collate_samples,
+            )
+            data_loaders.append(data_loader)
+        return dataset_utils.MultiDataLoader(data_loaders, probabilities)
 
 
 def main() -> None:
