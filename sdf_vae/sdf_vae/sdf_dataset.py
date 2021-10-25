@@ -37,5 +37,4 @@ class SDFDataset(torch.utils.data.Dataset):
         """
         sdf_path = os.path.join(self.path, f"{idx:05}.npy")
         sdf_np = np.load(sdf_path)
-        sdf_np = np.transpose(sdf_np, (0, 2, 1))  # make z the 'up' axis
         return torch.as_tensor(sdf_np).unsqueeze(0)
