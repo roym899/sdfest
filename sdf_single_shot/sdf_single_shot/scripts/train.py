@@ -13,6 +13,7 @@ import wandb
 import yoco
 
 from sdf_single_shot.datasets import dataset_utils
+from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.datasets.generated_dataset import SDFVAEViewDataset
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
@@ -33,6 +34,7 @@ class Trainer:
             config: The configuration for model and training.
         """
         self.config = config
+        print(self.config)
 
     def run(self) -> None:
         """Train the model."""
@@ -98,6 +100,9 @@ class Trainer:
 
         program_starts = time.time()
         for samples in multi_data_loader:
+            print(current_iteration)
+            for k, v in samples.items():
+                samples[k] = v.to(device)
             latent_shape, position, scale, orientation = sdf_pose_net(
                 samples["pointset"]
             )
@@ -329,10 +334,15 @@ class Trainer:
         data_loaders = []
         probabilities = []
         for dataset_dict in self.config["datasets"].values():
-            if dataset_dict["type"] == "SDFVAEViewDataset":
-                dataset = SDFVAEViewDataset(
+            dataset_type = utils.str_to_object(dataset_dict["type"])
+            if dataset_type == SDFVAEViewDataset:
+                dataset = dataset_type(
                     config=dataset_dict["config_dict"],
                     vae=self.vae,
+                )
+            elif dataset_type is not None:
+                dataset = dataset_type(
+                    config=dataset_dict["config_dict"]
                 )
             else:
                 raise NotImplementedError(

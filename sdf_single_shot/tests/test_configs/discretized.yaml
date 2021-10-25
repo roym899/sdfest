@@ -1,5 +1,5 @@
 config:
-    - vae: "../vae_models/mug.yaml"
+    - vae: "../vae_model/mug.yaml"
     - datasets:
         generated_dataset: 
             config_dict: "./generated_dataset.yaml"

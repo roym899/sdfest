@@ -76,4 +76,3 @@ class MultiDataLoader:
                 yield next(self._data_loader_iterators[i])
             except StopIteration:
                 self._data_loader_iterators[i] = iter(self._data_loaders[i])
-                yield next(self._data_loader_iterators[i])

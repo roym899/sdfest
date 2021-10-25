@@ -1,11 +1,18 @@
 config:
     - "./discretized.yaml"
     - vae: "../vae_models/bowl.yaml"
-    - generated_dataset: "./generated_dataset.yaml"
 
 # Category-specific config
-generated_dataset:
-    z_min: 0.2
-    z_max: 1.5
-    extent_mean: 0.2
-    extent_std: 0.05
+datasets:
+    generated_dataset:
+        config_dict:
+            z_min: 0.2
+            z_max: 1.5
+            extent_mean: 0.2
+            extent_std: 0.05
+    camera_train:
+        config_dict:
+            category_str: bowl
+    real_train:
+        config_dict:
+            category_str: bowl

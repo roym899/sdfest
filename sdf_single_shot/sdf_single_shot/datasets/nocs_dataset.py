@@ -90,14 +90,17 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Resolution of the orientation grid.
                 Only used if orientation_repr is "discretized".
             remap_y_axis:
-                If not None, the original y-axis will be mapped to the provided axis.
+                If not None, the NOCS y-axis will be mapped to the provided axis.
                 Resulting coordinate system will always be right-handed.
                 This is typically the up-axis.
+                Note that NOCS object models are NOT aligned the same as ShapeNetV2.
+                To get ShapeNetV2 alignment: y
                 One of: "x", "y", "z", "-x", "-y", "-z"
             remap_x_axis:
                 If not None, the original x-axis will be mapped to the provided axis.
                 Resulting coordinate system will always be right-handed.
-                This is typically the front-axis.
+                Note that NOCS object models are NOT aligned the same as ShapeNetV2.
+                To get ShapeNetV2 alignment: -z
                 One of: "x", "y", "z", "-x", "-y", "-z"
             category_str:
                 If not None, only samples from the matching category will be returned.
@@ -329,7 +332,9 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     def _sample_from_sample_data(self, sample_data: dict) -> dict:
         """Create dictionary containing a single sample."""
-        color = torch.from_numpy(np.asarray(Image.open(sample_data["color_path"])))
+        color = torch.from_numpy(
+            np.asarray(Image.open(sample_data["color_path"]), dtype=np.float32) / 255
+        )
         depth = self._load_depth(sample_data["depth_path"])
         instances_mask = self._load_mask(sample_data["mask_path"])
         instance_mask = instances_mask == sample_data["mask_id"]
@@ -423,7 +428,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Scalar-last quaternion, shape (4,).
             extents (torch.Tensor):
                 Bounding box side lengths.
-            nocs_transformation:
+            nocs_transformation (torch.Tensor):
                 Transformation from centered [-0.5,0.5]^3 NOCS coordinates to camera.
         """
         gts_path = self._get_gts_path(color_path)
@@ -458,8 +463,10 @@ class NOCSDataset(torch.utils.data.Dataset):
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
 
-        position = torch.from_numpy(position)
-        orientation_q = torch.from_numpy(orientation_q)
+        position = torch.Tensor(position)
+        orientation_q = torch.Tensor(orientation_q)
+        extents = torch.Tensor(extents)
+        nocs_transform = torch.Tensor(nocs_transform)
         return position, orientation_q, extents, nocs_transform
 
     def _get_gts_path(self, color_path: str) -> Optional[str]:
@@ -512,7 +519,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         mesh = o3d.io.read_triangle_mesh(obj_path)
         vertices = np.asarray(mesh.vertices)
         extents = np.max(vertices, axis=0) - np.min(vertices, axis=0)
-        return torch.from_numpy(extents)
+        return torch.Tensor(extents)
 
     def _load_mask(self, mask_path: str) -> torch.Tensor:
         """Load mask from mask filepath."""
@@ -526,7 +533,7 @@ class NOCSDataset(torch.utils.data.Dataset):
     def _load_depth(self, depth_path: str) -> torch.Tensor:
         """Load depth from depth filepath."""
         depth = torch.from_numpy(
-            np.asarray(Image.open(depth_path), dtype=np.float64) * 0.001
+            np.asarray(Image.open(depth_path), dtype=np.float32) * 0.001
         )
         return depth
 
@@ -538,7 +545,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             Coordinates are normalized to [0,1], shape (H,W,3).
         """
         nocs_map = torch.from_numpy(
-            np.asarray(Image.open(nocs_map_path), dtype=np.float64) / 255
+            np.asarray(Image.open(nocs_map_path), dtype=np.float32) / 255
         )
         # z-coordinate has to be flipped
         # see https://github.com/hughw19/NOCS_CVPR2019/blob/14dbce775c3c7c45bb7b19269bd53d68efb8f73f/dataset.py#L327 # noqa: E501
@@ -628,7 +635,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         rotation_o2n[:, 2] *= np.linalg.det(rotation_o2n)  # make special orthogonal
         if np.linalg.det(rotation_o2n) != 1.0:  # check if special orthogonal
             raise ValueError("Unsupported combination of remap_{y,x}_axis. det != 1")
-        remapped_extents = torch.abs(torch.from_numpy(rotation_o2n) @ extents)
+        remapped_extents = torch.abs(torch.Tensor(rotation_o2n) @ extents)
 
         # quaternion so far: original -> camera
         # we want a quaternion: new -> camera
