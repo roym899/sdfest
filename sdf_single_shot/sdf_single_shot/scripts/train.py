@@ -34,26 +34,28 @@ class Trainer:
             config: The configuration for model and training.
         """
         self.config = config
-        print(self.config)
+        self._validation_iteration = config["validation_iteration"]
+        self._visualization_iteration = config["visualization_iteration"]
+        self._checkpoint_iteration = config["checkpoint_iteration"]
 
     def run(self) -> None:
         """Train the model."""
         wandb.init(project="sdf_single_shot", config=self.config)
 
-        device = self.get_device()
+        self._device = self.get_device()
 
         # init dataset and dataloader
         self.vae = self.create_sdfvae()
 
         # init model to train
-        sdf_pose_net = SDFPoseNet(
+        self._sdf_pose_net = SDFPoseNet(
             backbone=MODULE_DICT[self.config["backbone_type"]](
                 **self.config["backbone"]
             ),
             head=MODULE_DICT[self.config["head_type"]](
                 shape_dimension=self.config["vae"]["latent_size"], **self.config["head"]
             ),
-        ).to(device)
+        ).to(self._device)
 
         # deterministic samples (needs to be done after model initialization, as it
         # can have varying number of parameters)
@@ -61,49 +63,49 @@ class Trainer:
         random.seed(torch.initial_seed())  # to get deterministic examples
 
         # print network summary
-        torchinfo.summary(sdf_pose_net, (1, 500, 3), device=device)
+        torchinfo.summary(self._sdf_pose_net, (1, 500, 3), device=self._device)
 
         # init optimizer
-        optimizer = torch.optim.Adam(
-            sdf_pose_net.parameters(), lr=self.config["learning_rate"]
+        self._optimizer = torch.optim.Adam(
+            self._sdf_pose_net.parameters(), lr=self.config["learning_rate"]
         )
 
         # load checkpoint if provided
         if "checkpoint" in self.config and self.config["checkpoint"] is not None:
             # TODO: checkpoint should always go together with model config!
             (
-                sdf_pose_net,
-                optimizer,
-                current_iteration,
-                run_name,
+                self._sdf_pose_net,
+                self._optimizer,
+                self._current_iteration,
+                self._run_name,
             ) = utils.load_checkpoint(
-                self.config["checkpoint"], sdf_pose_net, optimizer, device
+                self.config["checkpoint"], self._sdf_pose_net, self._optimizer, self._device
             )
         else:
-            current_iteration = 0
-            run_name = (
+            self._current_iteration = 0
+            self._run_name = (
                 f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
             )
 
         wandb.config.run_name = (
-            run_name  # to allow association of ckpts with wandb runs
+            self._run_name  # to allow association of ckpts with wandb runs
         )
 
-        model_base_path = os.path.join(os.getcwd(), "models", run_name)
+        self._model_base_path = os.path.join(os.getcwd(), "models", self._run_name)
 
-        multi_data_loader = self._create_multi_data_loader()
+        self._multi_data_loader = self._create_multi_data_loader()
 
         # backup config to model directory
-        os.makedirs(model_base_path, exist_ok=True)
-        config_path = os.path.join(model_base_path, "config.yaml")
+        os.makedirs(self._model_base_path, exist_ok=True)
+        config_path = os.path.join(self._model_base_path, "config.yaml")
         yoco.save_config_to_file(config_path, self.config)
 
         program_starts = time.time()
-        for samples in multi_data_loader:
-            print(current_iteration)
+        for samples in self._multi_data_loader:
+            print(self._current_iteration)
             for k, v in samples.items():
-                samples[k] = v.to(device)
-            latent_shape, position, scale, orientation = sdf_pose_net(
+                samples[k] = v.to(self._device)
+            latent_shape, position, scale, orientation = self._sdf_pose_net(
                 samples["pointset"]
             )
             predictions = {
@@ -113,112 +115,32 @@ class Trainer:
                 "orientation": orientation,
             }
 
-            loss = self._compute_loss(predictions, samples, current_iteration)
-
-            optimizer.zero_grad()
+            loss = self._compute_loss(samples, predictions)
+            self._optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            self._optimizer.step()
 
-            # compute metrics / i.e., loss and representation independent metrics
-            with torch.no_grad():
-                # extract quaternion from orientation representation
-                target_quaternions = samples["quaternion"]
-                if self.config["head"]["orientation_repr"] == "quaternion":
-                    predicted_quaternions = predictions["orientation"]
-                elif self.config["head"]["orientation_repr"] == "discretized":
-                    predicted_quaternions = torch.empty_like(target_quaternions)
-                    for i, v in enumerate(predictions["orientation"]):
-                        index = v.argmax().item()
-                        quat = sdf_pose_net._head._grid.index_to_quat(index)
-                        predicted_quaternions[i, :] = torch.tensor(quat)
-                else:
-                    raise NotImplementedError(
-                        "Orientation representation "
-                        f"{self.config['head']['orientation_repr']}"
-                        " is not supported"
-                    )
-                geodesic_error = quaternion_utils.geodesic_distance(
-                    target_quaternions, predicted_quaternions
-                )
-                wandb.log(
-                    {
-                        "metric geodesic distance": geodesic_error.item(),
-                    },
-                    step=current_iteration,
-                )
+            self._compute_metrics(samples, predictions)
 
-            current_iteration += 1
+            if self._current_iteration % self._visualization_iteration == 0:
+                self._generate_visualizations()
 
-            # generate visualizations
-            with torch.no_grad():
-                if current_iteration % 5000 == 0:
-                    # generate unseen input and target
-                    test_inp, _ = next(iter(data_loader))
-                    test_out = sdf_pose_net(test_inp)
-                    input_pointcloud = test_inp[0].detach().cpu().numpy()
-                    input_pointcloud = np.hstack(
-                        (
-                            input_pointcloud,
-                            np.full((input_pointcloud.shape[0], 1), 0),
-                        )
-                    )
-                    output_sdfs = vae.decode(test_out[0])
-                    output_sdf = output_sdfs[0][0].detach().cpu().numpy()
-                    output_position = test_out[1][0].detach().cpu().numpy()
-                    output_scale = test_out[2][0].detach().cpu().numpy()
-                    if self.config["head"]["orientation_repr"] == "quaternion":
-                        quat = test_out[3][0].detach().cpu().numpy()
-                    elif self.config["head"]["orientation_repr"] == "discretized":
-                        quat = sdf_pose_net._head._grid.index_to_quat(
-                            test_out[3][0].argmax()
-                        )
-                    else:
-                        raise NotImplementedError(
-                            "Orientation representation "
-                            f"{self.config['head']['orientation_repr']}"
-                            " is not supported"
-                        )
-                    output_pointcloud = sdf_utils.sdf_to_pointcloud(
-                        output_sdf, output_position, quat, output_scale
-                    )
-                    output_pointcloud = np.hstack(
-                        (
-                            output_pointcloud,
-                            np.full((output_pointcloud.shape[0], 1), 1),
-                        )
-                    )
-                    pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+            if self._current_iteration % self._validation_iteration == 0:
+                self._compute_validation_metrics()
 
-                    wandb.log(
-                        {"point_cloud": wandb.Object3D(pointcloud)},
-                        step=current_iteration,
-                    )
+            if self._current_iteration % self._checkpoint_iteration == 0:
+                self._save_checkpoint()
 
-                if current_iteration % 100000 == 0:
-                    checkpoint_path = os.path.join(
-                        model_base_path, f"{current_iteration}.ckp"
-                    )
-                    utils.save_checkpoint(
-                        path=checkpoint_path,
-                        model=sdf_pose_net,
-                        optimizer=optimizer,
-                        iteration=current_iteration,
-                        run_name=run_name,
-                    )
-
-            if current_iteration > self.config["iterations"]:
+            self._current_iteration += 1
+            if self._current_iteration > self.config["iterations"]:
                 break
 
         now = time.time()
-        print(
-            "It has been {0} seconds since the loop started".format(
-                now - program_starts
-            )
-        )
+        print(f"Training finished after {now-program_starts} seconds.")
 
         # save the final model
         torch.save(
-            sdf_pose_net.state_dict(),
+            self._sdf_pose_net.state_dict(),
             os.path.join(wandb.run.dir, f"{wandb.run.name}.pt"),
         )
         config_path = os.path.join(wandb.run.dir, f"{wandb.run.name}.yaml")
@@ -251,20 +173,12 @@ class Trainer:
 
     def _compute_loss(
         self,
-        predictions: dict,
         samples: dict,
-        current_iteration: int,
+        predictions: dict,
     ) -> torch.Tensor:
         """Compute total loss.
 
         Args:
-            predictions: Dictionary containing the following keys:
-                "latent_shape": Shape (N,D).
-                "position": Shape (N,3).
-                "scale": Shape (N,).
-                "orientation":
-                    Shape (N,4) for quaternion representation.
-                    Shape (N,R) for discretized representation.
             samples:
                 Samples dictionary containing a subset of the following keys:
                     "latent_shape": Shape (N,D).
@@ -273,8 +187,13 @@ class Trainer:
                     "orientation":
                         Shape (N,4) for quaternion representation.
                         Shape (N,) for discretized representation.
-            current_iteration:
-                Current trainig iteration. Used to log loss terms to wandb.
+            predictions: Dictionary containing the following keys:
+                "latent_shape": Shape (N,D).
+                "position": Shape (N,3).
+                "scale": Shape (N,).
+                "orientation":
+                    Shape (N,4) for quaternion representation.
+                    Shape (N,R) for discretized representation.
         Returns:
             The combined loss. Scalar.
         """
@@ -325,7 +244,7 @@ class Trainer:
 
         wandb.log(
             log_dict,
-            step=current_iteration,
+            step=self._current_iteration,
         )
 
         return loss
@@ -341,9 +260,7 @@ class Trainer:
                     vae=self.vae,
                 )
             elif dataset_type is not None:
-                dataset = dataset_type(
-                    config=dataset_dict["config_dict"]
-                )
+                dataset = dataset_type(config=dataset_dict["config_dict"])
             else:
                 raise NotImplementedError(
                     f"Dataset type {dataset_dict['type']} not supported."
@@ -356,6 +273,98 @@ class Trainer:
             )
             data_loaders.append(data_loader)
         return dataset_utils.MultiDataLoader(data_loaders, probabilities)
+
+    def _compute_metrics(self, samples: dict, predictions: dict) -> None:
+        # compute metrics / i.e., loss and representation independent metrics
+        with torch.no_grad():
+            # extract quaternion from orientation representation
+            target_quaternions = samples["quaternion"]
+            if self.config["head"]["orientation_repr"] == "quaternion":
+                predicted_quaternions = predictions["orientation"]
+            elif self.config["head"]["orientation_repr"] == "discretized":
+                predicted_quaternions = torch.empty_like(target_quaternions)
+                for i, v in enumerate(predictions["orientation"]):
+                    index = v.argmax().item()
+                    quat = self._sdf_pose_net._head._grid.index_to_quat(index)
+                    predicted_quaternions[i, :] = torch.tensor(quat)
+            else:
+                raise NotImplementedError(
+                    "Orientation representation "
+                    f"{self.config['head']['orientation_repr']}"
+                    " is not supported"
+                )
+            geodesic_error = quaternion_utils.geodesic_distance(
+                target_quaternions, predicted_quaternions
+            )
+            wandb.log(
+                {
+                    "metric geodesic distance": geodesic_error.item(),
+                },
+                step=self._current_iteration,
+            )
+
+    def _generate_visualizations(self) -> None:
+        # generate visualizations
+        with torch.no_grad():
+            if self._current_iteration % 5000 == 0:
+                # generate unseen input and target
+                test_samples = next(iter(self._multi_data_loader))
+                for k, v in test_samples.items():
+                    test_samples[k] = v.to(self._device)
+                test_out = self._sdf_pose_net(test_samples["pointset"])
+                input_pointcloud = test_samples["pointset"][0].detach().cpu().numpy()
+                input_pointcloud = np.hstack(
+                    (
+                        input_pointcloud,
+                        np.full((input_pointcloud.shape[0], 1), 0),
+                    )
+                )
+                output_sdfs = self.vae.decode(test_out[0])
+                output_sdf = output_sdfs[0][0].detach().cpu().numpy()
+                output_position = test_out[1][0].detach().cpu().numpy()
+                output_scale = test_out[2][0].detach().cpu().numpy()
+                if self.config["head"]["orientation_repr"] == "quaternion":
+                    quat = test_out[3][0].detach().cpu().numpy()
+                elif self.config["head"]["orientation_repr"] == "discretized":
+                    quat = self._sdf_pose_net._head._grid.index_to_quat(
+                        test_out[3][0].argmax()
+                    )
+                else:
+                    raise NotImplementedError(
+                        "Orientation representation "
+                        f"{self.config['head']['orientation_repr']}"
+                        " is not supported"
+                    )
+                output_pointcloud = sdf_utils.sdf_to_pointcloud(
+                    output_sdf, output_position, quat, output_scale
+                )
+                output_pointcloud = np.hstack(
+                    (
+                        output_pointcloud,
+                        np.full((output_pointcloud.shape[0], 1), 1),
+                    )
+                )
+                pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+
+                wandb.log(
+                    {"point_cloud": wandb.Object3D(pointcloud)},
+                    step=self._current_iteration,
+                )
+
+    def _compute_validation_metrics(self) -> None:
+        pass
+
+    def _save_checkpoint(self) -> None:
+        checkpoint_path = os.path.join(
+            self._model_base_path, f"{self._current_iteration}.ckp"
+        )
+        utils.save_checkpoint(
+            path=checkpoint_path,
+            model=self._sdf_pose_net,
+            optimizer=self._optimizer,
+            iteration=self._current_iteration,
+            run_name=self._run_name,
+        )
 
 
 def main() -> None:

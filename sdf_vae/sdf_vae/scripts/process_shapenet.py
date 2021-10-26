@@ -154,7 +154,8 @@ def check_meshes(path):
     return filtered_objects
 
 
-def conv_to_sdf(obj):
+def conv_to_sdf(obj: Object3D):
+    print(obj.mesh_path)
     return obj.convert_to_sdf(resolution, padding)
 
 
@@ -163,7 +164,7 @@ def convert_to_sdf(objects: List[Object3D]) -> List[Object3D]:
     # TODO do not keep everything in memory, store to disk instead
 
     num_objects = len(objects)
-    with Pool() as p:
+    with Pool(processes=1) as p:
         objects = list(
             tqdm(
                 p.imap(conv_to_sdf, objects),

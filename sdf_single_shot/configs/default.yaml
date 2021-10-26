@@ -11,6 +11,9 @@ learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
+visualization_iteration: 5000
+validation_iteration: 50000
+checkpoint_iteration: 50000
 datasets: 
     generated_dataset:
         type: SDFVAEViewDataset
