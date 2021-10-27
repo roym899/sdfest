@@ -14,10 +14,13 @@ orientation_weight: 1
 visualization_iteration: 5000
 validation_iteration: 50000
 checkpoint_iteration: 50000
+orientation_repr: quaternion
 datasets: 
     generated_dataset:
         type: SDFVAEViewDataset
         probability: 1.0
+validation_datasets: {}
+category_str: mug
 
 # Network params
 backbone_type: VanillaPointNet
@@ -31,4 +34,3 @@ head:
     in_size: 1024 # number of input features
     mlp_out_sizes: [512, 256, 128] 
     batchnorm: True
-    orientation_repr: quaternion

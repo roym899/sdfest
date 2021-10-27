@@ -18,27 +18,22 @@ orientation_weight: 1
 visualization_iteration: 5000
 validation_iteration: 50000
 checkpoint_iteration: 50000
+orientation_repr: discretized
+orientation_grid_resolution: 1
 
 # Dataset specific config
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        config_dict:
-            orientation_repr: discretized
-            orientation_grid_resolution: 1
         probability: 0.6
     camera_train:
         type: NOCSDataset
-        config_dict:
-            orientation_repr: discretized
-            orientation_grid_resolution: 1
         probability: 0.3
     real_train:
         type: NOCSDataset
-        config_dict:
-            orientation_repr: discretized
-            orientation_grid_resolution: 1
         probability: 0.1
+
+validation_datasets: {}
 
 # Network params
 backbone_type: VanillaPointNet
@@ -52,5 +47,3 @@ head:
     in_size: 1024 # number of input features
     mlp_out_sizes: [512, 256, 128] 
     batchnorm: True
-    orientation_repr: discretized
-    grid_resolution: 1 # only for discretized orientation repr.

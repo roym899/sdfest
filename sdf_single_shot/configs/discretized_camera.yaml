@@ -1,9 +1,9 @@
 config:
     - "./discretized.yaml"
-    - vae: "../vae_models/bottle.yaml"
+    - vae: "../vae_models/camera.yaml"
 
 # Category-specific dataset configs
-category_str: bottle
+category_str: camera
 datasets:
     generated_dataset:
         config_dict:

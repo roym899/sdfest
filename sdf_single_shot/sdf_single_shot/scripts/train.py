@@ -33,14 +33,38 @@ class Trainer:
         Args:
             config: The configuration for model and training.
         """
-        self.config = config
+        self._read_config(config)
+
+    def _read_config(self, config: dict) -> None:
+        self._config = config
         self._validation_iteration = config["validation_iteration"]
         self._visualization_iteration = config["visualization_iteration"]
         self._checkpoint_iteration = config["checkpoint_iteration"]
 
+        # propagate orientation representation and category to datasets
+        datasets = (
+            list(self._config["datasets"].values())
+            + list(self._config["validation_datasets"].values())
+        )
+        for dataset in datasets:
+            dataset["config_dict"]["orientation_repr"] = config["orientation_repr"]
+            if "orientation_grid_resolution" in config:
+                dataset["config_dict"]["orientation_grid_resolution"] = config[
+                    "orientation_grid_resolution"
+                ]
+            if "category_str" in config:
+                dataset["config_dict"]["category_str"] = config["category_str"]
+
+        # propagate orientation representation to init head
+        self._config["head"]["orientation_repr"] = config["orientation_repr"]
+        if "orientation_grid_resolution" in config:
+            self._config["head"]["orientation_grid_resolution"] = config[
+                "orientation_grid_resolution"
+            ]
+
     def run(self) -> None:
         """Train the model."""
-        wandb.init(project="sdf_single_shot", config=self.config)
+        wandb.init(project="sdf_single_shot", config=self._config)
 
         self._device = self.get_device()
 
@@ -49,11 +73,12 @@ class Trainer:
 
         # init model to train
         self._sdf_pose_net = SDFPoseNet(
-            backbone=MODULE_DICT[self.config["backbone_type"]](
-                **self.config["backbone"]
+            backbone=MODULE_DICT[self._config["backbone_type"]](
+                **self._config["backbone"]
             ),
-            head=MODULE_DICT[self.config["head_type"]](
-                shape_dimension=self.config["vae"]["latent_size"], **self.config["head"]
+            head=MODULE_DICT[self._config["head_type"]](
+                shape_dimension=self._config["vae"]["latent_size"],
+                **self._config["head"],
             ),
         ).to(self._device)
 
@@ -67,11 +92,11 @@ class Trainer:
 
         # init optimizer
         self._optimizer = torch.optim.Adam(
-            self._sdf_pose_net.parameters(), lr=self.config["learning_rate"]
+            self._sdf_pose_net.parameters(), lr=self._config["learning_rate"]
         )
 
         # load checkpoint if provided
-        if "checkpoint" in self.config and self.config["checkpoint"] is not None:
+        if "checkpoint" in self._config and self._config["checkpoint"] is not None:
             # TODO: checkpoint should always go together with model config!
             (
                 self._sdf_pose_net,
@@ -79,7 +104,7 @@ class Trainer:
                 self._current_iteration,
                 self._run_name,
             ) = utils.load_checkpoint(
-                self.config["checkpoint"],
+                self._config["checkpoint"],
                 self._sdf_pose_net,
                 self._optimizer,
                 self._device,
@@ -101,7 +126,7 @@ class Trainer:
         # backup config to model directory
         os.makedirs(self._model_base_path, exist_ok=True)
         config_path = os.path.join(self._model_base_path, "config.yaml")
-        yoco.save_config_to_file(config_path, self.config)
+        yoco.save_config_to_file(config_path, self._config)
 
         program_starts = time.time()
         for samples in self._multi_data_loader:
@@ -135,7 +160,7 @@ class Trainer:
                 self._save_checkpoint()
 
             self._current_iteration += 1
-            if self._current_iteration > self.config["iterations"]:
+            if self._current_iteration > self._config["iterations"]:
                 break
 
         now = time.time()
@@ -147,14 +172,14 @@ class Trainer:
             os.path.join(wandb.run.dir, f"{wandb.run.name}.pt"),
         )
         config_path = os.path.join(wandb.run.dir, f"{wandb.run.name}.yaml")
-        self.config["model"] = os.path.join(".", f"{wandb.run.name}.pt")
-        yoco.save_config_to_file(config_path, self.config)
+        self._config["model"] = os.path.join(".", f"{wandb.run.name}.pt")
+        yoco.save_config_to_file(config_path, self._config)
 
     def get_device(self) -> torch.device:
         """Create device based on config."""
-        if "device" not in self.config or self.config["device"] is None:
+        if "device" not in self._config or self._config["device"] is None:
             return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        return torch.device(self.config["device"])
+        return torch.device(self._config["device"])
 
     def create_sdfvae(self) -> SDFVAE:
         """Create SDFVAE based on config.
@@ -165,12 +190,12 @@ class Trainer:
         device = self.get_device()
         vae = SDFVAE(
             sdf_size=64,
-            latent_size=self.config["vae"]["latent_size"],
-            encoder_dict=self.config["vae"]["encoder"],
-            decoder_dict=self.config["vae"]["decoder"],
+            latent_size=self._config["vae"]["latent_size"],
+            encoder_dict=self._config["vae"]["encoder"],
+            decoder_dict=self._config["vae"]["decoder"],
             device=device,
         ).to(device)
-        state_dict = torch.load(self.config["vae"]["model"], map_location=device)
+        state_dict = torch.load(self._config["vae"]["model"], map_location=device)
         vae.load_state_dict(state_dict)
         return vae
 
@@ -216,32 +241,32 @@ class Trainer:
                 predictions["position"], samples["position"]
             )
             log_dict["loss position"] = loss_position_l2.item()
-            loss = loss + self.config["position_weight"] * loss_position_l2
+            loss = loss + self._config["position_weight"] * loss_position_l2
 
         if "scale" in samples:
             loss_scale_l2 = torch.nn.functional.mse_loss(
                 predictions["scale"], samples["scale"]
             )
             log_dict["loss scale"] = loss_scale_l2.item()
-            loss = loss + self.config["scale_weight"] * loss_scale_l2
+            loss = loss + self._config["scale_weight"] * loss_scale_l2
 
         if "orientation" in samples:
-            if self.config["head"]["orientation_repr"] == "quaternion":
+            if self._config["head"]["orientation_repr"] == "quaternion":
                 loss_orientation = quaternion_utils.simple_quaternion_loss(
                     predictions["orientation"], samples["orientation"]
                 )
-            elif self.config["head"]["orientation_repr"] == "discretized":
+            elif self._config["head"]["orientation_repr"] == "discretized":
                 loss_orientation = torch.nn.functional.cross_entropy(
                     predictions["orientation"], samples["orientation"]
                 )
             else:
                 raise NotImplementedError(
                     "Orientation repr "
-                    f"{self.config['head']['orientation_repr']}"
+                    f"{self._config['head']['orientation_repr']}"
                     " not supported."
                 )
             log_dict["loss orientation"] = loss_orientation.item()
-            loss = loss + self.config["orientation_weight"] * loss_orientation
+            loss = loss + self._config["orientation_weight"] * loss_orientation
 
         log_dict["total loss"] = loss.item()
 
@@ -255,7 +280,7 @@ class Trainer:
     def _create_multi_data_loader(self) -> dataset_utils.MultiDataLoader:
         data_loaders = []
         probabilities = []
-        for dataset_dict in self.config["datasets"].values():
+        for dataset_dict in self._config["datasets"].values():
             dataset_type = utils.str_to_object(dataset_dict["type"])
             if dataset_type == SDFVAEViewDataset:
                 dataset = dataset_type(
@@ -271,7 +296,7 @@ class Trainer:
             probabilities.append(dataset_dict["probability"])
             data_loader = torch.utils.data.DataLoader(
                 dataset=dataset,
-                batch_size=self.config["batch_size"],
+                batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
             )
             data_loaders.append(data_loader)
@@ -282,9 +307,9 @@ class Trainer:
         with torch.no_grad():
             # extract quaternion from orientation representation
             target_quaternions = samples["quaternion"]
-            if self.config["head"]["orientation_repr"] == "quaternion":
+            if self._config["head"]["orientation_repr"] == "quaternion":
                 predicted_quaternions = predictions["orientation"]
-            elif self.config["head"]["orientation_repr"] == "discretized":
+            elif self._config["head"]["orientation_repr"] == "discretized":
                 predicted_quaternions = torch.empty_like(target_quaternions)
                 for i, v in enumerate(predictions["orientation"]):
                     index = v.argmax().item()
@@ -293,7 +318,7 @@ class Trainer:
             else:
                 raise NotImplementedError(
                     "Orientation representation "
-                    f"{self.config['head']['orientation_repr']}"
+                    f"{self._config['head']['orientation_repr']}"
                     " is not supported"
                 )
             geodesic_error = quaternion_utils.geodesic_distance(
@@ -326,16 +351,16 @@ class Trainer:
                 output_sdf = output_sdfs[0][0].detach().cpu().numpy()
                 output_position = test_out[1][0].detach().cpu().numpy()
                 output_scale = test_out[2][0].detach().cpu().numpy()
-                if self.config["head"]["orientation_repr"] == "quaternion":
+                if self._config["head"]["orientation_repr"] == "quaternion":
                     quat = test_out[3][0].detach().cpu().numpy()
-                elif self.config["head"]["orientation_repr"] == "discretized":
+                elif self._config["head"]["orientation_repr"] == "discretized":
                     quat = self._sdf_pose_net._head._grid.index_to_quat(
                         test_out[3][0].argmax()
                     )
                 else:
                     raise NotImplementedError(
                         "Orientation representation "
-                        f"{self.config['head']['orientation_repr']}"
+                        f"{self._config['head']['orientation_repr']}"
                         " is not supported"
                     )
                 output_pointcloud = sdf_utils.sdf_to_pointcloud(

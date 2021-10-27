@@ -16,7 +16,7 @@ class SDFPoseHead(nn.Module):
         shape_dimension: int,
         batchnorm: bool,
         orientation_repr: Optional[str] = "quaternion",
-        grid_resolution: Optional[int] = None,
+        orientation_grid_resolution: Optional[int] = None,
     ):
         """Initialize the SDFPoseHead.
 
@@ -27,7 +27,7 @@ class SDFPoseHead(nn.Module):
             batchnorm:          whether to use batchnorm or not
             orientation_repr:
                 The orientation represention. One of "quaternion"|"discretized".
-            grid_resolution:
+            orientation_grid_resolution:
                 The resolution of the SO3 grid.
                 Only used when orientation_repr == "discretized".
         """
@@ -56,7 +56,7 @@ class SDFPoseHead(nn.Module):
             self._grid = None
             self._final_layer = nn.Linear(mlp_out_sizes[-1], self._shape_dimension + 8)
         elif orientation_repr == "discretized":
-            self._grid = SO3Grid(grid_resolution)
+            self._grid = SO3Grid(orientation_grid_resolution)
             self._final_layer = nn.Linear(
                 mlp_out_sizes[-1], self._shape_dimension + 4 + self._grid.num_cells()
             )
@@ -155,7 +155,7 @@ if __name__ == "__main__":
         10,
         True,
         orientation_repr="discretized",
-        grid_resolution=0,
+        orientation_grid_resolution=0,
     )
     inp = torch.rand(16, 1024)  # batch size 16 with 1024 features
     out = sdf_pose_head(inp)

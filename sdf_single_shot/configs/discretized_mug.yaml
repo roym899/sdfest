@@ -3,6 +3,7 @@ config:
     - vae: "../vae_model/mug.yaml"
 
 # Category-specific config
+category_str: mug
 datasets:
     generated_dataset:
         config_dict:
@@ -10,9 +11,3 @@ datasets:
             z_max: 1.5
             extent_mean: 0.11
             extent_std: 0.01
-    camera_train:
-        config_dict:
-            category_str: mug
-    real_train:
-        config_dict:
-            category_str: mug

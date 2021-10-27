@@ -3,6 +3,7 @@ config:
     - vae: "../vae_models/bowl.yaml"
 
 # Category-specific config
+category_str: bowl
 datasets:
     generated_dataset:
         config_dict:
@@ -10,9 +11,4 @@ datasets:
             z_max: 1.5
             extent_mean: 0.2
             extent_std: 0.05
-    camera_train:
-        config_dict:
-            category_str: bowl
-    real_train:
-        config_dict:
-            category_str: bowl
+            
