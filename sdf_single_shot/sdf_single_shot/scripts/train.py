@@ -79,7 +79,10 @@ class Trainer:
                 self._current_iteration,
                 self._run_name,
             ) = utils.load_checkpoint(
-                self.config["checkpoint"], self._sdf_pose_net, self._optimizer, self._device
+                self.config["checkpoint"],
+                self._sdf_pose_net,
+                self._optimizer,
+                self._device,
             )
         else:
             self._current_iteration = 0

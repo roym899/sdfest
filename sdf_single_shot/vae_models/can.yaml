@@ -35,6 +35,6 @@ l1_small_weight: 0.0
 pc_weight: 1.0
 kld_weight: 3.0
 learning_rate: 0.001
-dataset_path: ./data/shapenet_processed/bottle_filtered/
-device: cuda:0
-model: ./bottle.pt
+dataset_path: ./data/shapenet_processed/can_filtered/
+model: ./can.pt
+device: cuda:2

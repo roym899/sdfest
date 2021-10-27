@@ -164,7 +164,7 @@ def convert_to_sdf(objects: List[Object3D]) -> List[Object3D]:
     # TODO do not keep everything in memory, store to disk instead
 
     num_objects = len(objects)
-    with Pool(processes=1) as p:
+    with Pool() as p:
         objects = list(
             tqdm(
                 p.imap(conv_to_sdf, objects),

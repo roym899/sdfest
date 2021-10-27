@@ -364,7 +364,6 @@ class VAEVisualizer(QDialog):
             return None
         try:
             sdf_np = np.load(path)
-            sdf_np = np.transpose(sdf_np, (0, 2, 1))  # make z the 'up' axis
             return torch.as_tensor(sdf_np).unsqueeze(0).unsqueeze(0)
         except FileNotFoundError:
             print("Error loading SDF.")
