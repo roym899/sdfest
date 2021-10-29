@@ -65,7 +65,7 @@ def quaternion_invert(quaternions: torch.Tensor) -> torch.Tensor:
 
 
 def geodesic_distance(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
-    """Compute mean geodesic distance between quaternions.
+    """Compute geodesic distances between quaternions.
 
     Args:
         q1: First set of quaterions, shape (N,4).
@@ -75,8 +75,7 @@ def geodesic_distance(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
     """
     abs_q1q2 = torch.clip(torch.abs(torch.sum(q1 * q2, dim=1)), 0, 1)
     geodesic_distances = 2 * torch.acos(abs_q1q2)
-    geodesic_distance = torch.mean(geodesic_distances)
-    return geodesic_distance
+    return geodesic_distances
 
 
 def simple_quaternion_loss(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:

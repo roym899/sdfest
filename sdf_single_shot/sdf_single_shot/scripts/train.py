@@ -4,11 +4,13 @@ from datetime import datetime
 import os
 import random
 import time
+from typing import List
 
 import numpy as np
 from sdf_vae.sdf_vae import SDFVAE
 import torch
 import torchinfo
+from tqdm import tqdm
 import wandb
 import yoco
 
@@ -42,9 +44,8 @@ class Trainer:
         self._checkpoint_iteration = config["checkpoint_iteration"]
 
         # propagate orientation representation and category to datasets
-        datasets = (
-            list(self._config["datasets"].values())
-            + list(self._config["validation_datasets"].values())
+        datasets = list(self._config["datasets"].values()) + list(
+            self._config["validation_datasets"].values()
         )
         for dataset in datasets:
             dataset["config_dict"]["orientation_repr"] = config["orientation_repr"]
@@ -122,6 +123,7 @@ class Trainer:
         self._model_base_path = os.path.join(os.getcwd(), "models", self._run_name)
 
         self._multi_data_loader = self._create_multi_data_loader()
+        self._validation_data_loader_dict = self._create_validation_data_loader_dict()
 
         # backup config to model directory
         os.makedirs(self._model_base_path, exist_ok=True)
@@ -130,7 +132,8 @@ class Trainer:
 
         program_starts = time.time()
         for samples in self._multi_data_loader:
-            print(self._current_iteration)
+            self._current_iteration += 1
+
             for k, v in samples.items():
                 samples[k] = v.to(self._device)
             latent_shape, position, scale, orientation = self._sdf_pose_net(
@@ -148,19 +151,19 @@ class Trainer:
             loss.backward()
             self._optimizer.step()
 
-            self._compute_metrics(samples, predictions)
+            with torch.no_grad():
+                self._compute_metrics(samples, predictions)
 
-            if self._current_iteration % self._visualization_iteration == 0:
-                self._generate_visualizations()
+                if self._current_iteration % self._visualization_iteration == 0:
+                    self._generate_visualizations()
 
-            if self._current_iteration % self._validation_iteration == 0:
-                self._compute_validation_metrics()
+                if self._current_iteration % self._validation_iteration == 0:
+                    self._compute_validation_metrics()
 
             if self._current_iteration % self._checkpoint_iteration == 0:
                 self._save_checkpoint()
 
-            self._current_iteration += 1
-            if self._current_iteration > self._config["iterations"]:
+            if self._current_iteration >= self._config["iterations"]:
                 break
 
         now = time.time()
@@ -281,18 +284,9 @@ class Trainer:
         data_loaders = []
         probabilities = []
         for dataset_dict in self._config["datasets"].values():
-            dataset_type = utils.str_to_object(dataset_dict["type"])
-            if dataset_type == SDFVAEViewDataset:
-                dataset = dataset_type(
-                    config=dataset_dict["config_dict"],
-                    vae=self.vae,
-                )
-            elif dataset_type is not None:
-                dataset = dataset_type(config=dataset_dict["config_dict"])
-            else:
-                raise NotImplementedError(
-                    f"Dataset type {dataset_dict['type']} not supported."
-                )
+            dataset = self._create_dataset(
+                dataset_dict["type"], dataset_dict["config_dict"]
+            )
             probabilities.append(dataset_dict["probability"])
             data_loader = torch.utils.data.DataLoader(
                 dataset=dataset,
@@ -302,85 +296,137 @@ class Trainer:
             data_loaders.append(data_loader)
         return dataset_utils.MultiDataLoader(data_loaders, probabilities)
 
+    def _create_validation_data_loader_dict(self) -> dict:
+        data_loader_dict = {}
+        for dataset_name, dataset_dict in self._config["validation_datasets"].items():
+            dataset = self._create_dataset(
+                dataset_dict["type"], dataset_dict["config_dict"]
+            )
+            data_loader = torch.utils.data.DataLoader(
+                dataset=dataset,
+                batch_size=self._config["batch_size"],
+                collate_fn=dataset_utils.collate_samples,
+            )
+            data_loader_dict[dataset_name] = data_loader
+        return data_loader_dict
+
+    def _create_dataset(
+        self, type_str: str, config_dict: dict
+    ) -> torch.utils.data.Dataset:
+        dataset_type = utils.str_to_object(type_str)
+        if dataset_type == SDFVAEViewDataset:
+            dataset = dataset_type(
+                config=config_dict,
+                vae=self.vae,
+            )
+        elif dataset_type is not None:
+            dataset = dataset_type(config=config_dict)
+        else:
+            raise NotImplementedError(f"Dataset type {type_str} not supported.")
+        return dataset
+
+    def _mean_geodesic_distance(self, samples: dict, predictions: dict) -> torch.Tensor:
+        target_quaternions = samples["quaternion"]
+        if self._config["head"]["orientation_repr"] == "quaternion":
+            predicted_quaternions = predictions["orientation"]
+        elif self._config["head"]["orientation_repr"] == "discretized":
+            predicted_quaternions = torch.empty_like(target_quaternions)
+            for i, v in enumerate(predictions["orientation"]):
+                index = v.argmax().item()
+                quat = self._sdf_pose_net._head._grid.index_to_quat(index)
+                predicted_quaternions[i, :] = torch.tensor(quat)
+        else:
+            raise NotImplementedError(
+                "Orientation representation "
+                f"{self._config['head']['orientation_repr']}"
+                " is not supported"
+            )
+        geodesic_distances = quaternion_utils.geodesic_distance(
+            target_quaternions, predicted_quaternions
+        )
+        return torch.mean(geodesic_distances)
+
     def _compute_metrics(self, samples: dict, predictions: dict) -> None:
         # compute metrics / i.e., loss and representation independent metrics
-        with torch.no_grad():
-            # extract quaternion from orientation representation
-            target_quaternions = samples["quaternion"]
+        # extract quaternion from orientation representation
+        geodesic_distance = self._mean_geodesic_distance(samples, predictions)
+        wandb.log(
+            {
+                "metric geodesic distance": geodesic_distance.item(),
+            },
+            step=self._current_iteration,
+        )
+
+    def _generate_visualizations(self) -> None:
+        # generate visualizations
+        if self._current_iteration % self._visualization_iteration == 0:
+            # generate unseen input and target
+            test_samples = next(iter(self._multi_data_loader))
+            for k, v in test_samples.items():
+                test_samples[k] = v.to(self._device)
+            test_out = self._sdf_pose_net(test_samples["pointset"])
+            input_pointcloud = test_samples["pointset"][0].detach().cpu().numpy()
+            input_pointcloud = np.hstack(
+                (
+                    input_pointcloud,
+                    np.full((input_pointcloud.shape[0], 1), 0),
+                )
+            )
+            output_sdfs = self.vae.decode(test_out[0])
+            output_sdf = output_sdfs[0][0].detach().cpu().numpy()
+            output_position = test_out[1][0].detach().cpu().numpy()
+            output_scale = test_out[2][0].detach().cpu().numpy()
             if self._config["head"]["orientation_repr"] == "quaternion":
-                predicted_quaternions = predictions["orientation"]
+                quat = test_out[3][0].detach().cpu().numpy()
             elif self._config["head"]["orientation_repr"] == "discretized":
-                predicted_quaternions = torch.empty_like(target_quaternions)
-                for i, v in enumerate(predictions["orientation"]):
-                    index = v.argmax().item()
-                    quat = self._sdf_pose_net._head._grid.index_to_quat(index)
-                    predicted_quaternions[i, :] = torch.tensor(quat)
+                quat = self._sdf_pose_net._head._grid.index_to_quat(
+                    test_out[3][0].argmax()
+                )
             else:
                 raise NotImplementedError(
                     "Orientation representation "
                     f"{self._config['head']['orientation_repr']}"
                     " is not supported"
                 )
-            geodesic_error = quaternion_utils.geodesic_distance(
-                target_quaternions, predicted_quaternions
+            output_pointcloud = sdf_utils.sdf_to_pointcloud(
+                output_sdf, output_position, quat, output_scale
             )
+            output_pointcloud = np.hstack(
+                (
+                    output_pointcloud,
+                    np.full((output_pointcloud.shape[0], 1), 1),
+                )
+            )
+            pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+
             wandb.log(
-                {
-                    "metric geodesic distance": geodesic_error.item(),
-                },
+                {"point_cloud": wandb.Object3D(pointcloud)},
                 step=self._current_iteration,
             )
 
-    def _generate_visualizations(self) -> None:
-        # generate visualizations
-        with torch.no_grad():
-            if self._current_iteration % 5000 == 0:
-                # generate unseen input and target
-                test_samples = next(iter(self._multi_data_loader))
-                for k, v in test_samples.items():
-                    test_samples[k] = v.to(self._device)
-                test_out = self._sdf_pose_net(test_samples["pointset"])
-                input_pointcloud = test_samples["pointset"][0].detach().cpu().numpy()
-                input_pointcloud = np.hstack(
-                    (
-                        input_pointcloud,
-                        np.full((input_pointcloud.shape[0], 1), 0),
-                    )
-                )
-                output_sdfs = self.vae.decode(test_out[0])
-                output_sdf = output_sdfs[0][0].detach().cpu().numpy()
-                output_position = test_out[1][0].detach().cpu().numpy()
-                output_scale = test_out[2][0].detach().cpu().numpy()
-                if self._config["head"]["orientation_repr"] == "quaternion":
-                    quat = test_out[3][0].detach().cpu().numpy()
-                elif self._config["head"]["orientation_repr"] == "discretized":
-                    quat = self._sdf_pose_net._head._grid.index_to_quat(
-                        test_out[3][0].argmax()
-                    )
-                else:
-                    raise NotImplementedError(
-                        "Orientation representation "
-                        f"{self._config['head']['orientation_repr']}"
-                        " is not supported"
-                    )
-                output_pointcloud = sdf_utils.sdf_to_pointcloud(
-                    output_sdf, output_position, quat, output_scale
-                )
-                output_pointcloud = np.hstack(
-                    (
-                        output_pointcloud,
-                        np.full((output_pointcloud.shape[0], 1), 1),
-                    )
-                )
-                pointcloud = np.vstack((input_pointcloud, output_pointcloud))
-
-                wandb.log(
-                    {"point_cloud": wandb.Object3D(pointcloud)},
-                    step=self._current_iteration,
-                )
-
     def _compute_validation_metrics(self) -> None:
-        pass
+        for name, data_loader in self._validation_data_loader_dict.items():
+            metrics_dict = {}
+            sample_count = 0
+            for samples in tqdm(data_loader):
+                predictions = self._sdf_pose_net(samples["pointset"])
+                euclidean_distance = torch.linalg.norm(
+                    predictions["position"] - samples["position"], dim=1
+                )
+                metrics_dict[f"{name} validation mean position error / m"] += torch.sum(
+                    euclidean_distance
+                )
+                metrics_dict[f"{name} validation mean scale error / m"] += torch.sum(
+                    torch.abs(predictions["scale"] - samples["scale"])
+                )
+                metrics_dict[f"{name} validation mean geodesic_distance / rad"] = (
+                    self._mean_geodesic_distance(samples, predictions)
+                    * samples.shape[0]
+                )
+                sample_count += samples.shape[0]
+            for metric_name in metrics_dict:
+                metrics_dict[metric_name] /= sample_count
+            wandb.log(metrics_dict, step=self._current_iteration)
 
     def _save_checkpoint(self) -> None:
         checkpoint_path = os.path.join(

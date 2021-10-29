@@ -8,11 +8,19 @@ from pytest import FixtureRequest
 from sdf_single_shot.scripts import train
 
 
-def test_single_iteration_train_sdfvae() -> None:
+def test_single_iteration_train_sdfvae(request: FixtureRequest, tmp_path: str) -> None:
     """Test training for a single iteration."""
     # use default config (generated_dataset) with 1 iteration
+    tests_dir = request.fspath.dirname
     os.environ["WANDB_MODE"] = "disabled"
-    sys.argv = ["", "--iterations", "1"]
+    os.chdir(tmp_path)
+    sys.argv = [
+        "",
+        "--iterations",
+        "1",
+        "--config",
+        os.path.join(tests_dir, "../configs/", "default.yaml"),
+    ]
     train.main()
 
 
@@ -23,6 +31,7 @@ def test_multi_dataset_training(request: FixtureRequest, tmp_path: str) -> None:
     shutil.copytree(nocs_dataset_dir, tmp_path, dirs_exist_ok=True)
     # use default config with 1 iteration
     os.environ["WANDB_MODE"] = "disabled"
+    os.chdir(tmp_path)
     sys.argv = [
         "",
         "--iterations",
@@ -33,5 +42,11 @@ def test_multi_dataset_training(request: FixtureRequest, tmp_path: str) -> None:
         str(tmp_path),
         "--datasets.real_train.config_dict.root_dir",
         str(tmp_path),
+        "--visualization_iteration",
+        "1",
+        "--validation_iteration",
+        "1",
+        "--checkpoint_iteration",
+        "1",
     ]
     train.main()
