@@ -23,6 +23,7 @@ setuptools.setup(
         "pandas",
         "scipy",
         "torchinfo",
+        "joblib",
         "yoco",
         "sdf_differentiable_renderer",
         "sdf_vae",

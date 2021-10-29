@@ -133,6 +133,7 @@ class Trainer:
         program_starts = time.time()
         for samples in self._multi_data_loader:
             self._current_iteration += 1
+            print(self._current_iteration)
 
             for k, v in samples.items():
                 samples[k] = v.to(self._device)

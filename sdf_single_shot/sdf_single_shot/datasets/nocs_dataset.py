@@ -1,13 +1,17 @@
 """Module providing dataset class for NOCS datasets (CAMERA / REAL)."""
+import imghdr
 from glob import glob
 import os
 import pickle
+from shutil import copyfile
 from typing import TypedDict, Optional
 
+from joblib import Parallel, delayed
 from scipy.spatial.transform import Rotation
 import numpy as np
 import open3d as o3d
 import pandas as pd
+from tqdm import tqdm
 import torch
 from PIL import Image
 from sdf_differentiable_renderer import Camera
@@ -205,57 +209,107 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         os.makedirs(self._preprocess_path)
 
-        color_paths = self._get_color_files()
-        counter = 0
-        for color_path in color_paths:
-            depth_path = self._depth_path_from_color_path(color_path)
-            mask_path = self._mask_path_from_color_path(color_path)
-            meta_path = self._meta_path_from_color_path(color_path)
-            meta_data = pd.read_csv(
-                meta_path, sep=" ", header=None, converters={2: lambda x: str(x)}
-            )
-            instances_mask = self._load_mask(mask_path)
-            mask_ids = np.unique(instances_mask).tolist()
-            gt_id = 0  # GT only contains valid objects of interests and is 0-indexed
-            for mask_id in mask_ids:
-                if mask_id == 255:  # 255 is background
-                    continue
-                match = meta_data[meta_data.iloc[:, 0] == mask_id]
-                if match.empty:
-                    print(f"Warning: mask {mask_id} not found in {meta_path}")
-                elif match.shape[0] != 1:
-                    print(f"Warning: mask {mask_id} not unique in {meta_path}")
+        self._fix_obj_models()
 
-                meta_row = match.iloc[0]
-                category_id = meta_row.iloc[1]
-                if category_id == 0:  # unknown / distractor object
-                    continue
+        color_paths = self._get_color_files()
+        Parallel(n_jobs=-1)(
+            [
+                delayed(self._preprocess_color_path)(i, color_path)
+                for i, color_path in enumerate(color_paths)
+            ]
+        )
+
+    def _fix_obj_models(self) -> None:
+        """Fix issues with fileextensions.
+
+        Some png files have jpg extension. This function fixes these models.
+        """
+        glob_pattern = os.path.join(self._root_dir, "**", "*.jpg")
+        files = glob(glob_pattern, recursive=True)
+        for filepath in files:
+            what = imghdr.what(filepath)
+            if what == "png":
+                print("Fixing: ", filepath)
+                folder, problematic_filename = os.path.split(filepath)
+                name, _ = problematic_filename.split(".")
+                fixed_filename = f"fixed_{name}.png"
+                fixed_filepath = os.path.join(folder, fixed_filename)
+
+                mtl_filepath = os.path.join(folder, "model.mtl")
+                bu_mtl_filepath = os.path.join(folder, "model.mtl.old")
+                copyfile(mtl_filepath, bu_mtl_filepath)
+
+                copyfile(filepath, fixed_filepath)
+
+    def _preprocess_color_path(self, image_id, color_path):
+        counter = 0
+        print(f"Preprocessing image: {image_id}")
+        depth_path = self._depth_path_from_color_path(color_path)
+        if not os.path.isfile(depth_path):
+            print(f"Missing depth file {depth_path}. Skipping.")
+            return
+
+        mask_path = self._mask_path_from_color_path(color_path)
+        meta_path = self._meta_path_from_color_path(color_path)
+        meta_data = pd.read_csv(
+            meta_path, sep=" ", header=None, converters={2: lambda x: str(x)}
+        )
+        instances_mask = self._load_mask(mask_path)
+        mask_ids = np.unique(instances_mask).tolist()
+        gt_id = 0  # GT only contains valid objects of interests and is 0-indexed
+        for mask_id in mask_ids:
+            if mask_id == 255:  # 255 is background
+                continue
+            match = meta_data[meta_data.iloc[:, 0] == mask_id]
+            if match.empty:
+                print(f"Warning: mask {mask_id} not found in {meta_path}")
+            elif match.shape[0] != 1:
+                print(f"Warning: mask {mask_id} not unique in {meta_path}")
+
+            meta_row = match.iloc[0]
+            category_id = meta_row.iloc[1]
+            if category_id == 0:  # unknown / distractor object
+                continue
+
+            try:
                 (
                     position,
                     orientation_q,
                     extents,
                     nocs_transform,
                 ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
+            except PoseEstimationError:
+                print(
+                    f"Insufficient data for pose estimation. Skipping {color_path}:{mask_id}."
+                )
+                return
+            except ObjectError:
+                print(
+                    f"Insufficient object mesh for pose estimation. Skipping {color_path}:{mask_id}."
+                )
+                return
 
-                obj_path = self._get_obj_path(meta_row)
-                sample_info = {
-                    "color_path": color_path,
-                    "depth_path": depth_path,
-                    "mask_path": mask_path,
-                    "mask_id": mask_id,
-                    "category_id": category_id,
-                    "obj_path": obj_path,
-                    "nocs_transform": nocs_transform,
-                    "position": position,
-                    "orientation_q": orientation_q,
-                    "extents": extents,
-                    "nocs_scale": torch.linalg.norm(extents),
-                    "max_extent": torch.max(extents),
-                }
-                out_file = os.path.join(self._preprocess_path, f"{counter:08}.pkl")
-                pickle.dump(sample_info, open(out_file, "wb"))
-                counter += 1
-                gt_id += 1
+            obj_path = self._get_obj_path(meta_row)
+            sample_info = {
+                "color_path": color_path,
+                "depth_path": depth_path,
+                "mask_path": mask_path,
+                "mask_id": mask_id,
+                "category_id": category_id,
+                "obj_path": obj_path,
+                "nocs_transform": nocs_transform,
+                "position": position,
+                "orientation_q": orientation_q,
+                "extents": extents,
+                "nocs_scale": torch.linalg.norm(extents),
+                "max_extent": torch.max(extents),
+            }
+            out_file = os.path.join(
+                self._preprocess_path, f"{image_id}_{counter:08}.pkl"
+            )
+            pickle.dump(sample_info, open(out_file, "wb"))
+            counter += 1
+            gt_id += 1
 
     def _get_color_files(self) -> list:
         """Return list of paths of color images of the selected split."""
@@ -441,6 +495,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 nocs_scale,
                 nocs_transform,
             ) = self._estimate_object(color_path, mask_id)
+
         else:  # camera_val and real_test
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transform = gts_data["gt_RTs"][gt_id]
@@ -518,6 +573,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         mesh = o3d.io.read_triangle_mesh(obj_path)
         vertices = np.asarray(mesh.vertices)
+        if len(vertices) == 0:
+            raise ObjectError()
         extents = np.max(vertices, axis=0) - np.min(vertices, axis=0)
         return torch.Tensor(extents)
 
@@ -554,22 +611,33 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     def _estimate_object(self, color_path: str, mask_id: int) -> tuple:
         """Estimate pose and scale through ground truth NOCS map."""
-        depth_path = self._depth_path_from_color_path(color_path)
-        depth = self._load_depth(depth_path)
-        mask_path = self._mask_path_from_color_path(color_path)
-        instances_mask = self._load_mask(mask_path)
-        instance_mask = instances_mask == mask_id
-        nocs_map_path = self._nocs_map_path_from_color_path(color_path)
-        nocs_map = self._load_nocs_map(nocs_map_path)
-        valid_instance_mask = instance_mask * depth != 0
-        nocs_map[~valid_instance_mask] = 0
-        centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
-        measured_points = pointset_utils.depth_to_pointcloud(
-            depth, self._camera, mask=valid_instance_mask, convention="opencv"
-        )
-        return nocs_utils.estimate_similarity_transform(
-            centered_nocs_points, measured_points, verbose=False
-        )
+        position = rotation_matrix = scale = out_transform = None
+        while position is None:
+            depth_path = self._depth_path_from_color_path(color_path)
+            depth = self._load_depth(depth_path)
+            mask_path = self._mask_path_from_color_path(color_path)
+            instances_mask = self._load_mask(mask_path)
+            instance_mask = instances_mask == mask_id
+            nocs_map_path = self._nocs_map_path_from_color_path(color_path)
+            nocs_map = self._load_nocs_map(nocs_map_path)
+            valid_instance_mask = instance_mask * depth != 0
+            nocs_map[~valid_instance_mask] = 0
+            centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
+            measured_points = pointset_utils.depth_to_pointcloud(
+                depth, self._camera, mask=valid_instance_mask, convention="opencv"
+            )
+            if len(centered_nocs_points) == 0 or len(measured_points) == 0:
+                raise PoseEstimationError()
+
+            (
+                position,
+                rotation_matrix,
+                scale,
+                out_transform,
+            ) = nocs_utils.estimate_similarity_transform(
+                centered_nocs_points, measured_points, verbose=False
+            )
+        return position, rotation_matrix, scale, out_transform
 
     def _get_scale(self, sample_data: dict, extents: torch.Tensor) -> float:
         """Return scale from stored sample data and extents."""
@@ -671,3 +739,15 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise NotImplementedError(
                 f"Orientation representation {self._orientation_repr} is not supported."
             )
+
+
+class PoseEstimationError(Exception):
+    """Error if pose estimation encountered an error."""
+
+    pass
+
+
+class ObjectError(Exception):
+    """Error if something with the mesh is wrong."""
+
+    pass
