@@ -7,6 +7,9 @@ config:
             config_dict: "./camera_train.yaml"
         real_train: 
             config_dict: "./real_train.yaml"
+    - validation_datasets:
+        camera_val: 
+            config_dict: "./camera_val.yaml"
 
 # Training params
 batch_size: 32
@@ -33,7 +36,9 @@ datasets:
         type: NOCSDataset
         probability: 0.1
 
-validation_datasets: {}
+validation_datasets: 
+    camera_val:
+        type: NOCSDataset
 
 # Network params
 backbone_type: VanillaPointNet

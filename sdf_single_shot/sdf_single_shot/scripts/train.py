@@ -408,19 +408,19 @@ class Trainer:
         for name, data_loader in self._validation_data_loader_dict.items():
             metrics_dict = {}
             sample_count = 0
-            for samples in tqdm(data_loader):
+            for samples in data_loader:
                 predictions = self._sdf_pose_net(samples["pointset"])
                 euclidean_distance = torch.linalg.norm(
                     predictions["position"] - samples["position"], dim=1
                 )
                 metrics_dict[f"{name} validation mean position error / m"] += torch.sum(
                     euclidean_distance
-                )
+                ).item()
                 metrics_dict[f"{name} validation mean scale error / m"] += torch.sum(
                     torch.abs(predictions["scale"] - samples["scale"])
-                )
+                ).item()
                 metrics_dict[f"{name} validation mean geodesic_distance / rad"] = (
-                    self._mean_geodesic_distance(samples, predictions)
+                    self._mean_geodesic_distance(samples, predictions).item()
                     * samples.shape[0]
                 )
                 sample_count += samples.shape[0]
