@@ -5,9 +5,6 @@ from typing import List
 
 
 
-"""
-TODO: Either create a new class or modify VanillaPointNet
-"""
 class VanillaPointNet(nn.Module):
     """Parametrized PointNet without transformation layers (no T-nets).
 
@@ -40,7 +37,7 @@ class VanillaPointNet(nn.Module):
             if i == 0:
                 self._linear_layers.append(nn.Linear(self._in_size, out_size))
             else:
-                self._linear_layers.append(nn.Linear(mlp_out_sizes[i-1], out_size))
+                self._linear_layers.append(nn.Linear(mlp_out_sizes[i - 1], out_size))
 
         self._bn_layers = torch.nn.ModuleList([])
         if self._batchnorm:
@@ -71,9 +68,63 @@ class VanillaPointNet(nn.Module):
         return out
 
 
+class IteratativePointNet():
+    """
+     Accomodates iterated application of pointnet taking concatenation of input with output of previous iteration.
+
+    """
+
+    def __init__(self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool):
+        """
+        Initialize the IteratativePointNet module.
+
+
+        Args:
+            num_concat:     number of iterations of pointnet application (If 1 then it is VanillaPointNet)
+            in_size:        dimension of the input points
+            mlp_out_sizes:  output sizes of each linear layer
+            batchnorm:      whether to use batchnorm or not
+        """
+
+        self.num_concat = num_concat
+        # create 1st pointnet for taking points of channel = in_size
+        self.pointnet_1 = VanillaPointNet(in_size, mlp_out_sizes, batchnorm)
+        # create 2nd pointnet for taking points of channel = size of concatenated vector
+        self.pointnet_2 = VanillaPointNet(in_size + mlp_out_sizes[-1], mlp_out_sizes, batchnorm)
+
+
+    def __call__(self, x):
+        """Forward pass
+
+        Input has dimension NxMxC, where N is the batch size, M the number of points
+        per set, and C the number of channels per point.
+
+        Args:
+            x: batch of point sets
+        """
+        batchsize, set_size, channels = x.shape
+        for concat_step in range(self.num_concat):
+            # apply 1st pointnet to input
+            if concat_step == 0:
+                out = self.pointnet_1(x)
+            else:
+                # out has dim (batchsize, num_outputs)
+                # repeat output vector across 2nd dimension (dim = batchsize, set_size, num_outputs)
+                repeated_out = out.unsqueeze(1).repeat(1, set_size, 1)
+                # concatenate input vector and repeated_out
+                modified_x = torch.cat((repeated_out, x), 2)
+                out = self.pointnet_2(modified_x)
+        return out
+
+
 if __name__ == "__main__":
-    # simple sanity check
-    pointnet = VanillaPointNet(3, [64, 64, 64, 128, 1024], True)
-    inp = torch.randn(1, 500, 3)
-    out = pointnet(inp)
+    #simple sanity check
+    # pointnet = VanillaPointNet(3, [64, 64, 64, 128, 1024], True)
+    # inp = torch.randn(2, 500, 3)
+    # out = pointnet(inp)
+    # print(out.shape)
+
+    iteratative_pointnet = IteratativePointNet(5, 3, [64, 64, 64, 128, 1024], True)
+    inp = torch.randn(2, 500, 3)
+    out = iteratative_pointnet(inp)
     print(out.shape)
