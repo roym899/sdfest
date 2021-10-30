@@ -4,6 +4,10 @@ import torch.nn as nn
 from typing import List
 
 
+
+"""
+TODO: Either create a new class or modify VanillaPointNet
+"""
 class VanillaPointNet(nn.Module):
     """Parametrized PointNet without transformation layers (no T-nets).
 
