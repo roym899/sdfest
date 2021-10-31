@@ -1,9 +1,11 @@
 """Module providing dataset class for NOCS datasets (CAMERA / REAL)."""
+import datetime
 import imghdr
 from glob import glob
 import os
 import pickle
 from shutil import copyfile
+import time
 from typing import TypedDict, Optional
 
 from joblib import Parallel, delayed
@@ -11,7 +13,6 @@ from scipy.spatial.transform import Rotation
 import numpy as np
 import open3d as o3d
 import pandas as pd
-from tqdm import tqdm
 import torch
 from PIL import Image
 from sdf_differentiable_renderer import Camera
@@ -211,13 +212,17 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         self._fix_obj_models()
 
-        color_paths = self._get_color_files()
+        self._start_time = time.time()
+        self._color_paths = self._get_color_files()
+
         Parallel(n_jobs=-1)(
-            [
+            (
                 delayed(self._preprocess_color_path)(i, color_path)
-                for i, color_path in enumerate(color_paths)
-            ]
+                for i, color_path in enumerate(self._color_paths)
+            )
         )
+
+        print("\nFinished preprocessing for {self._split}.")
 
     def _fix_obj_models(self) -> None:
         """Fix issues with fileextensions.
@@ -241,9 +246,28 @@ class NOCSDataset(torch.utils.data.Dataset):
 
                 copyfile(filepath, fixed_filepath)
 
-    def _preprocess_color_path(self, image_id, color_path):
+    def _update_preprocess_progress(self, image_id: int) -> None:
+        current_time = time.time()
+        duration = current_time - self._start_time
+        imgs_per_sec = image_id / duration
+        if image_id > 10:
+            remaining_imgs = len(self._color_paths) - image_id
+            remaining_secs = remaining_imgs / imgs_per_sec
+            remaining_time_str = str(datetime.timedelta(seconds=round(remaining_secs)))
+        else:
+            remaining_time_str = "N/A"
+        print(
+            f"Preprocessing image: {image_id:>10} / {len(self._color_paths)}"
+            f" {image_id / len(self._color_paths) * 100:>6.2f}%"  # progress percentage
+            f" Remaining time: {remaining_time_str}"  # remaining time
+            "\033[K",  # clear until end of line
+            end="\r",  # overwrite previous
+        )
+
+    def _preprocess_color_path(self, image_id: int, color_path: str) -> None:
         counter = 0
-        print(f"Preprocessing image: {image_id}")
+        self._update_preprocess_progress(image_id)
+
         depth_path = self._depth_path_from_color_path(color_path)
         if not os.path.isfile(depth_path):
             print(f"Missing depth file {depth_path}. Skipping.")
@@ -258,6 +282,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         mask_ids = np.unique(instances_mask).tolist()
         gt_id = 0  # GT only contains valid objects of interests and is 0-indexed
         for mask_id in mask_ids:
+
             if mask_id == 255:  # 255 is background
                 continue
             match = meta_data[meta_data.iloc[:, 0] == mask_id]
@@ -280,12 +305,14 @@ class NOCSDataset(torch.utils.data.Dataset):
                 ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
             except PoseEstimationError:
                 print(
-                    f"Insufficient data for pose estimation. Skipping {color_path}:{mask_id}."
+                    "Insufficient data for pose estimation. "
+                    f"Skipping {color_path}:{mask_id}."
                 )
                 return
             except ObjectError:
                 print(
-                    f"Insufficient object mesh for pose estimation. Skipping {color_path}:{mask_id}."
+                    "Insufficient object mesh for pose estimation. "
+                    f"Skipping {color_path}:{mask_id}."
                 )
                 return
 
@@ -495,7 +522,6 @@ class NOCSDataset(torch.utils.data.Dataset):
                 nocs_scale,
                 nocs_transform,
             ) = self._estimate_object(color_path, mask_id)
-
         else:  # camera_val and real_test
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transform = gts_data["gt_RTs"][gt_id]
@@ -504,6 +530,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
+
 
         orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
         mesh_extents = self._get_mesh_extents_from_obj(obj_path)
@@ -612,31 +639,32 @@ class NOCSDataset(torch.utils.data.Dataset):
     def _estimate_object(self, color_path: str, mask_id: int) -> tuple:
         """Estimate pose and scale through ground truth NOCS map."""
         position = rotation_matrix = scale = out_transform = None
-        while position is None:
-            depth_path = self._depth_path_from_color_path(color_path)
-            depth = self._load_depth(depth_path)
-            mask_path = self._mask_path_from_color_path(color_path)
-            instances_mask = self._load_mask(mask_path)
-            instance_mask = instances_mask == mask_id
-            nocs_map_path = self._nocs_map_path_from_color_path(color_path)
-            nocs_map = self._load_nocs_map(nocs_map_path)
-            valid_instance_mask = instance_mask * depth != 0
-            nocs_map[~valid_instance_mask] = 0
-            centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
-            measured_points = pointset_utils.depth_to_pointcloud(
-                depth, self._camera, mask=valid_instance_mask, convention="opencv"
-            )
-            if len(centered_nocs_points) == 0 or len(measured_points) == 0:
-                raise PoseEstimationError()
+        depth_path = self._depth_path_from_color_path(color_path)
+        depth = self._load_depth(depth_path)
+        mask_path = self._mask_path_from_color_path(color_path)
+        instances_mask = self._load_mask(mask_path)
+        instance_mask = instances_mask == mask_id
+        nocs_map_path = self._nocs_map_path_from_color_path(color_path)
+        nocs_map = self._load_nocs_map(nocs_map_path)
+        valid_instance_mask = instance_mask * depth != 0
+        nocs_map[~valid_instance_mask] = 0
+        centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
+        measured_points = pointset_utils.depth_to_pointcloud(
+            depth, self._camera, mask=valid_instance_mask, convention="opencv"
+        )
 
-            (
-                position,
-                rotation_matrix,
-                scale,
-                out_transform,
-            ) = nocs_utils.estimate_similarity_transform(
-                centered_nocs_points, measured_points, verbose=False
-            )
+        (
+            position,
+            rotation_matrix,
+            scale,
+            out_transform,
+        ) = nocs_utils.estimate_similarity_transform(
+            centered_nocs_points, measured_points, verbose=False
+        )
+
+        if position is None:
+            raise PoseEstimationError()
+
         return position, rotation_matrix, scale, out_transform
 
     def _get_scale(self, sample_data: dict, extents: torch.Tensor) -> float:

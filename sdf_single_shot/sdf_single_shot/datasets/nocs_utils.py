@@ -38,6 +38,10 @@ def estimate_similarity_transform(
             Scaling factor along each axis, to scale source to target.
         transform (np.ndarray): Homogeneous transformation matrix, shape (4,4).
     """
+    if len(source) < 5 or len(target) < 5:
+        print("Pose estimation failed. Not enough point correspondences: ", len(source))
+        return None, None, None, None
+
     # make points homogeneous
     source_hom = np.transpose(np.hstack([source, np.ones([source.shape[0], 1])]))  # 4,N
     target_hom = np.transpose(np.hstack([target, np.ones([source.shape[0], 1])]))  # 4,N
@@ -65,9 +69,7 @@ def estimate_similarity_transform(
     )
 
     if best_inlier_ratio < 0.1:
-        print(
-            "[ WARN ] - Something is wrong. Small BestInlierRatio: ", best_inlier_ratio
-        )
+        print("Pose estimation failed. Small inlier ratio: ", best_inlier_ratio)
         return None, None, None, None
 
     scales, rotation_matrix, position, out_transform = _estimate_similarity_umeyama(
