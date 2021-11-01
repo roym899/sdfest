@@ -1,5 +1,6 @@
 """Script to train model."""
 import argparse
+from collections import defaultdict
 from datetime import datetime
 import os
 import random
@@ -133,7 +134,7 @@ class Trainer:
         program_starts = time.time()
         for samples in self._multi_data_loader:
             self._current_iteration += 1
-            print(self._current_iteration)
+            print(f"Current iteration: {self._current_iteration}\033[K", end="\r")
 
             for k, v in samples.items():
                 samples[k] = v.to(self._device)
@@ -307,6 +308,7 @@ class Trainer:
                 dataset=dataset,
                 batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
+                num_workers=8
             )
             data_loader_dict[dataset_name] = data_loader
         return data_loader_dict
@@ -380,9 +382,8 @@ class Trainer:
             if self._config["head"]["orientation_repr"] == "quaternion":
                 quat = test_out[3][0].detach().cpu().numpy()
             elif self._config["head"]["orientation_repr"] == "discretized":
-                quat = self._sdf_pose_net._head._grid.index_to_quat(
-                    test_out[3][0].argmax()
-                )
+                index = test_out[3][0].argmax().item()
+                quat = self._sdf_pose_net._head._grid.index_to_quat(index)
             else:
                 raise NotImplementedError(
                     "Orientation representation "
@@ -407,10 +408,21 @@ class Trainer:
 
     def _compute_validation_metrics(self) -> None:
         for name, data_loader in self._validation_data_loader_dict.items():
-            metrics_dict = {}
+            metrics_dict = defaultdict(lambda: 0)
             sample_count = 0
-            for samples in data_loader:
-                predictions = self._sdf_pose_net(samples["pointset"])
+            for samples in tqdm(data_loader, desc="Validation"):
+                batch_size = samples["position"].shape[0]
+                for k, v in samples.items():
+                    samples[k] = v.to(self._device)
+                latent_shape, position, scale, orientation = self._sdf_pose_net(
+                    samples["pointset"]
+                )
+                predictions = {
+                    "latent_shape": latent_shape,
+                    "position": position,
+                    "scale": scale,
+                    "orientation": orientation,
+                }
                 euclidean_distance = torch.linalg.norm(
                     predictions["position"] - samples["position"], dim=1
                 )
@@ -422,9 +434,9 @@ class Trainer:
                 ).item()
                 metrics_dict[f"{name} validation mean geodesic_distance / rad"] = (
                     self._mean_geodesic_distance(samples, predictions).item()
-                    * samples.shape[0]
+                    * batch_size
                 )
-                sample_count += samples.shape[0]
+                sample_count += batch_size
             for metric_name in metrics_dict:
                 metrics_dict[metric_name] /= sample_count
             wandb.log(metrics_dict, step=self._current_iteration)

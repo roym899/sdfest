@@ -163,7 +163,6 @@ class NOCSDataset(torch.utils.data.Dataset):
         self._preprocess_path = os.path.join(self._root_dir, "sdfest_pre", self._split)
         if not os.path.isdir(self._preprocess_path):
             self._preprocess_dataset()
-        # self._preprocess_dataset()
         self._mask_pointcloud = config["mask_pointcloud"]
         self._normalize_pointcloud = config["normalize_pointcloud"]
         self._scale_convention = config["scale_convention"]
@@ -443,17 +442,15 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         pointcloud_mask = instance_mask if self._mask_pointcloud else None
         pointcloud = pointset_utils.depth_to_pointcloud(
-            depth, self._camera, mask=pointcloud_mask
+            depth,
+            self._camera,
+            mask=pointcloud_mask,
+            convention=self._camera_convention,
         )
-        if self._normalize_pointcloud:
-            pointcloud, centroid = pointset_utils.normalize_points(pointcloud)
-            position = sample_data["position"] - centroid
-        else:
-            position = sample_data["position"]
 
-        # position
+        # adjust camera convention for position, orientation and scale
         position = pointset_utils.change_position_camera_convention(
-            position, "opencv", self._camera_convention
+            sample_data["position"], "opencv", self._camera_convention
         )
 
         # orientation / scale
@@ -465,6 +462,11 @@ class NOCSDataset(torch.utils.data.Dataset):
         )
         orientation = self._quat_to_orientation_repr(orientation_q)
         scale = self._get_scale(sample_data, extents)
+
+        # normalize pointcloud & position
+        if self._normalize_pointcloud:
+            pointcloud, centroid = pointset_utils.normalize_points(pointcloud)
+            position = position - centroid
 
         sample = {
             "color": color,

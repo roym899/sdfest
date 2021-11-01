@@ -29,13 +29,13 @@ orientation_str: mug
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 0.6
+        probability: 0.0
     camera_train:
         type: NOCSDataset
-        probability: 0.3
+        probability: 1.0
     real_train:
         type: NOCSDataset
-        probability: 0.1
+        probability: 0.0
 
 validation_datasets:
     camera_val:
