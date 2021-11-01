@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from sdf_single_shot import quaternion_utils
+
 
 def str_to_object(name: str) -> Any:
     """Try to find object with a given name.
@@ -35,7 +37,12 @@ def str_to_object(name: str) -> Any:
 
 
 def visualize_sample(sample: Optional[dict] = None, prediction: Optional[dict] = None):
-    """Visualize sample and prediction."""
+    """Visualize sample and prediction.
+
+    Assumes the following conventions and keys
+        "scale": Half maximum side length of bounding box.
+        "quaternion: Scalar-last orientation of object.
+    """
     print(sample["position"])
     print(sample["quaternion"])
     pointset = sample["pointset"].cpu().numpy()
@@ -52,6 +59,33 @@ def visualize_sample(sample: Optional[dict] = None, prediction: Optional[dict] =
         ax.scatter(pointset[indices, 0], pointset[indices, 1], pointset[indices, 2])
     else:
         ax.scatter(pointset[:, 0], pointset[:, 1], pointset[:, 2])
+
+    # draw x y z axis
+    axis_pts = sample["scale"].cpu() * torch.eye(3)
+    axis_pts = quaternion_utils.quaternion_apply(sample["quaternion"].cpu(), axis_pts)
+    axis_pts = axis_pts + sample["position"].cpu()
+    axis_pts = axis_pts.numpy()
+    origin = sample["position"].cpu()
+    ax.plot(
+        [origin[0], axis_pts[0, 0]],
+        [origin[1], axis_pts[0, 1]],
+        [origin[2], axis_pts[0, 2]],
+        "r",
+    )
+    ax.plot(
+        [origin[0], axis_pts[1, 0]],
+        [origin[1], axis_pts[1, 1]],
+        [origin[2], axis_pts[1, 2]],
+        "g",
+    )
+    ax.plot(
+        [origin[0], axis_pts[2, 0]],
+        [origin[1], axis_pts[2, 1]],
+        [origin[2], axis_pts[2, 2]],
+        "b",
+    )
+
+    # TODO: draw bounding box
 
     set_axes_equal(ax)
 
