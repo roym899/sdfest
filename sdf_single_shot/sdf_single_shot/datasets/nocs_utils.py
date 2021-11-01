@@ -114,7 +114,7 @@ def _get_ransac_inliers(
     for _ in range(0, max_iterations):
         # Pick 5 random (but corresponding) points from source and target without repl.
         rand_idx = np.random.choice(
-            np.arange(source_hom.shape[1]), size=5, replace=False
+            source_hom.shape[1], size=5, replace=False
         )
         # rand_idx = np.random.randint(source_hom.shape[1], size=10)
         _, _, _, out_transform = _estimate_similarity_umeyama(
@@ -223,6 +223,10 @@ def _estimate_similarity_umeyama(
     rotation = u @ s @ vh
 
     var_p = np.var(source_hom[:3, :], axis=1).sum()
+    if var_p == 0:
+        print("Pose estimation failed: 0 variance in sampled points.""")
+        print(source_hom)
+        raise PoseEstimationError()
     scale_fact = 1 / var_p * np.trace(s @ diag)  # scale factor
     scales = np.array([scale_fact, scale_fact, scale_fact])
     scales_matrix = np.diag(scales)
@@ -235,3 +239,9 @@ def _estimate_similarity_umeyama(
     out_transform[:3, 3] = translation
 
     return scales, rotation, translation, out_transform
+
+
+class PoseEstimationError(Exception):
+    """Error if pose estimation encountered an error."""
+
+    pass

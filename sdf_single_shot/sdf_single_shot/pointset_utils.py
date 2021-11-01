@@ -52,6 +52,7 @@ def depth_to_pointcloud(
         The pointcloud in the camera frame, in OpenGL convention, shape (N,3).
     """
     fx, fy, cx, cy, _ = camera.get_pinhole_camera_parameters(0.0)
+    print(fx, fy, cx, cy)
 
     if mask is None:
         indices = torch.nonzero(depth_image, as_tuple=True)

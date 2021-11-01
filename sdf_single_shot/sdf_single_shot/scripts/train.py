@@ -246,6 +246,10 @@ class Trainer:
                 predictions["position"], samples["position"]
             )
             log_dict["loss position"] = loss_position_l2.item()
+            if loss_position_l2.item() > 1.0:
+                print(loss_position_l2.item())
+                print(predictions["position"])
+                print(samples["position"])
             loss = loss + self._config["position_weight"] * loss_position_l2
 
         if "scale" in samples:
@@ -294,6 +298,7 @@ class Trainer:
                 dataset=dataset,
                 batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
+                drop_last=True
             )
             data_loaders.append(data_loader)
         return dataset_utils.MultiDataLoader(data_loaders, probabilities)

@@ -321,7 +321,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                     extents,
                     nocs_transform,
                 ) = self._get_pose_and_scale(color_path, mask_id, gt_id, meta_row)
-            except PoseEstimationError:
+            except nocs_utils.PoseEstimationError:
                 print(
                     "Insufficient data for pose estimation. "
                     f"Skipping {color_path}:{mask_id}."
@@ -675,6 +675,10 @@ class NOCSDataset(torch.utils.data.Dataset):
             depth, self._camera, mask=valid_instance_mask, convention="opencv"
         )
 
+        # require at least 30 point correspondences to prevent outliers
+        if len(measured_points) < 30:
+            raise nocs_utils.PoseEstimationError()
+
         (
             position,
             rotation_matrix,
@@ -685,7 +689,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         )
 
         if position is None:
-            raise PoseEstimationError()
+            raise nocs_utils.PoseEstimationError()
 
         return position, rotation_matrix, scale, out_transform
 
@@ -789,12 +793,6 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise NotImplementedError(
                 f"Orientation representation {self._orientation_repr} is not supported."
             )
-
-
-class PoseEstimationError(Exception):
-    """Error if pose estimation encountered an error."""
-
-    pass
 
 
 class ObjectError(Exception):
