@@ -241,7 +241,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         with open(category_json_path, "w") as f:
             json.dump(dict(category_str_to_files), f)
 
-        print(f"\nFinished preprocessing for {self._split}.")
+        print(f"Finished preprocessing for {self._split}.", end="\033[K\n")
 
     def _fix_obj_models(self) -> None:
         """Fix issues with fileextensions.
@@ -289,7 +289,7 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         depth_path = self._depth_path_from_color_path(color_path)
         if not os.path.isfile(depth_path):
-            print(f"Missing depth file {depth_path}. Skipping.")
+            print(f"Missing depth file {depth_path}. Skipping.", end="\033[K\n")
             return
 
         mask_path = self._mask_path_from_color_path(color_path)
@@ -306,9 +306,9 @@ class NOCSDataset(torch.utils.data.Dataset):
                 continue
             match = meta_data[meta_data.iloc[:, 0] == mask_id]
             if match.empty:
-                print(f"Warning: mask {mask_id} not found in {meta_path}")
+                print(f"Warning: mask {mask_id} not found in {meta_path}", end="\033[K\n")
             elif match.shape[0] != 1:
-                print(f"Warning: mask {mask_id} not unique in {meta_path}")
+                print(f"Warning: mask {mask_id} not unique in {meta_path}", end="\033[K\n")
 
             meta_row = match.iloc[0]
             category_id = meta_row.iloc[1]
@@ -325,15 +325,15 @@ class NOCSDataset(torch.utils.data.Dataset):
             except nocs_utils.PoseEstimationError:
                 print(
                     "Insufficient data for pose estimation. "
-                    f"Skipping {color_path}:{mask_id}."
+                    f"Skipping {color_path}:{mask_id}.", end="\033[K\n"
                 )
-                return
+                continue
             except ObjectError:
                 print(
                     "Insufficient object mesh for pose estimation. "
-                    f"Skipping {color_path}:{mask_id}."
+                    f"Skipping {color_path}:{mask_id}.", end="\033[K\n"
                 )
-                return
+                continue
 
             obj_path = self._get_obj_path(meta_row)
             sample_info = {
@@ -673,6 +673,12 @@ class NOCSDataset(torch.utils.data.Dataset):
         valid_instance_mask = instance_mask * depth != 0
         nocs_map[~valid_instance_mask] = 0
         centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
+
+        # skip object if it cointains errorneous depth
+        if torch.max(depth[valid_instance_mask]) > 32.0:
+            print("Erroneous depth detected.", end="\033[K\n")
+            raise nocs_utils.PoseEstimationError()
+
         measured_points = pointset_utils.depth_to_pointcloud(
             depth, self._camera, mask=valid_instance_mask, convention="opencv"
         )
