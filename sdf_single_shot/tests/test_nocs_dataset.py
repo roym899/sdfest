@@ -158,14 +158,6 @@ def test_nocsdataset_gts_path(request: FixtureRequest, tmp_path: str) -> None:
     assert os.path.isfile(gts_path)
 
 
-def test_nocsdataset_get_pose_and_scale(request: FixtureRequest, tmp_path: str) -> None:
-    """Test getting pose and scale from NOCS dataset."""
-    camera_train, camera_val, real_train, real_test = create_datasets(
-        request.fspath.dirname, tmp_path
-    )
-    # TODO check that all datasets return correct data
-
-
 def test_nocsdataset_get_obj_path(request: FixtureRequest, tmp_path: str) -> None:
     """Test getting pose and scale from NOCS dataset."""
     camera_train, camera_val, real_train, real_test = create_datasets(

@@ -43,8 +43,6 @@ def visualize_sample(sample: Optional[dict] = None, prediction: Optional[dict] =
         "scale": Half maximum side length of bounding box.
         "quaternion: Scalar-last orientation of object.
     """
-    print(sample["position"])
-    print(sample["quaternion"])
     pointset = sample["pointset"].cpu().numpy()
     plt.imshow(sample["mask"].cpu().numpy())
     plt.show()

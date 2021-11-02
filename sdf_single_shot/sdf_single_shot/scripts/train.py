@@ -154,6 +154,13 @@ class Trainer:
             self._optimizer.step()
 
             with torch.no_grad():
+                samples_dict = defaultdict(lambda: dict())
+                for k,vs in samples.items():
+                    for i, v in enumerate(vs):
+                        samples_dict[i][k] = v
+                for sample in samples_dict.values():
+                    utils.visualize_sample(sample, None)
+
                 self._compute_metrics(samples, predictions)
 
                 if self._current_iteration % self._visualization_iteration == 0:
@@ -294,12 +301,15 @@ class Trainer:
             dataset = self._create_dataset(
                 dataset_dict["type"], dataset_dict["config_dict"]
             )
+            num_workers = 12 if dataset_dict["type"] != "SDFVAEViewDataset" else 0
             probabilities.append(dataset_dict["probability"])
             data_loader = torch.utils.data.DataLoader(
                 dataset=dataset,
                 batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
-                drop_last=True
+                drop_last=True,
+                shuffle=True,
+                num_workers=num_workers,
             )
             data_loaders.append(data_loader)
         return dataset_utils.MultiDataLoader(data_loaders, probabilities)

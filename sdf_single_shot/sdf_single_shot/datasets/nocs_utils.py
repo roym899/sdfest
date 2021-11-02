@@ -52,7 +52,7 @@ def estimate_similarity_transform(
     ratio_ts = target_norm / source_norm
     ratio_st = source_norm / target_norm
     pass_t = ratio_st if (ratio_st > ratio_ts) else ratio_ts
-    pass_t *= 0.1  # tighter bound
+    pass_t *= 0.01  # tighter bound
     stop_t = pass_t / 100
     n_iter = 100
     if verbose:

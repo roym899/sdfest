@@ -674,17 +674,17 @@ class NOCSDataset(torch.utils.data.Dataset):
         nocs_map[~valid_instance_mask] = 0
         centered_nocs_points = nocs_map[valid_instance_mask] - 0.5
 
-        # skip object if it cointains errorneous depth
-        if torch.max(depth[valid_instance_mask]) > 32.0:
-            print("Erroneous depth detected.", end="\033[K\n")
-            raise nocs_utils.PoseEstimationError()
-
         measured_points = pointset_utils.depth_to_pointcloud(
             depth, self._camera, mask=valid_instance_mask, convention="opencv"
         )
 
         # require at least 30 point correspondences to prevent outliers
         if len(measured_points) < 30:
+            raise nocs_utils.PoseEstimationError()
+
+        # skip object if it cointains errorneous depth
+        if torch.max(depth[valid_instance_mask]) > 32.0:
+            print("Erroneous depth detected.", end="\033[K\n")
             raise nocs_utils.PoseEstimationError()
 
         (
