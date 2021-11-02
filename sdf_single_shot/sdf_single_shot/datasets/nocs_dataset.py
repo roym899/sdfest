@@ -194,6 +194,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 "orientation"
                 "quaternion"
                 "scale"
+                "color_path"
         """
         sample_file = self._sample_files[idx]
         sample_data = pickle.load(open(sample_file, "rb"))
@@ -477,6 +478,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "orientation": orientation,
             "quaternion": orientation_q,
             "scale": scale,
+            "color_path": sample_data["color_path"],
         }
         return sample
 

@@ -165,3 +165,22 @@ def set_axes_equal(ax) -> None:
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
+def dict_to(data_dict: dict, device: torch.device) -> dict:
+    """Move values in dictionary of type torch.Tensor to a specfied device.
+
+    Args:
+        data_dict: Dictionary to be iterated over.
+        device: Device to move objects of type torch.Tensor to.
+    Returns:
+        Dictionary containing the same keys and values as data_dict, but with all
+        objects of type torch.Tensor moved to the specified device.
+    """
+    new_data_dict = {}
+    for k, v in data_dict.items():
+        if isinstance(v, torch.Tensor):
+            new_data_dict[k] = v.to(device)
+        else:
+            new_data_dict[k] = v
+    return new_data_dict

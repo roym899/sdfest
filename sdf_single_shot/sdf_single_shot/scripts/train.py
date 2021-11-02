@@ -136,8 +136,8 @@ class Trainer:
             self._current_iteration += 1
             print(f"Current iteration: {self._current_iteration}\033[K", end="\r")
 
-            for k, v in samples.items():
-                samples[k] = v.to(self._device)
+            samples = utils.dict_to(samples, self._device)
+
             latent_shape, position, scale, orientation = self._sdf_pose_net(
                 samples["pointset"]
             )
@@ -247,9 +247,10 @@ class Trainer:
             )
             log_dict["loss position"] = loss_position_l2.item()
             if loss_position_l2.item() > 1.0:
-                print(loss_position_l2.item())
-                print(predictions["position"])
-                print(samples["position"])
+                _, index = torch.max(samples["scale"], dim=0)
+                print(samples["scale"][index].item())
+                print(samples["color_path"][index.item()])
+                print(samples["position"][index.item()])
             loss = loss + self._config["position_weight"] * loss_position_l2
 
         if "scale" in samples:
@@ -370,8 +371,7 @@ class Trainer:
         if self._current_iteration % self._visualization_iteration == 0:
             # generate unseen input and target
             test_samples = next(iter(self._multi_data_loader))
-            for k, v in test_samples.items():
-                test_samples[k] = v.to(self._device)
+            test_samples = utils.dict_to(test_samples, self._device)
             test_out = self._sdf_pose_net(test_samples["pointset"])
             input_pointcloud = test_samples["pointset"][0].detach().cpu().numpy()
             input_pointcloud = np.hstack(
@@ -417,8 +417,7 @@ class Trainer:
             sample_count = 0
             for samples in tqdm(data_loader, desc="Validation"):
                 batch_size = samples["position"].shape[0]
-                for k, v in samples.items():
-                    samples[k] = v.to(self._device)
+                samples = utils.dict_to(samples, self._device)
                 latent_shape, position, scale, orientation = self._sdf_pose_net(
                     samples["pointset"]
                 )

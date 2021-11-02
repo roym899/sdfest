@@ -11,6 +11,7 @@ def collate_samples(samples: List[dict]) -> dict:
 
     Performs standard batching and additionally batches pointsets by taking subset of
     points.
+    Also supports non-tensor types, which will be returned as standard lists.
 
     Reduces all pointsets to a common size based on the smallest set.
 
@@ -46,8 +47,12 @@ def collate_samples(samples: List[dict]) -> dict:
                 num_points = sample["pointset"].shape[0]
                 point_indices = random.sample(range(0, num_points), smallest_set)
                 batch["pointset"][i] = sample["pointset"][point_indices]
-        else:
+        elif isinstance(samples[0][key], torch.Tensor):
+            # standard batching for torch tensors
             batch[key] = torch.stack([s[key] for s in samples])
+        else:
+            # standard list for other data types
+            batch[key] = [s[key] for s in samples]
 
     return batch
 

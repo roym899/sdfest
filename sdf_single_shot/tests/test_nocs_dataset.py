@@ -8,7 +8,7 @@ from pytest import FixtureRequest
 import torch
 
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
-from sdf_single_shot import quaternion_utils, so3grid
+from sdf_single_shot import quaternion_utils, so3grid, utils
 
 
 def create_datasets(
@@ -55,10 +55,10 @@ def test_nocsdataset_preprocessing(request: FixtureRequest, tmp_path: str) -> No
     )
 
     # check correct number of files
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_train"))) == 4 + 1
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_val"))) == 2 + 1
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_train"))) == 5 + 1
-    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_test"))) == 5 + 1
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_train"))) == 5
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "camera_val"))) == 3
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_train"))) == 6
+    assert len(os.listdir(os.path.join(tmp_path, "sdfest_pre", "real_test"))) == 6
 
     assert len(camera_train) == 4
     assert len(camera_val) == 2
@@ -90,12 +90,16 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         assert sample["pointset"].shape == (valid_depth_points, 3)
 
         # test camera convention
+        dataset._mask_pointcloud = True
         dataset._camera_convention = "opencv"
         sample_cv = dataset[0]
         dataset._camera_convention = "opengl"
         sample_gl = dataset[0]
         assert sample_cv["position"][2] > 0
         assert sample_gl["position"][2] < 0
+
+        utils.visualize_sample(sample_cv)
+        # utils.visualize_sample(sample_gl)
 
         # test scale conventions
         dataset._scale_convention = "full"
