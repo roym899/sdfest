@@ -98,9 +98,6 @@ def test_nocsdataset_getitem(request: FixtureRequest, tmp_path: str) -> None:
         assert sample_cv["position"][2] > 0
         assert sample_gl["position"][2] < 0
 
-        utils.visualize_sample(sample_cv)
-        # utils.visualize_sample(sample_gl)
-
         # test scale conventions
         dataset._scale_convention = "full"
         full_scale = dataset[0]["scale"]

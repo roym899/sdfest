@@ -60,36 +60,62 @@ def visualize_sample(sample: Optional[dict] = None, prediction: Optional[dict] =
     else:
         ax.scatter(pointset[:, 0], pointset[:, 1], pointset[:, 2])
 
-    # draw x y z axis
+    _plot_coordinate_frame(ax, sample)
+
+    _plot_bounding_box(ax, sample)
+
+    set_axes_equal(ax)
+
+    plt.show()
+
+
+def _plot_coordinate_frame(ax, sample):
     axis_pts = sample["scale"].cpu() * torch.eye(3)
     axis_pts = quaternion_utils.quaternion_apply(sample["quaternion"].cpu(), axis_pts)
     axis_pts = axis_pts + sample["position"].cpu()
     axis_pts = axis_pts.numpy()
     origin = sample["position"].cpu()
-    ax.plot(
-        [origin[0], axis_pts[0, 0]],
-        [origin[1], axis_pts[0, 1]],
-        [origin[2], axis_pts[0, 2]],
-        "r",
-    )
-    ax.plot(
-        [origin[0], axis_pts[1, 0]],
-        [origin[1], axis_pts[1, 1]],
-        [origin[2], axis_pts[1, 2]],
-        "g",
-    )
-    ax.plot(
-        [origin[0], axis_pts[2, 0]],
-        [origin[1], axis_pts[2, 1]],
-        [origin[2], axis_pts[2, 2]],
-        "b",
-    )
+    _plot_line(ax, origin, axis_pts[0], "r")
+    _plot_line(ax, origin, axis_pts[1], "g")
+    _plot_line(ax, origin, axis_pts[2], "b")
 
-    # TODO: draw bounding box
 
-    set_axes_equal(ax)
+def _plot_bounding_box(ax, sample):
+    border_pts = (
+        torch.tensor(
+            [
+                [-1.0, -1.0, -1.0],
+                [-1.0, -1.0, 1.0],
+                [-1.0, 1.0, -1.0],
+                [-1.0, 1.0, 1.0],
+                [1.0, -1.0, -1.0],
+                [1.0, -1.0, 1.0],
+                [1.0, 1.0, -1.0],
+                [1.0, 1.0, 1.0],
+            ]
+        )
+        * sample["scale"].cpu()
+    )
+    border_pts = quaternion_utils.quaternion_apply(
+        sample["quaternion"].cpu(), border_pts
+    )
+    border_pts = border_pts + sample["position"].cpu()
+    _plot_line(ax, border_pts[0], border_pts[1], "k")
+    _plot_line(ax, border_pts[0], border_pts[2], "k")
+    _plot_line(ax, border_pts[0], border_pts[4], "k")
+    _plot_line(ax, border_pts[1], border_pts[3], "k")
+    _plot_line(ax, border_pts[1], border_pts[5], "k")
+    _plot_line(ax, border_pts[2], border_pts[3], "k")
+    _plot_line(ax, border_pts[2], border_pts[6], "k")
+    _plot_line(ax, border_pts[3], border_pts[7], "k")
+    _plot_line(ax, border_pts[4], border_pts[5], "k")
+    _plot_line(ax, border_pts[4], border_pts[6], "k")
+    _plot_line(ax, border_pts[5], border_pts[7], "k")
+    _plot_line(ax, border_pts[6], border_pts[7], "k")
 
-    plt.show()
+
+def _plot_line(ax, pt1, pt2, *args, **kwargs):
+    ax.plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], [pt1[2], pt2[2]], *args, **kwargs)
 
 
 def save_checkpoint(path: str, model: torch.nn.Module, optimizer, iteration, run_name):
