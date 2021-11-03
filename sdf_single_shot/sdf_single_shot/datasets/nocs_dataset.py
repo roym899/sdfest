@@ -306,9 +306,13 @@ class NOCSDataset(torch.utils.data.Dataset):
                 continue
             match = meta_data[meta_data.iloc[:, 0] == mask_id]
             if match.empty:
-                print(f"Warning: mask {mask_id} not found in {meta_path}", end="\033[K\n")
+                print(
+                    f"Warning: mask {mask_id} not found in {meta_path}", end="\033[K\n"
+                )
             elif match.shape[0] != 1:
-                print(f"Warning: mask {mask_id} not unique in {meta_path}", end="\033[K\n")
+                print(
+                    f"Warning: mask {mask_id} not unique in {meta_path}", end="\033[K\n"
+                )
 
             meta_row = match.iloc[0]
             category_id = meta_row.iloc[1]
@@ -325,13 +329,15 @@ class NOCSDataset(torch.utils.data.Dataset):
             except nocs_utils.PoseEstimationError:
                 print(
                     "Insufficient data for pose estimation. "
-                    f"Skipping {color_path}:{mask_id}.", end="\033[K\n"
+                    f"Skipping {color_path}:{mask_id}.",
+                    end="\033[K\n",
                 )
                 continue
             except ObjectError:
                 print(
                     "Insufficient object mesh for pose estimation. "
-                    f"Skipping {color_path}:{mask_id}.", end="\033[K\n"
+                    f"Skipping {color_path}:{mask_id}.",
+                    end="\033[K\n",
                 )
                 continue
 
@@ -539,15 +545,8 @@ class NOCSDataset(torch.utils.data.Dataset):
         """
         gts_path = self._get_gts_path(color_path)
         obj_path = self._get_obj_path(meta_row)
-        if gts_path is None:  # camera_train and real_train
-            # use ground truth NOCS mask to perform alignment
-            (
-                position,
-                rotation_matrix,
-                nocs_scale,
-                nocs_transform,
-            ) = self._estimate_object(color_path, mask_id)
-        else:  # camera_val and real_test
+        if self._split == "real_test":
+            # only use gt for real test data, since there are errors in camera val
             gts_data = pickle.load(open(gts_path, "rb"))
             nocs_transform = gts_data["gt_RTs"][gt_id]
             position = nocs_transform[0:3, 3]
@@ -555,6 +554,14 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
+        else:  # camera_train, camera_val, real_train
+            # use ground truth NOCS mask to perform alignment
+            (
+                position,
+                rotation_matrix,
+                nocs_scale,
+                nocs_transform,
+            ) = self._estimate_object(color_path, mask_id)
 
         orientation_q = Rotation.from_matrix(rotation_matrix).as_quat()
         mesh_extents = self._get_mesh_extents_from_obj(obj_path)

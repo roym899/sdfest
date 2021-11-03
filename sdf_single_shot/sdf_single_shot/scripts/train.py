@@ -1,7 +1,7 @@
 """Script to train model."""
 import argparse
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import random
 import time
@@ -43,6 +43,7 @@ class Trainer:
         self._validation_iteration = config["validation_iteration"]
         self._visualization_iteration = config["visualization_iteration"]
         self._checkpoint_iteration = config["checkpoint_iteration"]
+        self._iterations = config["iterations"]
 
         # propagate orientation representation and category to datasets
         datasets = list(self._config["datasets"].values()) + list(
@@ -132,10 +133,11 @@ class Trainer:
         config_path = os.path.join(self._model_base_path, "config.yaml")
         yoco.save_config_to_file(config_path, self._config)
 
-        program_starts = time.time()
+        self._start_time = time.time()
         for samples in self._multi_data_loader:
             self._current_iteration += 1
             print(f"Current iteration: {self._current_iteration}\033[K", end="\r")
+            self._update_progress()
 
             samples = utils.dict_to(samples, self._device)
 
@@ -173,11 +175,11 @@ class Trainer:
             if self._current_iteration % self._checkpoint_iteration == 0:
                 self._save_checkpoint()
 
-            if self._current_iteration >= self._config["iterations"]:
+            if self._current_iteration >= self._iterations:
                 break
 
         now = time.time()
-        print(f"Training finished after {now-program_starts} seconds.")
+        print(f"Training finished after {now-self._start_time} seconds.")
 
         # save the final model
         torch.save(
@@ -303,13 +305,16 @@ class Trainer:
                 dataset_dict["type"], dataset_dict["config_dict"]
             )
             num_workers = 12 if dataset_dict["type"] != "SDFVAEViewDataset" else 0
+            shuffle = (
+                False if isinstance(dataset, torch.utils.data.IterableDataset) else True
+            )
             probabilities.append(dataset_dict["probability"])
             data_loader = torch.utils.data.DataLoader(
                 dataset=dataset,
                 batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
                 drop_last=True,
-                shuffle=True,
+                shuffle=shuffle,
                 num_workers=num_workers,
             )
             data_loaders.append(data_loader)
@@ -466,7 +471,7 @@ class Trainer:
                 metrics_dict[f"{name} validation mean scale error / m"] += torch.sum(
                     torch.abs(predictions["scale"] - samples["scale"])
                 ).item()
-                metrics_dict[f"{name} validation mean geodesic_distance / rad"] = (
+                metrics_dict[f"{name} validation mean geodesic_distance / rad"] += (
                     self._mean_geodesic_distance(samples, predictions).item()
                     * batch_size
                 )
@@ -486,6 +491,24 @@ class Trainer:
             optimizer=self._optimizer,
             iteration=self._current_iteration,
             run_name=self._run_name,
+        )
+
+    def _update_progress(self) -> None:
+        current_time = time.time()
+        duration = current_time - self._start_time
+        iterations_per_sec = self._current_iteration / duration
+        if self._current_iteration > 10:
+            remaining_iterations = self._iterations - self._current_iteration
+            remaining_secs = remaining_iterations / iterations_per_sec
+            remaining_time_str = str(timedelta(seconds=round(remaining_secs)))
+        else:
+            remaining_time_str = "N/A"
+        print(
+            f"Current iteration: {self._current_iteration:>10} / {self._iterations}"
+            f" {self._current_iteration / self._iterations * 100:>6.2f}%"
+            f" Remaining time: {remaining_time_str}"  # remaining time
+            "\033[K",  # clear until end of line
+            end="\r",  # overwrite previous
         )
 
 

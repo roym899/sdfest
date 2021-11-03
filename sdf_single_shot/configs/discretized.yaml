@@ -12,15 +12,15 @@ config:
             config_dict: "./camera_val.yaml"
 
 # Training params
-batch_size: 32
+batch_size: 8
 iterations: 500000
 learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
-visualization_iteration: 5000
-validation_iteration: 50000
-checkpoint_iteration: 50000
+visualization_iteration: 1000
+validation_iteration: 5000
+checkpoint_iteration: 10000
 orientation_repr: discretized
 orientation_grid_resolution: 1
 orientation_str: mug
@@ -29,13 +29,13 @@ orientation_str: mug
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 0.0
+        probability: 0.7
     camera_train:
         type: NOCSDataset
-        probability: 1.0
+        probability: 0.2
     real_train:
         type: NOCSDataset
-        probability: 0.0
+        probability: 0.1
 
 validation_datasets:
     camera_val:
