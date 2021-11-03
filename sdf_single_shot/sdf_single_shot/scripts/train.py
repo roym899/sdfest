@@ -83,6 +83,7 @@ class Trainer:
                 **self._config["head"],
             ),
         ).to(self._device)
+        self._sdf_pose_net.train()
 
         # deterministic samples (needs to be done after model initialization, as it
         # can have varying number of parameters)
@@ -154,12 +155,12 @@ class Trainer:
             self._optimizer.step()
 
             with torch.no_grad():
-                samples_dict = defaultdict(lambda: dict())
-                for k,vs in samples.items():
-                    for i, v in enumerate(vs):
-                        samples_dict[i][k] = v
-                for sample in samples_dict.values():
-                    utils.visualize_sample(sample, None)
+                # samples_dict = defaultdict(lambda: dict())
+                # for k,vs in samples.items():
+                #     for i, v in enumerate(vs):
+                #         samples_dict[i][k] = v
+                # for sample in samples_dict.values():
+                #     utils.visualize_sample(sample, None)
 
                 self._compute_metrics(samples, predictions)
 
@@ -324,7 +325,7 @@ class Trainer:
                 dataset=dataset,
                 batch_size=self._config["batch_size"],
                 collate_fn=dataset_utils.collate_samples,
-                num_workers=8
+                num_workers=12,
             )
             data_loader_dict[dataset_name] = data_loader
         return data_loader_dict
@@ -380,25 +381,25 @@ class Trainer:
         # generate visualizations
         if self._current_iteration % self._visualization_iteration == 0:
             # generate unseen input and target
-            test_samples = next(iter(self._multi_data_loader))
-            test_samples = utils.dict_to(test_samples, self._device)
-            test_out = self._sdf_pose_net(test_samples["pointset"])
-            input_pointcloud = test_samples["pointset"][0].detach().cpu().numpy()
+            samples = next(iter(self._multi_data_loader))
+            samples = utils.dict_to(samples, self._device)
+            predictions = self._sdf_pose_net(samples["pointset"])
+            input_pointcloud = samples["pointset"][0].detach().cpu().numpy()
             input_pointcloud = np.hstack(
                 (
                     input_pointcloud,
                     np.full((input_pointcloud.shape[0], 1), 0),
                 )
             )
-            output_sdfs = self.vae.decode(test_out[0])
+            output_sdfs = self.vae.decode(predictions[0])
             output_sdf = output_sdfs[0][0].detach().cpu().numpy()
-            output_position = test_out[1][0].detach().cpu().numpy()
-            output_scale = test_out[2][0].detach().cpu().numpy()
+            output_position = predictions[1][0].detach().cpu().numpy()
+            output_scale = predictions[2][0].detach().cpu().numpy()
             if self._config["head"]["orientation_repr"] == "quaternion":
-                quat = test_out[3][0].detach().cpu().numpy()
+                output_quaternion = predictions[3][0].detach().cpu().numpy()
             elif self._config["head"]["orientation_repr"] == "discretized":
-                index = test_out[3][0].argmax().item()
-                quat = self._sdf_pose_net._head._grid.index_to_quat(index)
+                index = predictions[3][0].argmax().item()
+                output_quaternion = self._sdf_pose_net._head._grid.index_to_quat(index)
             else:
                 raise NotImplementedError(
                     "Orientation representation "
@@ -406,7 +407,7 @@ class Trainer:
                     " is not supported"
                 )
             output_pointcloud = sdf_utils.sdf_to_pointcloud(
-                output_sdf, output_position, quat, output_scale
+                output_sdf, output_position, output_quaternion, output_scale
             )
             output_pointcloud = np.hstack(
                 (
@@ -421,7 +422,26 @@ class Trainer:
                 step=self._current_iteration,
             )
 
+            output_pointcloud = sdf_utils.sdf_to_pointcloud(
+                output_sdf,
+                samples["position"][0].detach().cpu().numpy(),
+                samples["quaternion"][0].detach().cpu().numpy(),
+                samples["scale"][0].detach().cpu().numpy(),
+            )
+            output_pointcloud = np.hstack(
+                (
+                    output_pointcloud,
+                    np.full((output_pointcloud.shape[0], 1), 1),
+                )
+            )
+            pointcloud = np.vstack((input_pointcloud, output_pointcloud))
+            wandb.log(
+                {"point_cloud gt pose": wandb.Object3D(pointcloud)},
+                step=self._current_iteration,
+            )
+
     def _compute_validation_metrics(self) -> None:
+        self._sdf_pose_net.eval()
         for name, data_loader in self._validation_data_loader_dict.items():
             metrics_dict = defaultdict(lambda: 0)
             sample_count = 0
@@ -454,6 +474,7 @@ class Trainer:
             for metric_name in metrics_dict:
                 metrics_dict[metric_name] /= sample_count
             wandb.log(metrics_dict, step=self._current_iteration)
+        self._sdf_pose_net.train()
 
     def _save_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
