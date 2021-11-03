@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+import trimesh
 
 # need to import PySide2 before matplotlib
 # see: https://matplotlib.org/3.2.1/gallery/user_interfaces/embedding_in_qt_sgskip.html # noqa
@@ -129,6 +130,8 @@ class VAEVisualizer(QDialog):
         single_object_widget_layout.setAlignment(QtCore.Qt.AlignTop)
         single_object_widget_bottom = QWidget()
         single_object_widget_bottom_layout = QHBoxLayout()
+        single_object_save_buttons_widget = QWidget()
+        single_object_save_buttons_layout = QHBoxLayout()
         self.slider_group_widget = QWidget()
         self.slider_group_widget_layout = QVBoxLayout()
         load_sdf_button = QPushButton("Load SDF")
@@ -137,6 +140,11 @@ class VAEVisualizer(QDialog):
         generate_sdf_button.clicked.connect(self.generate_sdf)
         save_figure_button = QPushButton("Save figure")
         save_figure_button.clicked.connect(self.save_figure)
+        save_mesh_button = QPushButton("Save mesh")
+        save_mesh_button.clicked.connect(self.save_mesh)
+        save_sdf_button = QPushButton("Save sdf")
+        save_sdf_button.clicked.connect(self.save_sdf)
+
         self.single_object_figure = Figure(
             dpi=85, facecolor=(1, 1, 1), edgecolor=(0, 0, 0), tight_layout=True
         )
@@ -151,14 +159,22 @@ class VAEVisualizer(QDialog):
         self.scroll_area_sliders.setWidget(self.slider_group_widget)
         self.scroll_area_sliders.show()
 
+        # Single object bottom
         single_object_widget_bottom_layout.addWidget(single_object_canvas)
         single_object_widget_bottom_layout.addWidget(self.scroll_area_sliders)
-
         single_object_widget_bottom.setLayout(single_object_widget_bottom_layout)
 
+        # Single object save buttons
+        single_object_save_buttons_layout.addWidget(save_figure_button)
+        single_object_save_buttons_layout.addWidget(save_mesh_button)
+        single_object_save_buttons_layout.addWidget(save_sdf_button)
+        single_object_save_buttons_widget.setLayout(single_object_save_buttons_layout)
+        single_object_save_buttons_layout.setMargin(0)
+
+        # Single object tab
         single_object_widget_layout.addWidget(load_sdf_button)
         single_object_widget_layout.addWidget(generate_sdf_button)
-        single_object_widget_layout.addWidget(save_figure_button)
+        single_object_widget_layout.addWidget(single_object_save_buttons_widget)
         single_object_widget_layout.addWidget(single_object_widget_bottom)
         single_object_widget.setLayout(single_object_widget_layout)
 
@@ -436,14 +452,12 @@ class VAEVisualizer(QDialog):
                 if self._single_sdf_latent is not None:
                     if evaluate:
                         t1 = time.time()
-                        self._single_reconstructed_sdf = self._model.decode(
+                        self._single_sdf_output = self._model.decode(
                             self._single_sdf_latent, enforce_tsdf=True
                         )
                         print(f"Decoding took {time.time() - t1}s")
                     t1 = time.time()
-                    self.render_sdf(
-                        ax2, self._single_reconstructed_sdf[0, 0].detach().numpy()
-                    )
+                    self.render_sdf(ax2, self._single_sdf_output[0, 0].detach().numpy())
                     print(f"Rendering took {time.time() - t1}s")
 
         self.single_object_figure.canvas.draw()
@@ -576,6 +590,32 @@ class VAEVisualizer(QDialog):
         filename = now.strftime("%Y-%m-%d_%H-%M-%S.png")
         self.single_object_figure.savefig(filename, pad_inches=0, dpi=200)
         print(f"Saved as {filename}")
+
+    def save_mesh(self):
+        """Save current object mesh."""
+        if self._single_sdf_output is None:
+            print("Can't save mesh without generated SDF.")
+            return
+        sdf = self._single_sdf_output[0, 0].detach().numpy()
+        mesh = sdf_utils.mesh_from_sdf(sdf, self._isosurface_level, complete_mesh=True)
+        mesh_filename = (
+            f"mesh_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}.obj"
+        )
+        mesh_path = os.path.join(os.getcwd(), mesh_filename)
+        with open(mesh_path, "w") as f:
+            f.write(trimesh.exchange.obj.export_obj(mesh))
+
+    def save_sdf(self):
+        """Save current object sdf."""
+        if self._single_sdf_output is None:
+            print("Can't save SDF without generated SDF.")
+            return
+        sdf = self._single_sdf_output[0, 0].detach().numpy()
+        sdf_filename = (
+            f"sdf_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}.npy"
+        )
+        sdf_path = os.path.join(os.getcwd(), sdf_filename)
+        np.save(sdf_path, sdf)
 
     def config_changed(self, string):
         self.parse_config()
