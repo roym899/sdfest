@@ -1,7 +1,6 @@
 """Tests for pointset_utils module."""
 
 import torch
-
 from sdf_single_shot import pointset_utils
 
 

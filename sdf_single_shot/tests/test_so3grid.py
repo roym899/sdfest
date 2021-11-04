@@ -1,6 +1,5 @@
 """Tests for SO3Grid class."""
 import numpy as np
-
 from sdf_single_shot.so3grid import SO3Grid
 
 

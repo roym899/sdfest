@@ -68,7 +68,7 @@ class VanillaPointNet(nn.Module):
         return out
 
 
-class IteratativePointNet():
+class IteratativePointNet(nn.Module):
     """
      Accomodates iterated application of pointnet taking concatenation of input with output of previous iteration.
 
@@ -80,12 +80,12 @@ class IteratativePointNet():
 
 
         Args:
-            num_concat:     number of iterations of pointnet application (If 1 then it is VanillaPointNet)
+            num_concat:     number of concatenations of input and previous iteration (If 0 then it is == VanillaPointNet)
             in_size:        dimension of the input points
             mlp_out_sizes:  output sizes of each linear layer
             batchnorm:      whether to use batchnorm or not
         """
-
+        super().__init__()
         self.num_concat = num_concat
         # create 1st pointnet for taking points of channel = in_size
         self.pointnet_1 = VanillaPointNet(in_size, mlp_out_sizes, batchnorm)
@@ -93,7 +93,7 @@ class IteratativePointNet():
         self.pointnet_2 = VanillaPointNet(in_size + mlp_out_sizes[-1], mlp_out_sizes, batchnorm)
 
 
-    def __call__(self, x):
+    def forward(self, x):
         """Forward pass
 
         Input has dimension NxMxC, where N is the batch size, M the number of points
@@ -102,12 +102,10 @@ class IteratativePointNet():
         Args:
             x: batch of point sets
         """
+        out = self.pointnet_1(x)
         batchsize, set_size, channels = x.shape
         for concat_step in range(self.num_concat):
             # apply 1st pointnet to input
-            if concat_step == 0:
-                out = self.pointnet_1(x)
-            else:
                 # out has dim (batchsize, num_outputs)
                 # repeat output vector across 2nd dimension (dim = batchsize, set_size, num_outputs)
                 repeated_out = out.unsqueeze(1).repeat(1, set_size, 1)
@@ -119,12 +117,14 @@ class IteratativePointNet():
 
 if __name__ == "__main__":
     #simple sanity check
-    # pointnet = VanillaPointNet(3, [64, 64, 64, 128, 1024], True)
-    # inp = torch.randn(2, 500, 3)
-    # out = pointnet(inp)
-    # print(out.shape)
 
-    iteratative_pointnet = IteratativePointNet(5, 3, [64, 64, 64, 128, 1024], True)
-    inp = torch.randn(2, 500, 3)
-    out = iteratative_pointnet(inp)
-    print(out.shape)
+    inp_p = torch.randn(2, 500, 3)
+    #
+    # pointnet = VanillaPointNet(3, [64, 64, 1024], True)
+    # out_p = pointnet(inp_p)
+    # print(f"out shape of pointnet : {out_p.shape}")
+
+    iteratative_pointnet = IteratativePointNet(0, 3, [64, 64, 1024], True)
+    out_ip = iteratative_pointnet(inp_p)
+    print(f"out shape of iterative pointnet 2: {out_ip.shape}")
+
