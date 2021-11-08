@@ -1,5 +1,5 @@
-final_meshes.json binary
-poetry.lock binary
-*.obj binary
-*.txt binary
-*.mtl binary
+final_meshes.json binary linguist-generated
+poetry.lock binary linguist-generated
+*.obj binary linguist-generated
+*.txt binary linguist-generated
+*.mtl binary linguist-generated
