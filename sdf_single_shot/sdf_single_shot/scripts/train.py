@@ -258,9 +258,9 @@ class Trainer:
             log_dict["loss position"] = loss_position_l2.item()
             if loss_position_l2.item() > 1.0:
                 _, index = torch.max(samples["scale"], dim=0)
-                print(samples["scale"][index].item())
-                print(samples["color_path"][index.item()])
-                print(samples["position"][index.item()])
+                # print(samples["scale"][index].item())
+                # print(samples["color_path"][index.item()])
+                # print(samples["position"][index.item()])
             loss = loss + self._config["position_weight"] * loss_position_l2
 
         if "scale" in samples:

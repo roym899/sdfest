@@ -34,39 +34,52 @@ class SDFPipeline:
         Args:
             config: Configuration dictionary.
         """
-        self.device = config["device"]
+        self._parse_config(config)
 
         self.init_network = SDFPoseNet(
-            INIT_MODULE_DICT[config["init"]["backbone_type"]](
-                **config["init"]["backbone"]
+            INIT_MODULE_DICT[self.init_config["backbone_type"]](
+                **self.init_config["backbone"]
             ),
-            INIT_MODULE_DICT[config["init"]["head_type"]](
-                shape_dimension=config["vae"]["latent_size"], **config["init"]["head"]
+            INIT_MODULE_DICT[self.init_config["head_type"]](
+                shape_dimension=self.vae_config["latent_size"],
+                **self.init_config["head"]
             ),
         ).to(self.device)
-        state_dict = torch.load(config["init"]["model"], map_location=self.device)
+        state_dict = torch.load(self.init_config["model"], map_location=self.device)
         self.init_network.load_state_dict(state_dict)
         self.init_network.eval()
 
         self.resolution = 64
         self.vae = SDFVAE(
             sdf_size=64,
-            latent_size=config["vae"]["latent_size"],
-            encoder_dict=config["vae"]["encoder"],
-            decoder_dict=config["vae"]["decoder"],
+            latent_size=self.vae_config["latent_size"],
+            encoder_dict=self.vae_config["encoder"],
+            decoder_dict=self.vae_config["decoder"],
             device=self.device,
         ).to(self.device)
-        state_dict = torch.load(config["vae"]["model"], map_location=self.device)
+        state_dict = torch.load(self.vae_config["model"], map_location=self.device)
         self.vae.load_state_dict(state_dict)
         self.vae.eval()
 
-        self.cam = Camera(**config["camera"])
+        self.cam = Camera(**self.camera_config)
         self.render = lambda sdf, pos, quat, i_s: render_depth_gpu(
             sdf, pos, quat, i_s, None, None, None, config["threshold"], self.cam
         )
         self.config = config
 
         self.log_data = []
+
+    def _parse_config(self, config: dict) -> None:
+        """Parse config dict.
+
+        This function makes sure that all required keys are available.
+        """
+        self.device = config["device"]
+        self.init_config = config["init"]
+        self.vae_config = config["vae"] if "vae" in config else self.init_config["vae"]
+        self.camera_config = config["camera"]
+
+        self.config = config
 
     @staticmethod
     def _compute_gradients(loss: torch.Tensor) -> None:
@@ -254,7 +267,7 @@ class SDFPipeline:
             {"params": position, "lr": 1e-3},
             {"params": orientation, "lr": 1e-2},
             {"params": scale_inv, "lr": 1e-2},
-            {"params": latent_shape, "lr": 2e-1},
+            {"params": latent_shape, "lr": 1e-2},
         ]
         optimizer = torch.optim.Adam(opt_vars)
 
@@ -543,11 +556,11 @@ class SDFPipeline:
             depth_images, camera_orientations, camera_positions
         ):
             centroid = None
-            if self.config["init"]["backbone_type"] == "VanillaPointNet":
+            if self.init_config["backbone_type"] == "VanillaPointNet":
                 inp = pointset_utils.depth_to_pointcloud(
                     depth_image, self.cam, normalize=False
                 )
-                if self.config["init"]["generated_dataset"]["normalize_pose"]:
+                if self.init_config["normalize_pose"]:
                     inp, centroid = pointset_utils.normalize_points(inp)
             else:
                 inp = depth_image
@@ -561,7 +574,7 @@ class SDFPipeline:
             if centroid is not None:
                 position += centroid
 
-            if self.config["init"]["head"]["orientation_repr"] == "discretized":
+            if self.init_config["head"]["orientation_repr"] == "discretized":
                 orientation_repr = torch.softmax(orientation_repr, 1)
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
@@ -570,7 +583,7 @@ class SDFPipeline:
                     dtype=torch.float,
                     device=self.device,
                 ).unsqueeze(0)
-            elif self.config["init"]["head"]["orientation_repr"] == "quaternion":
+            elif self.init_config["head"]["orientation_repr"] == "quaternion":
                 orientation_camera = orientation_repr
             else:
                 raise NotImplementedError("Orientation representation is not supported")
@@ -587,7 +600,7 @@ class SDFPipeline:
             if self.config["init_view"] == "first":
                 return latent_shape, position_world, scale, orientation_world
             elif self.config["init_view"] == "best":
-                if self.config["init"]["head"]["orientation_repr"] != "discretized":
+                if self.init_config["head"]["orientation_repr"] != "discretized":
                     raise NotImplementedError(
                         '"Best" init strategy only supported with discretized '
                         "orientation representation"
@@ -626,49 +639,3 @@ class SDFPipeline:
             .unsqueeze(0)
             .to(self.device)
         )
-
-
-def main() -> None:
-    """Entry point of the program."""
-    # define the arguments
-    parser = argparse.ArgumentParser(description="SDF pose estimation in depth images")
-
-    # parse arguments
-    parser.add_argument("--device")
-    parser.add_argument("--config", default="configs/default.yaml", nargs="+")
-    args = parser.parse_args()
-    config_dict = {k: v for k, v in vars(args).items() if v is not None}
-    config = yoco.load_config(config_dict)
-
-    pipeline = SDFPipeline(config)
-
-    # generate test depth with same camera params
-    cam = Camera(**config["camera"])
-    mesh = synthetic.Mesh(
-        path="/home/leo/datasets/shapenet/mug_03797390/61c10dccfa8e508e2d66cbf6a91063/"
-        "models/model_normalized.obj",
-        scale=0.08,
-    )
-    mesh.position = np.array([-0.0, 0.1, 0.7])
-    mesh.orientation = np.array([1.0, 0.5, 0.0, -1.5])
-    mesh.orientation /= np.linalg.norm(mesh.orientation)
-
-    # render depth image
-    test_depth = torch.tensor(
-        synthetic.draw_depth_geometry(mesh, cam), device=config["device"]
-    )
-    test_mask = test_depth != 0
-
-    position, orientation, scale, shape = pipeline(
-        test_depth, test_mask, test_depth, visualize=True
-    )
-
-    with torch.no_grad():
-        # visualize pipeline output
-        out = pipeline.generate_depth(position, orientation, scale, shape)
-        plt.imshow(out.cpu())
-        plt.show()
-
-
-if __name__ == "__main__":
-    main()
