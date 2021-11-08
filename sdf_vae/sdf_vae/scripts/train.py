@@ -258,7 +258,7 @@ def train(config):
                         p,
                         q,
                         s,
-                        0.01,
+                        threshold=0.01,
                         camera=camera,
                     )
                     pointcloud = pointset_utils.depth_to_pointcloud(

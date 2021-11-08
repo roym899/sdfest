@@ -32,12 +32,34 @@ def load_config_from_file(path, current_dict=None, parent=None, ns=None):
     return current_dict
 
 
-def load_config(config_dict, current_dict=None, parent=None) -> Dict:
+def load_config(
+    config_dict: dict,
+    current_dict: Optional[dict] = None,
+    parent: Optional[str] = None,
+    default_dict: Optional[dict] = None,
+) -> Dict:
     """Load a config specified as a dictionary.
 
     If a key is already in current_dict, config_dict will overwrite it.
+
+    Note that default_dict and current_dict are not supported together.
+
+    Args:
+        config_dict: Configuration dictionary to be loaded.
+        current_dict: Dictionary to be updated, will be updated in-place.
+        parent: Path of parent config. Used to resolve relative paths.
+        default_dict:
+            Default configuration dictionary. Will be loaded first, but not edited
+            inplace.
+    Returns:
+        Loaded / updated config.
     """
-    if current_dict is None:
+    if default_dict is not None and current_dict is not None:
+        raise ValueError("Either default_dict or current_dict has to be None.")
+
+    if default_dict is not None:
+        current_dict = load_config(copy.deepcopy(default_dict))
+    elif current_dict is None:
         current_dict = {}
 
     if "config" in config_dict:

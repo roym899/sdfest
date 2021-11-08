@@ -22,4 +22,4 @@ See the `./configs` folder for examples.
 ## Development
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
-- Use `pytest --cov=yoco --cov-report term-missing tests/` to run tests and check code coverage
+- Use `pytest --cov=sdf_single_shot --cov-report term-missing tests/` to run tests and check code coverage

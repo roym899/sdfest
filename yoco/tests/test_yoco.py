@@ -1,5 +1,6 @@
 """Test functions for YOCO."""
 import argparse
+import copy
 import os
 import pytest
 
@@ -40,6 +41,27 @@ def test_load_config():
         "test_param_3": "Param not in file",
     }
     assert config_dict == expected_dict
+
+    # Default dictionary (i.e., merging without overwriting
+    default_dict = {
+        "config": "tests/test_files/config_1.yaml",
+    }
+    config_dict = {
+        "test_param_1": 5,
+        "test_param_3": 5,
+    }
+    expected_default_dict = copy.deepcopy(default_dict)
+    final_config = yoco.load_config(config_dict, default_dict=default_dict)
+
+    # Default dictionary should not change
+    assert default_dict == expected_default_dict
+    expected_dict = {
+        "test_param_1": 5,
+        "test_param_2": "Test string",
+        "test_param_3": 5,
+        "test_list": [1, 2, 3],
+    }
+    assert expected_dict == final_config
 
 
 def test_save_config(tmp_path):
@@ -193,12 +215,7 @@ def test_config_from_parser() -> None:
 
     config_dict = yoco.load_config_from_args(
         parser,
-        args=[
-            "--config",
-            "tests/test_files/test_2.yaml",
-            "--test",
-            "4"
-        ],
+        args=["--config", "tests/test_files/test_2.yaml", "--test", "4"],
     )
     expected_dict = {
         "test": 4,  # argument has highest priority

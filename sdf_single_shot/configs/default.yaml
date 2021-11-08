@@ -1,6 +1,8 @@
 config:
     - vae: "../vae_models/mug.yaml"
-    - generated_dataset: "./generated_dataset.yaml"
+    - datasets:
+        generated_dataset: 
+            config_dict: "./generated_dataset.yaml"
 
 # Training params
 batch_size: 32
@@ -9,6 +11,16 @@ learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
+visualization_iteration: 5000
+validation_iteration: 50000
+checkpoint_iteration: 50000
+orientation_repr: quaternion
+datasets: 
+    generated_dataset:
+        type: SDFVAEViewDataset
+        probability: 1.0
+validation_datasets: {}
+category_str: mug
 
 # Network params
 backbone_type: VanillaPointNet
@@ -22,4 +34,3 @@ head:
     in_size: 1024 # number of input features
     mlp_out_sizes: [512, 256, 128] 
     batchnorm: True
-    orientation_repr: quaternion

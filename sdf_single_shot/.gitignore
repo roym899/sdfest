@@ -3,6 +3,7 @@ runs
 models
 wandb
 sdf_vae
+data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
