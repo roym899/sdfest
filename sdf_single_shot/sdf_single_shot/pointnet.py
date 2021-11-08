@@ -116,15 +116,26 @@ class IteratativePointNet(nn.Module):
 
 
 if __name__ == "__main__":
-    #simple sanity check
+    #check if dimensions are consistent across pointnets
 
-    inp_p = torch.randn(2, 500, 3)
-    #
-    # pointnet = VanillaPointNet(3, [64, 64, 1024], True)
-    # out_p = pointnet(inp_p)
-    # print(f"out shape of pointnet : {out_p.shape}")
+    inp1 = torch.randn(2, 500, 3)
+
+    pointnet = VanillaPointNet(3, [64, 64, 1024], True)
+    out_p = pointnet(inp1)
+
 
     iteratative_pointnet = IteratativePointNet(0, 3, [64, 64, 1024], True)
-    out_ip = iteratative_pointnet(inp_p)
-    print(f"out shape of iterative pointnet 2: {out_ip.shape}")
+    out_ip = iteratative_pointnet(inp1)
+
+    assert out_p.shape == out_ip.shape
+
+
+    #check if dimension is as expected
+
+    inp2 = torch.randn(100, 50, 2)
+    iteratative_pointnet2 = IteratativePointNet(3, 2, [32, 64, 64, 1024], True)
+    out_ip2 = iteratative_pointnet2(inp2)
+
+    assert out_ip2.shape == (100, 1024)
+
 
