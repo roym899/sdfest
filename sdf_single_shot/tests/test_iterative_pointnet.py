@@ -1,13 +1,32 @@
-
+import torch
 
 
 from sdf_single_shot.pointnet import VanillaPointNet, IteratativePointNet
-def test_equality_between_pointnets():
-    """Test whether VanillaPointnet and IterativePointnet with num_concat = 1 outputs same result"""
-    pointnet = VanillaPointNet(3, [64, 64, 1024], True)
-    iteratative_pointnet = IteratativePointNet(1, 3, [64, 64, 64, 128, 1024], True)
+    
 
+def test_shape_equality_pointnets():
+    """Test whether VanillaPointnet and IterativePointnet with num_concat = 1 outputs same result"""
+    inp1 = torch.randn(2, 500, 3)
+
+    pointnet = VanillaPointNet(3, [64, 64, 1024], True)
+    out_p = pointnet(inp1)
+
+    iteratative_pointnet = IteratativePointNet(0, 3, [64, 64, 1024], True)
+    out_ip = iteratative_pointnet(inp1)
+
+    assert out_p.shape == out_ip.shape
+
+    inp2 = torch.randn(100, 50, 2)
+    iteratative_pointnet2 = IteratativePointNet(3, 2, [32, 64, 64, 1024], True)
+    out_ip2 = iteratative_pointnet2(inp2)
+
+    assert out_ip2.shape == (100, 1024)
+
+
+def test_backward():
+    iteratative_pointnet = IteratativePointNet(4, 3, [64, 64, 64, 128], True)
     inp = torch.randn(100, 500, 3)
-    out1 = pointnet(inp)
-    out2 = iteratative_pointnet(inp)
-    assert out1 == out2
+    out1 = iteratative_pointnet(inp)
+    out_sum = torch.sum(out1)
+
+    out_sum.backward()
