@@ -1,0 +1,5 @@
+final_meshes.json binary
+poetry.lock binary
+*.obj binary
+*.txt binary
+*.mtl binary
