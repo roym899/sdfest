@@ -4,7 +4,6 @@ import torch.nn as nn
 from typing import List
 
 
-
 class VanillaPointNet(nn.Module):
     """Parametrized PointNet without transformation layers (no T-nets).
 
@@ -70,11 +69,13 @@ class VanillaPointNet(nn.Module):
 
 class IteratativePointNet(nn.Module):
     """
-     Accomodates iterated application of pointnet taking concatenation of input with output of previous iteration.
+    Accomodates iterated application of pointnet taking concatenation of input with output of previous iteration.
 
     """
 
-    def __init__(self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool):
+    def __init__(
+        self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
+    ):
         """
         Initialize the IteratativePointNet module.
 
@@ -90,8 +91,9 @@ class IteratativePointNet(nn.Module):
         # create 1st pointnet for taking points of channel = in_size
         self.pointnet_1 = VanillaPointNet(in_size, mlp_out_sizes, batchnorm)
         # create 2nd pointnet for taking points of channel = size of concatenated vector
-        self.pointnet_2 = VanillaPointNet(in_size + mlp_out_sizes[-1], mlp_out_sizes, batchnorm)
-
+        self.pointnet_2 = VanillaPointNet(
+            in_size + mlp_out_sizes[-1], mlp_out_sizes, batchnorm
+        )
 
     def forward(self, x):
         """Forward pass
@@ -106,36 +108,32 @@ class IteratativePointNet(nn.Module):
         batchsize, set_size, channels = x.shape
         for concat_step in range(self.num_concat):
             # apply 1st pointnet to input
-                # out has dim (batchsize, num_outputs)
-                # repeat output vector across 2nd dimension (dim = batchsize, set_size, num_outputs)
-                repeated_out = out.unsqueeze(1).repeat(1, set_size, 1)
-                # concatenate input vector and repeated_out
-                modified_x = torch.cat((repeated_out, x), 2)
-                out = self.pointnet_2(modified_x)
+            # out has dim (batchsize, num_outputs)
+            # repeat output vector across 2nd dimension (dim = batchsize, set_size, num_outputs)
+            repeated_out = out.unsqueeze(1).repeat(1, set_size, 1)
+            # concatenate input vector and repeated_out
+            modified_x = torch.cat((repeated_out, x), 2)
+            out = self.pointnet_2(modified_x)
         return out
 
 
 if __name__ == "__main__":
-    #check if dimensions are consistent across pointnets
+    # check if dimensions are consistent across pointnets
 
     inp1 = torch.randn(2, 500, 3)
 
     pointnet = VanillaPointNet(3, [64, 64, 1024], True)
     out_p = pointnet(inp1)
 
-
     iteratative_pointnet = IteratativePointNet(0, 3, [64, 64, 1024], True)
     out_ip = iteratative_pointnet(inp1)
 
     assert out_p.shape == out_ip.shape
 
-
-    #check if dimension is as expected
+    # check if dimension is as expected
 
     inp2 = torch.randn(100, 50, 2)
     iteratative_pointnet2 = IteratativePointNet(3, 2, [32, 64, 64, 1024], True)
     out_ip2 = iteratative_pointnet2(inp2)
 
     assert out_ip2.shape == (100, 1024)
-
-
