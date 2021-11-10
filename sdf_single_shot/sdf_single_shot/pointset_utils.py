@@ -1,9 +1,12 @@
 """Utility functions to handle pointsets."""
 import torch
 from typing import Optional
-from sdf_differentiable_renderer import Camera
 
-from sdf_single_shot import quaternion_utils
+import matplotlib.pyplot as plt
+import numpy as np
+
+from sdf_differentiable_renderer import Camera
+from sdf_single_shot import quaternion_utils, utils
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:
@@ -183,3 +186,27 @@ def change_orientation_camera_convention(
         # rotate 180deg around x direction
         gl2cv_q = in_orientation_q.new_tensor([1.0, 0, 0, 0])  # == cv2gl
         return quaternion_utils.quaternion_multiply(gl2cv_q, in_orientation_q)
+
+
+def visualize_pointset(pointset: torch.Tensor, max_points: int = 1000) -> None:
+    """Visualize pointset as 3D scatter plot.
+
+    Args:
+        pointset: The pointset to visualize. Shape (N,3).
+        max_points:
+            Maximum number of points.
+            If N>max_points only a random subset will be shown.
+    """
+    pointset_np = pointset.cpu().detach().numpy()
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
+    ax.set_box_aspect((1, 1, 1))
+
+    if len(pointset_np) > max_points:
+        indices = np.random.choice(len(pointset_np), replace=False, size=max_points)
+        ax.scatter(pointset_np[indices, 0], pointset_np[indices, 1], pointset_np[indices, 2])
+    else:
+        ax.scatter(pointset_np[:, 0], pointset_np[:, 1], pointset_np[:, 2])
+
+    utils.set_axes_equal(ax)
+    plt.show()
