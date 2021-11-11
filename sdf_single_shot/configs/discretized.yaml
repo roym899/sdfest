@@ -3,21 +3,21 @@ config:
     - datasets:
         generated_dataset: 
             config_dict: "./generated_dataset.yaml"
-        camera_train: 
-            config_dict: "./camera_train.yaml"
-        real_train: 
-            config_dict: "./real_train.yaml"
+        # camera_train: 
+        #     config_dict: "./camera_train.yaml"
+        # real_train: 
+        #     config_dict: "./real_train.yaml"
     - validation_datasets:
         camera_val: 
             config_dict: "./camera_val.yaml"
 
 # Training params
-batch_size: 8
-iterations: 500000
+batch_size: 32
+iterations: 10000
 learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
-orientation_weight: 1
+orientation_weight: 5
 visualization_iteration: 1000
 validation_iteration: 5000
 checkpoint_iteration: 10000
@@ -29,13 +29,13 @@ orientation_str: mug
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 0.7
-    camera_train:
-        type: NOCSDataset
-        probability: 0.2
-    real_train:
-        type: NOCSDataset
-        probability: 0.1
+        probability: 1.0
+    # camera_train:
+    #     type: NOCSDataset
+    #     probability: 0.2
+    # real_train:
+    #     type: NOCSDataset
+    #     probability: 0.1
 
 validation_datasets:
     camera_val:
@@ -45,11 +45,15 @@ validation_datasets:
 backbone_type: VanillaPointNet
 backbone:
     in_size: 3  # dimension of input points
-    mlp_out_sizes: [64, 64, 64, 128, 1024]
+    # tnets:
+    #     0: [64,64,64]
+    mlp_out_sizes: [64, 64, 64]
     batchnorm: True
+    # residual: True
 
 head_type: SDFPoseHead
 head:
-    in_size: 1024 # number of input features
-    mlp_out_sizes: [512, 256, 128] 
+    in_size: 64 # number of input features
+    mlp_out_sizes: [128, 128, 128] 
     batchnorm: True
+    # residual: True

@@ -11,3 +11,6 @@ extent_std: 0.01
 mask_noise: True
 mask_noise_min: 0.1
 mask_noise_max: 2.0
+norm_noise: False
+norm_noise_min: -0.2
+norm_noise_max: 0.2

@@ -75,6 +75,9 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         mask_noise: bool
         mask_noise_min: Optional[float]
         mask_noise_max: Optional[float]
+        norm_noise: bool
+        norm_noise_min: Optional[float]
+        norm_noise_max: Optional[float]
 
     default_config: Config = {
         "device": "cuda",
@@ -88,6 +91,9 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         "mask_noise": False,
         "mask_noise_min": 0.1,
         "mask_noise_max": 2.0,
+        "norm_noise": False,
+        "norm_noise_min": -0.2,
+        "norm_noise_max": 0.2,
     }
 
     def __init__(
@@ -131,6 +137,12 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._mask_noise_max = config["mask_noise_max"]
         self._mask_noise_sampler = lambda: random.uniform(
             config["mask_noise_min"], config["mask_noise_max"]
+        )
+        self._norm_noise = config["norm_noise"]
+        self._norm_noise_min = config["norm_noise_min"]
+        self._norm_noise_max = config["norm_noise_max"]
+        self._norm_noise_sampler = lambda: random.uniform(
+            config["norm_noise_min"], config["norm_noise_max"]
         )
         self._pointcloud = config["pointcloud"]
         self._normalize_pose = config["normalize_pose"]
@@ -254,9 +266,16 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         # print(inv_scale.requires_grad)
 
         if self._mask_noise:
+            pointset = pointset_utils.depth_to_pointcloud(
+                depth, self._camera, convention="opengl"
+            )
+            _, good_centroid = pointset_utils.normalize_points(pointset)
+
             mask = depth != 0
             perturbed_mask = self._perturb_mask(mask)
             depth[mask * (mask != perturbed_mask)] = self._mask_noise_sampler()
+        else:
+            good_centroid = None
 
         if self._pointcloud:
             pointset = pointset_utils.depth_to_pointcloud(
@@ -264,8 +283,22 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             )
 
             if self._normalize_pose:
-                pointset, centroid = pointset_utils.normalize_points(pointset)
-                position -= centroid  # adjust target
+                if good_centroid is None:
+                    pointset, centroid = pointset_utils.normalize_points(pointset)
+                    position -= centroid  # adjust target
+                else:
+                    pointset -= good_centroid
+                    position -= good_centroid
+
+                if self._norm_noise:
+                    noise = position.new_tensor([
+                        self._norm_noise_sampler(),
+                        self._norm_noise_sampler(),
+                        self._norm_noise_sampler()
+                    ])
+                    position += noise
+                    pointset += noise
+
 
             sample["pointset"] = pointset
 
