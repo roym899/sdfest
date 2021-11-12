@@ -4,8 +4,9 @@ import torch
 from sdf_single_shot.pointnet import VanillaPointNet, IteratativePointNet
 
 
-def test_shape_equality_pointnets():
-    """Test whether VanillaPointnet and IterativePointnet outputs same shape"""
+def test_shape_equality_pointnets() -> None:
+    """Test whether VanillaPointnet and IterativePointnet outputs same shape."""
+
     inp1 = torch.randn(2, 500, 3)
 
     pointnet = VanillaPointNet(3, [64, 64, 1024], True)
