@@ -44,6 +44,9 @@ class Trainer:
         self._visualization_iteration = config["visualization_iteration"]
         self._checkpoint_iteration = config["checkpoint_iteration"]
         self._iterations = config["iterations"]
+        self._init_weights_path = (
+            config["init_weights"] if "init_weights" in config else None
+        )
 
         # propagate orientation representation and category to datasets
         datasets = list(self._config["datasets"].values()) + list(
@@ -100,9 +103,11 @@ class Trainer:
         )
 
         # load weights if provided
-        if "init_weights" in self._config and self._config["init_weights"] is not None:
-            state_dict = torch.load(self.init_config["model"], map_location=self.device)
-            self.init_network.load_state_dict(state_dict)
+        if self._init_weights_path is not None:
+            state_dict = torch.load(
+                self._init_weights_path, map_location=self._device
+            )
+            self._sdf_pose_net.load_state_dict(state_dict)
 
         self._current_iteration = 0
         self._run_name = (
