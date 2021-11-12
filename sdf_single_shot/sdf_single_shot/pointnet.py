@@ -73,15 +73,15 @@ class IteratativePointNet(nn.Module):
     def __init__(
         self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
     ):
-        """
-        Initialize the IteratativePointNet module.
-
+        """Initialize the IteratativePointNet module.
 
         Args:
-            num_concat:     number of concatenations of input and previous iteration (If 0 then it is == VanillaPointNet)
-            in_size:        dimension of the input points
-            mlp_out_sizes:  output sizes of each linear layer
-            batchnorm:      whether to use batchnorm or not
+            num_concat:
+                Number of concatenations of input and previous iteration.
+                If 0 this module is the same as VanillaPointNet.
+            in_size: Dimension of the input points.
+            mlp_out_sizes: Output sizes of each linear layer.
+            batchnorm: Whether to use batchnorm or not.
         """
         super().__init__()
         self.num_concat = num_concat
