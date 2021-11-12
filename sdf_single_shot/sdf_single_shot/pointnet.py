@@ -101,12 +101,11 @@ class IteratativePointNet(nn.Module):
         Args:
             x: batch of point sets
         """
-        out = self.pointnet_1(x)
-        batchsize, set_size, channels = x.shape
-        for concat_step in range(self.num_concat):
-            # apply 1st pointnet to input
-            # out has dim (batchsize, num_outputs)
-            # repeat output vector across 2nd dimension (dim = batchsize, set_size, num_outputs)
+        # apply 1st pointnet to input
+        out = self.pointnet_1(x)  # shape (batch_size, num_outputs)
+        set_size = x.shape[1]
+        for _ in range(self.num_concat):
+            # repeat output vector across 2nd dimension
             repeated_out = out.unsqueeze(1).repeat(1, set_size, 1)
             # concatenate input vector and repeated_out
             modified_x = torch.cat((repeated_out, x), 2)
