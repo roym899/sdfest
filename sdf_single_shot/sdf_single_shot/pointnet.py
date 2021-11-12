@@ -130,6 +130,6 @@ if __name__ == "__main__":
 
     inp2 = torch.randn(100, 50, 2)
     iterative_pointnet2 = IterativePointNet(3, 2, [32, 64, 64, 1024], True)
-    out_ip2 = iteratative_pointnet2(inp2)
+    out_ip2 = iterative_pointnet2(inp2)
 
     assert out_ip2.shape == (100, 1024)
