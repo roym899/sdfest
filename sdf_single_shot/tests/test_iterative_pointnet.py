@@ -24,8 +24,9 @@ def test_shape_equality_pointnets():
     assert out_ip2.shape == (100, 1024)
 
 
-def test_backward():
-    """Test whether backward function is possible to call"""
+def test_backward() -> None:
+    """Test whether backward function is possible to call."""
+
     iteratative_pointnet = IteratativePointNet(4, 3, [64, 64, 64, 128], True)
     inp = torch.randn(100, 500, 3)
     out1 = iteratative_pointnet(inp)
