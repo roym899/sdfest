@@ -68,10 +68,7 @@ class VanillaPointNet(nn.Module):
 
 
 class IteratativePointNet(nn.Module):
-    """
-    Accomodates iterated application of pointnet taking concatenation of input with output of previous iteration.
-
-    """
+    """Iterated PointNet which concatenates input with output of previous stage."""
 
     def __init__(
         self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
