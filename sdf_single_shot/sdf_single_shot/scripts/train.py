@@ -99,28 +99,18 @@ class Trainer:
             self._sdf_pose_net.parameters(), lr=self._config["learning_rate"]
         )
 
-        # load checkpoint if provided
-        if "checkpoint" in self._config and self._config["checkpoint"] is not None:
-            # TODO: checkpoint should always go together with model config!
-            (
-                self._sdf_pose_net,
-                self._optimizer,
-                self._current_iteration,
-                self._run_name,
-            ) = utils.load_checkpoint(
-                self._config["checkpoint"],
-                self._sdf_pose_net,
-                self._optimizer,
-                self._device,
-            )
-        else:
-            self._current_iteration = 0
-            self._run_name = (
-                f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
-            )
+        # load weights if provided
+        if "init_weights" in self._config and self._config["init_weights"] is not None:
+            state_dict = torch.load(self.init_config["model"], map_location=self.device)
+            self.init_network.load_state_dict(state_dict)
+
+        self._current_iteration = 0
+        self._run_name = (
+            f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
+        )
 
         wandb.config.run_name = (
-            self._run_name  # to allow association of ckpts with wandb runs
+            self._run_name  # to allow association of pt files with wandb runs
         )
 
         self._model_base_path = os.path.join(os.getcwd(), "models", self._run_name)
@@ -212,6 +202,7 @@ class Trainer:
         ).to(device)
         state_dict = torch.load(self._config["vae"]["model"], map_location=device)
         vae.load_state_dict(state_dict)
+        vae.eval()
         return vae
 
     def _compute_loss(
@@ -485,12 +476,9 @@ class Trainer:
         checkpoint_path = os.path.join(
             self._model_base_path, f"{self._current_iteration}.ckp"
         )
-        utils.save_checkpoint(
-            path=checkpoint_path,
-            model=self._sdf_pose_net,
-            optimizer=self._optimizer,
-            iteration=self._current_iteration,
-            run_name=self._run_name,
+        torch.save(
+            self._sdf_pose_net.state_dict(),
+            checkpoint_path,
         )
 
     def _update_progress(self) -> None:
