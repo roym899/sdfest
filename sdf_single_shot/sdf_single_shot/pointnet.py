@@ -67,13 +67,13 @@ class VanillaPointNet(nn.Module):
         return out
 
 
-class IteratativePointNet(nn.Module):
+class IterativePointNet(nn.Module):
     """Iterated PointNet which concatenates input with output of previous stage."""
 
     def __init__(
         self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
     ):
-        """Initialize the IteratativePointNet module.
+        """Initialize the IterativePointNet module.
 
         Args:
             num_concat:
@@ -121,15 +121,15 @@ if __name__ == "__main__":
     pointnet = VanillaPointNet(3, [64, 64, 1024], True)
     out_p = pointnet(inp1)
 
-    iteratative_pointnet = IteratativePointNet(0, 3, [64, 64, 1024], True)
-    out_ip = iteratative_pointnet(inp1)
+    iterative_pointnet = IterativePointNet(0, 3, [64, 64, 1024], True)
+    out_ip = iterative_pointnet(inp1)
 
     assert out_p.shape == out_ip.shape
 
     # check if dimension is as expected
 
     inp2 = torch.randn(100, 50, 2)
-    iteratative_pointnet2 = IteratativePointNet(3, 2, [32, 64, 64, 1024], True)
+    iterative_pointnet2 = IterativePointNet(3, 2, [32, 64, 64, 1024], True)
     out_ip2 = iteratative_pointnet2(inp2)
 
     assert out_ip2.shape == (100, 1024)
