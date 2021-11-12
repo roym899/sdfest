@@ -96,7 +96,7 @@ class IteratativePointNet(nn.Module):
         )
 
     def forward(self, x):
-        """Forward pass
+        """Forward pass.
 
         Input has dimension NxMxC, where N is the batch size, M the number of points
         per set, and C the number of channels per point.
