@@ -112,24 +112,64 @@ class IterativePointNet(nn.Module):
             out = self.pointnet_2(modified_x)
         return out
 
+class GeneralizedIterativePointNet(nn.Module):
+    """Generalized Iterative PointNet which handles multiple MLPs and multiple iterations of each MLP."""
+
+    def __init__(
+        self, list_concat: list, in_size: int, list_mlp_out_sizes: list, batchnorm: bool
+    ):
+        """Initialize GeneralizedIterativePointnet Module where each MLP is handled by an IterativePointNet object.
+
+        Args:
+            list_concat:
+                List of concatenations for each MLP.
+            in_size: Dimension of the input points.
+            list_mlp_out_sizes:
+                List of Output sizes of each linear layer.
+                It is a List of Lists.
+            batchnorm: Whether to use batchnorm or not.
+        """
+
+        super().__init__()
+
+        self.pointnet_list = []
+        temp_iterative_pointnet = IterativePointNet(list_concat[0], in_size, list_mlp_out_sizes[0], batchnorm)
+        self.pointnet_list.append(temp_iterative_pointnet)
+        for pointnet_num in range(1, len(list_mlp_out_sizes)):
+            # the input size to new MLP should be the output size of the previous MLP
+            in_size = list_mlp_out_sizes[pointnet_num-1][-1]
+            temp_iterative_pointnet = IterativePointNet(list_concat[pointnet_num], in_size,
+                                                        list_mlp_out_sizes[pointnet_num], batchnorm)
+            self.pointnet_list.append(temp_iterative_pointnet)
+
+    def forward(self, x):
+        set_size = x.shape[1]
+        for pointnet in self.pointnet_list:
+            out = pointnet(x)
+            x = out.unsqueeze(1).repeat(1, set_size, 1)
+        return out
 
 if __name__ == "__main__":
     # check if dimensions are consistent across pointnets
 
-    inp1 = torch.randn(2, 500, 3)
-
-    pointnet = VanillaPointNet(3, [64, 64, 1024], True)
-    out_p = pointnet(inp1)
-
-    iterative_pointnet = IterativePointNet(0, 3, [64, 64, 1024], True)
-    out_ip = iterative_pointnet(inp1)
-
-    assert out_p.shape == out_ip.shape
-
-    # check if dimension is as expected
-
+    # inp1 = torch.randn(2, 500, 3)
+    #
+    # pointnet = VanillaPointNet(3, [64, 64, 1024], True)
+    # out_p = pointnet(inp1)
+    #
+    # iterative_pointnet = IterativePointNet(0, 3, [64, 64, 1024], True)
+    # out_ip = iterative_pointnet(inp1)
+    #
+    # assert out_p.shape == out_ip.shape
+    #
+    # # check if dimension is as expected
+    #
     inp2 = torch.randn(100, 50, 2)
-    iterative_pointnet2 = IterativePointNet(3, 2, [32, 64, 64, 1024], True)
-    out_ip2 = iterative_pointnet2(inp2)
+    # iterative_pointnet2 = IterativePointNet(3, 2, [32, 64, 64, 1024], True)
+    # out_ip2 = iterative_pointnet2(inp2)
+    #
+    # assert out_ip2.shape == (100, 1024)
 
-    assert out_ip2.shape == (100, 1024)
+    generalized_iterative_pointnet = GeneralizedIterativePointNet([1, 2, 3], 2, [[32, 64], [64, 64, 64], [128]], True)
+    out_gip = generalized_iterative_pointnet(inp2)
+    assert out_gip.shape == (100, 128)
