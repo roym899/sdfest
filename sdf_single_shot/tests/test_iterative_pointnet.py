@@ -48,8 +48,8 @@ def test_shape_equality_pointnet_generalized() -> None:
     generalized_iterative_pointnet = GeneralizedIterativePointNet(
         [1, 2, 3], 2, [[32, 64], [64, 128, 64], [128, 100]], True
     )
-    out_gip = generalized_iterative_pointnet(inp2)
-    assert out_gip.shape == (100, 100)
+    out_gip2 = generalized_iterative_pointnet(inp2)
+    assert out_gip2.shape == (100, 100)
 
 
 def test_backward() -> None:
