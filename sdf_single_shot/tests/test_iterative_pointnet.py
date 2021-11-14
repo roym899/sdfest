@@ -42,7 +42,7 @@ def test_shape_equality_pointnet_generalized() -> None:
     out_gip = generalized_iterative_pointnet(inp)
     assert out_gip.shape == out_p.shape
 
-    """Test whether IterativePointnet outputs required shape."""
+    """Test whether GeneralizedIterativePointnet outputs required shape."""
 
     inp2 = torch.randn(100, 30, 2)
     generalized_iterative_pointnet = GeneralizedIterativePointNet(
@@ -62,7 +62,8 @@ def test_backward() -> None:
 
     out_sum.backward()
 
-    """Test whether backward function is possible to call on IterativePointnet."""
+    """Test whether backward function is possible to call on
+     GeneralizedIterativePointnet."""
 
     generalized_iterative_pointnet = GeneralizedIterativePointNet(
         [2, 4], 3, [[64, 64, 64, 128], [156, 128]], True
