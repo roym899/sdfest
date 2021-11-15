@@ -481,7 +481,7 @@ class Trainer:
 
     def _save_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
-            self._model_base_path, f"{self._current_iteration}.ckp"
+            self._model_base_path, f"{self._current_iteration}.pt"
         )
         torch.save(
             self._sdf_pose_net.state_dict(),
