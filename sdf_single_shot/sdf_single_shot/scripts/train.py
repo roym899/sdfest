@@ -297,6 +297,8 @@ class Trainer:
         data_loaders = []
         probabilities = []
         for dataset_dict in self._config["datasets"].values():
+            if dataset_dict["probability"] == 0.0:
+                continue
             dataset = self._create_dataset(
                 dataset_dict["type"], dataset_dict["config_dict"]
             )
