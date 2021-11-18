@@ -3,13 +3,29 @@ config:
   - real275.yaml
   - category_configs:
       mug: ../models/v2/mug.yaml
-      bottle: ../models/bottle.yaml
-      bowl: ../models/bowl.yaml
+      bottle: ../models/v2/bottle.yaml
+      bowl: ../models/v2/bowl.yaml
+      can: ../models/v2/can.yaml
+      camera: ../models/v2/camera.yaml
 
 threshold: 0.005
 device: cuda
-max_iterations: 150
+max_iterations: 50
 
 visualize_optimization: False
 log_folder: null
 run_name: ''
+
+category_ids:
+  mug: 0
+  bottle: 1
+  bowl: 2
+  knife: 3
+  fork: 4
+
+# Map COCO categories to SDFEst categories
+# Categories not included will be mapped to themselves.
+coco_category_map:
+  cup: mug
+  frisbee: bowl  # some plates are sometimes classified as frisbees
+  scissors: knife  # knife is sometimes classified as scissors

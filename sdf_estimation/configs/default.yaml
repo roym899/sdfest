@@ -6,9 +6,10 @@ camera:
   cx: 320
   cy: 240
   pixel_center: 0.5
-threshold: 0.005
+threshold: 0.005  # for ray termination, post scaling
 device: cuda
 
+iso_threshold: 0.02  # for mesh extraction, pre scaling
 max_iterations: 30
 depth_weight: 1.0
 pc_weight: 3.0
