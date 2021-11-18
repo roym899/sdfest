@@ -192,7 +192,8 @@ def visualize_pointset(pointset: torch.Tensor, max_points: int = 1000) -> None:
     """Visualize pointset as 3D scatter plot.
 
     Args:
-        pointset: The pointset to visualize. Shape (N,3).
+        pointset:
+            The pointset to visualize. Either shape (N,3), xyz, or shape (N,6), xyzrgb.
         max_points:
             Maximum number of points.
             If N>max_points only a random subset will be shown.
@@ -204,9 +205,18 @@ def visualize_pointset(pointset: torch.Tensor, max_points: int = 1000) -> None:
 
     if len(pointset_np) > max_points:
         indices = np.random.choice(len(pointset_np), replace=False, size=max_points)
-        ax.scatter(pointset_np[indices, 0], pointset_np[indices, 1], pointset_np[indices, 2])
+        pointset_np = pointset_np[indices]
+
+    if pointset_np.shape[1] == 6:
+        colors = pointset_np[:, 3:]
     else:
-        ax.scatter(pointset_np[:, 0], pointset_np[:, 1], pointset_np[:, 2])
+        colors = None
+
+    ax.scatter(pointset_np[:, 0], pointset_np[:, 1], pointset_np[:, 2], c=colors)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
 
     utils.set_axes_equal(ax)
     plt.show()
