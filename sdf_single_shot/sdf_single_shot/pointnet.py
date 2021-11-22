@@ -135,14 +135,15 @@ class GeneralizedIterativePointNet(nn.Module):
 
         super().__init__()
 
+        init_in_size = in_size
         self.iterative_pointnet_list = []
         temp_iterative_pointnet = IterativePointNet(
             list_concat[0], in_size, list_mlp_out_sizes[0], batchnorm
         )
         self.iterative_pointnet_list.append(temp_iterative_pointnet)
         for iterative_pointnet_num in range(1, len(list_mlp_out_sizes)):
-            # the input size to new MLP should be the output size of the previous MLP
-            in_size = list_mlp_out_sizes[iterative_pointnet_num - 1][-1]
+            # the input size to new MLP should be the output size of the previous MLP plus previous input size
+            in_size = list_mlp_out_sizes[iterative_pointnet_num - 1][-1] + init_in_size
             temp_iterative_pointnet = IterativePointNet(
                 list_concat[iterative_pointnet_num],
                 in_size,
@@ -161,15 +162,17 @@ class GeneralizedIterativePointNet(nn.Module):
             x: batch of point sets
         """
         set_size = x.shape[1]
+        init_x = x
         for iterative_pointnet in self.iterative_pointnet_list:
             out = iterative_pointnet(x)  # shape (batch_size, num_outputs)
             # repeat output vector across 2nd dimension
             x = out.unsqueeze(1).repeat(1, set_size, 1)
+            x = torch.cat((x, init_x), 2)
         return out
 
 
 if __name__ == "__main__":
-    # check if dimensions are consistent across pointnets
+    #check if dimensions are consistent across pointnets
 
     inp1 = torch.randn(2, 500, 3)
 
@@ -188,3 +191,6 @@ if __name__ == "__main__":
     out_ip2 = iterative_pointnet2(inp2)
 
     assert out_ip2.shape == (100, 1024)
+
+
+
