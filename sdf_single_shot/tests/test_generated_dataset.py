@@ -75,3 +75,9 @@ def test_data_generation(request: FixtureRequest) -> None:
     dataset._pointcloud = True
     sample = next(iter(dataset))
     assert sample["pointset"].shape[1] == 3
+
+    # with Gaussian blur and mask noise
+    dataset._mask_noise = True
+    dataset._gaussian_noise_probability = 1.0
+    dataset._render_threshold = 0.005
+    sample = next(iter(dataset))

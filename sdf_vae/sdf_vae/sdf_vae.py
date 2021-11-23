@@ -77,6 +77,13 @@ class SDFVAE(nn.Module):
         return recon_x, z
 
     def decode(self, z, enforce_tsdf=False):
+        """Returns decoded SDF.
+
+        Args:
+            Batch of latent shapes. Shape (N, L).
+        Returns:
+            The decoded SDF. Shape (N, C, D, D, D).
+        """
         return self.decoder(z, enforce_tsdf)
 
     def prepare_input(self, sdfs: torch.Tensor) -> None:

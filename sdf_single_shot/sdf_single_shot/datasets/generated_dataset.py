@@ -3,6 +3,8 @@ import math
 from typing import Tuple, Optional, Iterator, TypedDict
 import random
 
+import numpy as np
+from scipy.ndimage import gaussian_filter
 import torch
 import torchvision.transforms as T
 import yoco
@@ -58,6 +60,14 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             mask_noise_max:
                 Maximum value to fill in for noisy mask.
                 Only used if mask_noise is True.
+            gaussian_noise_probability:
+                Probability to apply gaussian noise filter on depth image.
+            gaussian_noise_kernel_size:
+                Size of the Gaussian kernel.
+                Only used if Gaussian noise probability > 0.0.
+            gausian_noise_kernel_std:
+                Standard deviation of the Gaussian kernel.
+                Only used if Gaussian noise probability > 0.0.
         """
 
         width: int
@@ -75,19 +85,33 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         mask_noise: bool
         mask_noise_min: Optional[float]
         mask_noise_max: Optional[float]
+        norm_noise: bool
+        norm_noise_min: Optional[float]
+        norm_noise_max: Optional[float]
+        scale_to_unit_ball: bool
+        gaussian_noise_probability: float
+        gaussian_noise_kernel_size: Optional[int]
+        gausian_noise_kernel_std: Optional[float]
 
     default_config: Config = {
         "device": "cuda",
         "width": 640,
         "height": 480,
         "fov_deg": 90,
-        "render_threshold": 0.001,
+        "render_threshold": 0.004,
         "normalize_pose": None,
         "orientation_repr": "quaternion",
         "orientation_grid_resolution": None,
         "mask_noise": False,
         "mask_noise_min": 0.1,
         "mask_noise_max": 2.0,
+        "norm_noise": False,
+        "norm_noise_min": -0.2,
+        "norm_noise_max": 0.2,
+        "scale_to_unit_ball": False,
+        "gaussian_noise_probability": 0.0,
+        "gaussian_noise_kernel_size": 5,
+        "gaussian_noise_kernel_std": 1,
     }
 
     def __init__(
@@ -132,6 +156,13 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
         self._mask_noise_sampler = lambda: random.uniform(
             config["mask_noise_min"], config["mask_noise_max"]
         )
+        self._norm_noise = config["norm_noise"]
+        self._norm_noise_min = config["norm_noise_min"]
+        self._norm_noise_max = config["norm_noise_max"]
+        self._norm_noise_sampler = lambda: random.uniform(
+            config["norm_noise_min"], config["norm_noise_max"]
+        )
+        self._scale_to_unit_ball = config["scale_to_unit_ball"]
         self._pointcloud = config["pointcloud"]
         self._normalize_pose = config["normalize_pose"]
         self._render_threshold = config["render_threshold"]
@@ -140,6 +171,10 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             self._orientation_grid = so3grid.SO3Grid(
                 config["orientation_grid_resolution"]
             )
+        self._gaussian_noise_probability = config["gaussian_noise_probability"]
+        self._create_gaussian_kernel(
+            config["gaussian_noise_kernel_std"], config["gaussian_noise_kernel_size"]
+        )
 
     def __iter__(self) -> Iterator:
         """Return SDF volume at a specific index.
@@ -249,14 +284,27 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             camera=self._camera,
         )
 
-        # print(sdf.requires_grad)
-        # print(quaternion.requires_grad)
-        # print(inv_scale.requires_grad)
-
+        exact_mask = depth != 0
         if self._mask_noise:
-            mask = depth != 0
-            perturbed_mask = self._perturb_mask(mask)
-            depth[mask * (mask != perturbed_mask)] = self._mask_noise_sampler()
+            final_mask = self._perturb_mask(exact_mask)
+            depth[~exact_mask] = self._mask_noise_sampler()
+        else:
+            final_mask = exact_mask
+
+        if self._gaussian_noise_probability > 0.0:
+            if random.random() < self._gaussian_noise_probability:
+                invalid_depth_mask = depth == 0
+                depth[invalid_depth_mask] = torch.nan
+                depth_filtered = torch.nn.functional.conv2d(
+                    depth[None, None], self._gaussian_kernel, padding="same"
+                )[0, 0]
+                # nan might become inf be preserved
+                # https://github.com/pytorch/pytorch/issues/12484
+                mask = torch.logical_or(depth_filtered.isnan(), depth_filtered.isinf())
+                depth[~mask] = depth_filtered[~mask]
+                depth[depth.isnan()] = 0.0
+
+        depth[~final_mask] = 0
 
         if self._pointcloud:
             pointset = pointset_utils.depth_to_pointcloud(
@@ -266,6 +314,22 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             if self._normalize_pose:
                 pointset, centroid = pointset_utils.normalize_points(pointset)
                 position -= centroid  # adjust target
+
+                if self._norm_noise:
+                    noise = position.new_tensor(
+                        [
+                            self._norm_noise_sampler(),
+                            self._norm_noise_sampler(),
+                            self._norm_noise_sampler(),
+                        ]
+                    )
+                    position += noise
+                    pointset += noise
+
+                if self._scale_to_unit_ball:
+                    max_distance = torch.max(torch.linalg.norm(pointset))
+                    pointset /= max_distance
+                    scale /= max_distance
 
             sample["pointset"] = pointset
 
@@ -303,3 +367,12 @@ class SDFVAEViewDataset(torch.utils.data.IterableDataset):
             raise NotImplementedError(
                 f"Orientation representation {self._orientation_repr} is not supported."
             )
+
+    def _create_gaussian_kernel(self, std: float, kernel_size: int) -> None:
+        """Create and set Gaussian noise kernel used for smoothing the depth image."""
+        if kernel_size % 2 != 1:
+            raise ValueError("Kernel size should be odd.")
+        impulse = np.zeros((kernel_size, kernel_size))
+        impulse[kernel_size // 2, kernel_size // 2] = 1
+        kernel = gaussian_filter(impulse, std)
+        self._gaussian_kernel = torch.Tensor(kernel[None, None]).to(self._device)

@@ -185,10 +185,10 @@ class SDFPipeline:
                 file path to write rendering and error visualizations to
 
         Returns:
-            3D pose of SDF center in world frame, shape (3,)
-            orientation as normalized quaternion, scalar-last convention, shape (4,)
-            size of SDF as length of half-width, scalar
-            latent shape representation of the object, shape (latent_size,)
+            - 3D pose of SDF center in world frame, shape (1,3,)
+            - Orientation as normalized quaternion, scalar-last convention, shape (1,4,)
+            - Size of SDF as length of half-width, shape (1,)
+            - Latent shape representation of the object, shape (1,latent_size,).
         """
         if animation_path is not None:
             self._create_animation_folders(animation_path)
@@ -526,11 +526,11 @@ class SDFPipeline:
             masks: the masks used for preprocessing, same shape as depth_images
         """
         # shrink mask
-        masks = (
-            -torch.nn.functional.max_pool2d(
-                -masks.double(), kernel_size=5, stride=1, padding=2
-            )
-        ).bool()
+        # masks = (
+        #     -torch.nn.functional.max_pool2d(
+        #         -masks.double(), kernel_size=9, stride=1, padding=4
+        #     )
+        # ).bool()
 
         depth_images[~masks] = 0  # set outside of depth to 0
 
@@ -540,17 +540,22 @@ class SDFPipeline:
         # depth_images =
 
         # remove outliers based on median
+        # plt.imshow(depth_images[0].cpu().numpy())
+        # plt.show()
         # for mask, depth_image in zip(masks, depth_images):
         #     median = torch.median(depth_image[mask])
         #     errors = torch.abs(depth_image[mask] - median)
 
-        #     bins = 20
+        #     bins = 100
         #     hist = torch.histc(errors, bins=bins)
         #     print(hist)
         #     zero_indices = torch.nonzero(hist == 0)
         #     if len(zero_indices):
         #         threshold = zero_indices[0] / bins * errors.max()
+        #         print(threshold)
         #         depth_image[torch.abs(depth_image - median) > threshold] = 0
+        # plt.imshow(depth_images[0].cpu().numpy())
+        # plt.show()
 
     def _nn_init(
         self,
@@ -573,10 +578,10 @@ class SDFPipeline:
 
         Returns:
             Tuple comprised of:
-            - Latent shape representation of the object, shape (N, latent_size)
-            - 3D pose of SDF center in camera frame, shape (N, 3)
-            - Size of SDF as length of half-width, (N,)
-            - Orientation of SDF as normalized quaternion (N,4)
+            - Latent shape representation of the object, shape (1, latent_size)
+            - 3D pose of SDF center in camera frame, shape (1, 3)
+            - Size of SDF as length of half-width, (1,)
+            - Orientation of SDF as normalized quaternion (1,4)
         """
         best = 0
         best_result = None
@@ -604,6 +609,7 @@ class SDFPipeline:
 
             if self.init_config["head"]["orientation_repr"] == "discretized":
                 orientation_repr = torch.softmax(orientation_repr, 1)
+                # print(torch.sort(orientation_repr, dim=1).values)
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
                         orientation_repr.argmax().item()
@@ -630,7 +636,7 @@ class SDFPipeline:
             elif self.config["init_view"] == "best":
                 if self.init_config["head"]["orientation_repr"] != "discretized":
                     raise NotImplementedError(
-                        '"Best" init strategy only supported with discretized '
+                        '"best" init strategy only supported with discretized '
                         "orientation representation"
                     )
                 maximum = orientation_repr.max()

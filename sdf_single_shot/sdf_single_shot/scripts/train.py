@@ -44,6 +44,9 @@ class Trainer:
         self._visualization_iteration = config["visualization_iteration"]
         self._checkpoint_iteration = config["checkpoint_iteration"]
         self._iterations = config["iterations"]
+        self._init_weights_path = (
+            config["init_weights"] if "init_weights" in config else None
+        )
 
         # propagate orientation representation and category to datasets
         datasets = list(self._config["datasets"].values()) + list(
@@ -99,28 +102,20 @@ class Trainer:
             self._sdf_pose_net.parameters(), lr=self._config["learning_rate"]
         )
 
-        # load checkpoint if provided
-        if "checkpoint" in self._config and self._config["checkpoint"] is not None:
-            # TODO: checkpoint should always go together with model config!
-            (
-                self._sdf_pose_net,
-                self._optimizer,
-                self._current_iteration,
-                self._run_name,
-            ) = utils.load_checkpoint(
-                self._config["checkpoint"],
-                self._sdf_pose_net,
-                self._optimizer,
-                self._device,
+        # load weights if provided
+        if self._init_weights_path is not None:
+            state_dict = torch.load(
+                self._init_weights_path, map_location=self._device
             )
-        else:
-            self._current_iteration = 0
-            self._run_name = (
-                f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
-            )
+            self._sdf_pose_net.load_state_dict(state_dict)
+
+        self._current_iteration = 0
+        self._run_name = (
+            f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
+        )
 
         wandb.config.run_name = (
-            self._run_name  # to allow association of ckpts with wandb runs
+            self._run_name  # to allow association of pt files with wandb runs
         )
 
         self._model_base_path = os.path.join(os.getcwd(), "models", self._run_name)
@@ -212,6 +207,7 @@ class Trainer:
         ).to(device)
         state_dict = torch.load(self._config["vae"]["model"], map_location=device)
         vae.load_state_dict(state_dict)
+        vae.eval()
         return vae
 
     def _compute_loss(
@@ -301,6 +297,8 @@ class Trainer:
         data_loaders = []
         probabilities = []
         for dataset_dict in self._config["datasets"].values():
+            if dataset_dict["probability"] == 0.0:
+                continue
             dataset = self._create_dataset(
                 dataset_dict["type"], dataset_dict["config_dict"]
             )
@@ -483,14 +481,11 @@ class Trainer:
 
     def _save_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
-            self._model_base_path, f"{self._current_iteration}.ckp"
+            self._model_base_path, f"{self._current_iteration}.pt"
         )
-        utils.save_checkpoint(
-            path=checkpoint_path,
-            model=self._sdf_pose_net,
-            optimizer=self._optimizer,
-            iteration=self._current_iteration,
-            run_name=self._run_name,
+        torch.save(
+            self._sdf_pose_net.state_dict(),
+            checkpoint_path,
         )
 
     def _update_progress(self) -> None:

@@ -15,16 +15,17 @@ def sdf_to_pointcloud(
     max_points: Optional[int] = None,
     threshold: float = 0,
 ):
-    """Convert sdf to pointcloud.
+    """Convert SDF to pointcloud.
 
     Puts a point onto each cell vertex with a value < threshold.
 
     Args:
-        sdf: The values of the voxelized SDF.
-        position: The position of the SDF center.
+        sdf: The values of the voxelized SDF. Shape (D, D, D).
+        position: The position of the SDF center. Shape (3,).
         orientation:
             The orientation of the SDF as a normalized quaternion.
             This is the quaternion that will be applied to each point.
+            Scalar-last convention, shape (4,).
         scale: The half-length of the SDF.
         max_points: Maximum number of points in the pointcloud.
         threshold: The threshold below which a voxel will be included in the pointcloud.
