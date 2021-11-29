@@ -3,7 +3,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
-
 from sdf_single_shot import pointset_utils
 
 
