@@ -177,7 +177,7 @@ class GeneralizedIterativePointNet(nn.Module):
         super().__init__()
 
         init_in_size = in_size
-        self.iterative_pointnet_list = []
+        self.iterative_pointnet_list = torch.nn.ModuleList([])
         temp_iterative_pointnet = IterativePointNet(
             list_concat[0], in_size, list_mlp_out_sizes[0], batchnorm
         )
