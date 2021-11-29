@@ -1,4 +1,4 @@
-"""Parametrized PointNet variations."""
+"""Parametrized PointNet."""
 import torch
 import torch.nn as nn
 from typing import List
@@ -97,7 +97,14 @@ class VanillaPointNet(nn.Module):
 
 
 class IterativePointNet(nn.Module):
-    """Iterated PointNet which concatenates input with output of previous stage."""
+    """Iterative PointNet which concatenates input.
+
+    This is composed of 2 PointNets, where the first PointNet is applied once, the
+    second PointNet a number of times, i.e.,
+        out = PointNet1(in)
+        for i in range(num_concat):
+            out = PointNet2( concat( out, in ) )
+    """
 
     def __init__(
         self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
@@ -143,14 +150,20 @@ class IterativePointNet(nn.Module):
 
 
 class GeneralizedIterativePointNet(nn.Module):
-    """Generalized Iterative PointNet which handles multiple MLPs and iterated
-    application of each MLP."""
+    """Generalized Iterative PointNet composed of multiple IterativePointNet instances.
+
+    This is a sequence of iterative pointnets, where the initial input will be
+    concatenated to each input, e.g.,
+        out = IterativePointNet1(in)
+        out = IterativePointNet2(concat(out, in))
+        out = IterativePointNet3(concat(out, in))
+        ...
+    """
 
     def __init__(
         self, list_concat: list, in_size: int, list_mlp_out_sizes: list, batchnorm: bool
-    ):
-        """Initialize GeneralizedIterativePointnet Module where each MLP is handled by
-         an IterativePointNet object.
+    ) -> None:
+        """Initialize GeneralizedIterativePointnet module.
 
         Args:
             list_concat:
@@ -161,7 +174,6 @@ class GeneralizedIterativePointNet(nn.Module):
                 It is a List of Lists.
             batchnorm: Whether to use batchnorm or not.
         """
-
         super().__init__()
 
         init_in_size = in_size
