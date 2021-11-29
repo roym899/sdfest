@@ -16,6 +16,7 @@ Specific parameters:
         if provided and measure_runtime is true, the runtime results are written to file
     visualize_optimization: whether to visualize optimization while at it
     visualize_input: whether to visualize the input
+    create_animation: pass
 """
 import argparse
 from collections import defaultdict
@@ -43,7 +44,7 @@ import yoco
 
 from sdf_estimation.simple_setup import SDFPipeline
 
-matplotlib.use("tkagg")
+# matplotlib.use("tkagg")
 
 
 def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
@@ -345,6 +346,9 @@ def main() -> None:
         exit()
 
     pipeline = SDFPipeline(config)
+    create_animation = (
+        config["create_animation"] if "create_animation" in config else False
+    )
 
     timing_dict = None
     timing_dicts = []
@@ -427,6 +431,14 @@ def main() -> None:
             print("Category detected")
 
         for instance in matching_instances:
+            if create_animation:
+                animation_path = os.path.join(
+                    os.getcwd(),
+                    f"animation_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
+                )
+            else:
+                animation_path = None
+
             if config["visualize_input"]:
                 v = Visualizer(
                     color_img[:, :, ::-1],
@@ -449,6 +461,7 @@ def main() -> None:
                 instance_mask,
                 color_img_tensor,
                 visualize=config["visualize_optimization"],
+                animation_path=animation_path,
                 shape_optimization=shape_optimization,
             )
             break  # comment to evaluate all instances, instead of largest only

@@ -2,6 +2,7 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 from skimage.measure import marching_cubes
 import torch
@@ -60,7 +61,9 @@ def mesh_from_sdf(
         if complete_mesh:
             sdf_volume = np.pad(sdf_volume, pad_width=1, constant_values=1.0)
         sdf_volume.shape
-        vertices, faces, normals, _ = marching_cubes(sdf_volume, spacing=2 / np.array(sdf_volume.shape), level=level)
+        vertices, faces, normals, _ = marching_cubes(
+            sdf_volume, spacing=2 / np.array(sdf_volume.shape), level=level
+        )
         vertices -= 1
     except ValueError:
         return None
@@ -72,16 +75,44 @@ def mesh_from_sdf(
     )
 
 
-def plot_mesh(mesh: Trimesh, polar_angle=np.pi / 4, azimuth=0, plot_object=None):
+def plot_mesh(
+    mesh: Trimesh,
+    polar_angle=np.pi / 4,
+    azimuth=0,
+    camera_distance=2.5,
+    plot_object: Optional[Axes] = None,
+    transform: Optional[np.array] = None,
+):
+    """Render a mesh with camera pointing at its center.
+
+    Note that in pyrender z-axis is up, x,y form the polar_angle=0 plane.
+
+    Args:
+        mesh: The mesh to render.
+        polar_angle:
+            Polar angle of the camera.
+            For 0 the camera will look down the z-axis.
+        azimuth:
+            Azimuth of the camera.
+            For 0, polar_anlge=pi/2 the camera will look down the x axis.
+        camera_distance:
+            Distance of camera to the origin.
+        plot_object:
+            Axis to plot the image. Will use plt if not provided.
+        transform: Transform of the object. Identity by default.
+    """
     if plot_object is None:
         plot_object = plt
-    pyrender_mesh = pyrender.Mesh.from_trimesh(mesh, smooth=False)
+    if transform is None:
+        transform = np.eye(4, 4)[None]
+    elif transform.ndim == 2:
+        transform = transform[None]
+    pyrender_mesh = pyrender.Mesh.from_trimesh(mesh, poses=transform, smooth=False)
     scene = pyrender.Scene()
     scene.add(pyrender_mesh)
     camera = pyrender.PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=1.0)
 
     # position camera on sphere centered and pointing at centroid
-    radius = 2.5
     camera_unit_vector = np.array(
         [
             np.sin(polar_angle) * np.cos(azimuth),
@@ -89,7 +120,7 @@ def plot_mesh(mesh: Trimesh, polar_angle=np.pi / 4, azimuth=0, plot_object=None)
             np.cos(polar_angle),
         ]
     )
-    camera_position = radius * camera_unit_vector
+    camera_position = camera_distance * camera_unit_vector
 
     camera_pose = np.array(
         [
@@ -135,7 +166,7 @@ def plot_mesh(mesh: Trimesh, polar_angle=np.pi / 4, azimuth=0, plot_object=None)
     r = pyrender.OffscreenRenderer(1000, 1000, flags)
     color, _ = r.render(scene)
     plot_object.axis("off")
-    plot_object.imshow(color)
+    plot_object.imshow(color, interpolation="none")
 
 
 def visualize_sdf_reconstruction(

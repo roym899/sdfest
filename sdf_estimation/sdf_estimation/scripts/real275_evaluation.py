@@ -101,9 +101,11 @@ def main() -> None:
             transform_cv[0:3,0:3] = transform_cv[0:3,0:3] @ fix
 
             # NOCS Format
-            # RT is 4x4 transformation matrix, where the rotation matrix includes the scale
-            # scale includes another scale for the bb separate for each axis...
-            # -> there is a pencil of solutions
+            # RT is 4x4 transformation matrix, where the rotation matrix
+            # includes isotropic NOCS scale
+            # RT is the transform from NOCS coordinate to camera coordinates
+            # scale includes the tight bb size di separate for each axis
+            # isotropic NOCS scale is sqrt(d1^2+d2^2+d3^2)
 
             # print(transform_cv[0:3,0:3])
             # nocs_rot = nocs_dict["gt_RTs"][3][0:3, 0:3]

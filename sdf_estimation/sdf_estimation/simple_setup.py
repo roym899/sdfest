@@ -1,25 +1,27 @@
 """Modular SDF pose and shape estimation in depth images."""
-import argparse
 import copy
 import math
+import os
 import pickle
 import random
 import time
 from typing import Optional, Tuple
 
+import ffmpeg
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from skimage.measure import marching_cubes
+from sdf_vae import sdf_utils
 from sdf_vae.sdf_vae import SDFVAE
 from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import pointset_utils
+from sdf_single_shot import pointset_utils, quaternion_utils
 from sdf_differentiable_renderer import Camera, render_depth_gpu
 import torch
-import yoco
 
-from sdf_estimation import synthetic, losses, quaternion
+from sdf_estimation import synthetic, losses
+
 
 INIT_MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
 
@@ -33,39 +35,52 @@ class SDFPipeline:
         Args:
             config: Configuration dictionary.
         """
-        self.device = config["device"]
+        self._parse_config(config)
 
         self.init_network = SDFPoseNet(
-            INIT_MODULE_DICT[config["init"]["backbone_type"]](
-                **config["init"]["backbone"]
+            INIT_MODULE_DICT[self.init_config["backbone_type"]](
+                **self.init_config["backbone"]
             ),
-            INIT_MODULE_DICT[config["init"]["head_type"]](
-                shape_dimension=config["vae"]["latent_size"], **config["init"]["head"]
+            INIT_MODULE_DICT[self.init_config["head_type"]](
+                shape_dimension=self.vae_config["latent_size"],
+                **self.init_config["head"],
             ),
         ).to(self.device)
-        state_dict = torch.load(config["init"]["model"], map_location=self.device)
+        state_dict = torch.load(self.init_config["model"], map_location=self.device)
         self.init_network.load_state_dict(state_dict)
         self.init_network.eval()
 
         self.resolution = 64
         self.vae = SDFVAE(
             sdf_size=64,
-            latent_size=config["vae"]["latent_size"],
-            encoder_dict=config["vae"]["encoder"],
-            decoder_dict=config["vae"]["decoder"],
+            latent_size=self.vae_config["latent_size"],
+            encoder_dict=self.vae_config["encoder"],
+            decoder_dict=self.vae_config["decoder"],
             device=self.device,
         ).to(self.device)
-        state_dict = torch.load(config["vae"]["model"], map_location=self.device)
+        state_dict = torch.load(self.vae_config["model"], map_location=self.device)
         self.vae.load_state_dict(state_dict)
         self.vae.eval()
 
-        self.cam = Camera(**config["camera"])
+        self.cam = Camera(**self.camera_config)
         self.render = lambda sdf, pos, quat, i_s: render_depth_gpu(
             sdf, pos, quat, i_s, None, None, None, config["threshold"], self.cam
         )
         self.config = config
 
         self.log_data = []
+
+    def _parse_config(self, config: dict) -> None:
+        """Parse config dict.
+
+        This function makes sure that all required keys are available.
+        """
+        self.device = config["device"]
+        self.init_config = config["init"]
+        self.vae_config = config["vae"] if "vae" in config else self.init_config["vae"]
+        self.camera_config = config["camera"]
+
+        self.config = config
 
     @staticmethod
     def _compute_gradients(loss: torch.Tensor) -> None:
@@ -130,6 +145,7 @@ class SDFPipeline:
         camera_orientations: Optional[torch.Tensor] = None,
         log_path: Optional[str] = None,
         shape_optimization: bool = True,
+        animation_path: Optional[str] = None,
     ) -> tuple:
         """Infer pose, size and latent representation from depth and mask.
 
@@ -165,13 +181,18 @@ class SDFPipeline:
                 no logging is performed if None
             shape_optimization:
                 enable or disable shape optimization during iterative optimization
+            animation_path:
+                file path to write rendering and error visualizations to
 
         Returns:
-            3D pose of SDF center in world frame, shape (3,)
-            orientation as normalized quaternion, scalar-last convention, shape (4,)
-            size of SDF as length of half-width, scalar
-            latent shape representation of the object, shape (latent_size,)
+            - 3D pose of SDF center in world frame, shape (1,3,)
+            - Orientation as normalized quaternion, scalar-last convention, shape (1,4,)
+            - Size of SDF as length of half-width, shape (1,)
+            - Latent shape representation of the object, shape (1,latent_size,).
         """
+        if animation_path is not None:
+            self._create_animation_folders(animation_path)
+
         start_time = time.time()  # for logging
 
         # Add batch dimension if necessary
@@ -183,6 +204,9 @@ class SDFPipeline:
                 camera_positions.unsqueeze(0)
             if camera_orientations is not None:
                 camera_orientations.unsqueeze(0)
+
+        if animation_path is not None:
+            self._save_inputs(animation_path, depth_images, color_images, masks)
 
         n_imgs = depth_images.shape[0]
 
@@ -228,8 +252,11 @@ class SDFPipeline:
                 },
             )
 
+        if animation_path is not None:
+            self._save_preprocessed_inputs(animation_path, depth_images)
+
         # Iterative optimization
-        current_iteration = 1
+        self._current_iteration = 1
 
         position.requires_grad_()
         scale_inv.requires_grad_()
@@ -253,11 +280,11 @@ class SDFPipeline:
             {"params": position, "lr": 1e-3},
             {"params": orientation, "lr": 1e-2},
             {"params": scale_inv, "lr": 1e-2},
-            {"params": latent_shape, "lr": 2e-1},
+            {"params": latent_shape, "lr": 1e-2},
         ]
         optimizer = torch.optim.Adam(opt_vars)
 
-        while current_iteration <= self.config["max_iterations"]:
+        while self._current_iteration <= self.config["max_iterations"]:
             optimizer.zero_grad()
 
             norm_orientation = orientation / torch.sqrt(torch.sum(orientation ** 2))
@@ -273,11 +300,13 @@ class SDFPipeline:
                 depth_images, camera_positions, camera_orientations
             ):
                 # transform object to camera frame
-                q_w2c = quaternion.quaternion_invert(camera_orientation)
-                position_c = quaternion.quaternion_apply(
+                q_w2c = quaternion_utils.quaternion_invert(camera_orientation)
+                position_c = quaternion_utils.quaternion_apply(
                     q_w2c, position - camera_position
                 )
-                orientation_c = quaternion.quaternion_multiply(q_w2c, norm_orientation)
+                orientation_c = quaternion_utils.quaternion_multiply(
+                    q_w2c, norm_orientation
+                )
 
                 depth_estimate = self.render(
                     sdf[0, 0], position_c[0], orientation_c[0], scale_inv[0]
@@ -328,15 +357,29 @@ class SDFPipeline:
                 )
 
             with torch.no_grad():
+                if animation_path is not None:
+                    self._save_current_state(
+                        depth_images,
+                        animation_path,
+                        camera_positions,
+                        camera_orientations,
+                        position,
+                        orientation,
+                        scale_inv,
+                        sdf,
+                    )
+
                 if visualize and (
-                    current_iteration % 10 == 1
-                    or current_iteration == self.config["max_iterations"]
+                    self._current_iteration % 10 == 1
+                    or self._current_iteration == self.config["max_iterations"]
                 ):
-                    q_w2c = quaternion.quaternion_invert(camera_orientations[0])
-                    position_c = quaternion.quaternion_apply(
+                    q_w2c = quaternion_utils.quaternion_invert(camera_orientations[0])
+                    position_c = quaternion_utils.quaternion_apply(
                         q_w2c, position - camera_positions[0]
                     )
-                    orientation_c = quaternion.quaternion_multiply(q_w2c, orientation)
+                    orientation_c = quaternion_utils.quaternion_multiply(
+                        q_w2c, orientation
+                    )
 
                     current_depth = self.render(
                         sdf[0, 0], position_c, orientation_c, scale_inv
@@ -345,7 +388,7 @@ class SDFPipeline:
                     depth_image = depth_images[0]
                     color_image = color_images[0]
 
-                    if current_iteration == 1:
+                    if self._current_iteration == 1:
                         vmin = depth_image[depth_image != 0].min() * 0.9
                         vmax = depth_image[depth_image != 0].max()
                         # show input image
@@ -383,7 +426,7 @@ class SDFPipeline:
                     plt.draw()
                     plt.pause(0.001)
 
-            current_iteration += 1
+            self._current_iteration += 1
 
         if visualize:
             plt.ioff()
@@ -393,6 +436,9 @@ class SDFPipeline:
 
         if log_path is not None:
             self._write_log_data(log_path)
+
+        if animation_path is not None:
+            self._create_animations(animation_path)
 
         return position, orientation, scale, latent_shape
 
@@ -480,11 +526,11 @@ class SDFPipeline:
             masks: the masks used for preprocessing, same shape as depth_images
         """
         # shrink mask
-        masks = (
-            -torch.nn.functional.max_pool2d(
-                -masks.double(), kernel_size=5, stride=1, padding=2
-            )
-        ).bool()
+        # masks = (
+        #     -torch.nn.functional.max_pool2d(
+        #         -masks.double(), kernel_size=9, stride=1, padding=4
+        #     )
+        # ).bool()
 
         depth_images[~masks] = 0  # set outside of depth to 0
 
@@ -494,17 +540,22 @@ class SDFPipeline:
         # depth_images =
 
         # remove outliers based on median
+        # plt.imshow(depth_images[0].cpu().numpy())
+        # plt.show()
         # for mask, depth_image in zip(masks, depth_images):
         #     median = torch.median(depth_image[mask])
         #     errors = torch.abs(depth_image[mask] - median)
 
-        #     bins = 20
+        #     bins = 100
         #     hist = torch.histc(errors, bins=bins)
         #     print(hist)
         #     zero_indices = torch.nonzero(hist == 0)
         #     if len(zero_indices):
         #         threshold = zero_indices[0] / bins * errors.max()
+        #         print(threshold)
         #         depth_image[torch.abs(depth_image - median) > threshold] = 0
+        # plt.imshow(depth_images[0].cpu().numpy())
+        # plt.show()
 
     def _nn_init(
         self,
@@ -527,10 +578,10 @@ class SDFPipeline:
 
         Returns:
             Tuple comprised of:
-            - Latent shape representation of the object, shape (N, latent_size)
-            - 3D pose of SDF center in camera frame, shape (N, 3)
-            - Size of SDF as length of half-width, (N,)
-            - Orientation of SDF as normalized quaternion (N,4)
+            - Latent shape representation of the object, shape (1, latent_size)
+            - 3D pose of SDF center in camera frame, shape (1, 3)
+            - Size of SDF as length of half-width, (1,)
+            - Orientation of SDF as normalized quaternion (1,4)
         """
         best = 0
         best_result = None
@@ -538,11 +589,11 @@ class SDFPipeline:
             depth_images, camera_orientations, camera_positions
         ):
             centroid = None
-            if self.config["init"]["backbone_type"] == "VanillaPointNet":
+            if self.init_config["backbone_type"] == "VanillaPointNet":
                 inp = pointset_utils.depth_to_pointcloud(
                     depth_image, self.cam, normalize=False
                 )
-                if self.config["init"]["generated_dataset"]["normalize_pose"]:
+                if self.init_config["normalize_pose"]:
                     inp, centroid = pointset_utils.normalize_points(inp)
             else:
                 inp = depth_image
@@ -556,8 +607,9 @@ class SDFPipeline:
             if centroid is not None:
                 position += centroid
 
-            if self.config["init"]["head"]["orientation_repr"] == "discretized":
+            if self.init_config["head"]["orientation_repr"] == "discretized":
                 orientation_repr = torch.softmax(orientation_repr, 1)
+                # print(torch.sort(orientation_repr, dim=1).values)
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
                         orientation_repr.argmax().item()
@@ -565,26 +617,26 @@ class SDFPipeline:
                     dtype=torch.float,
                     device=self.device,
                 ).unsqueeze(0)
-            elif self.config["init"]["head"]["orientation_repr"] == "quaternion":
+            elif self.init_config["head"]["orientation_repr"] == "quaternion":
                 orientation_camera = orientation_repr
             else:
                 raise NotImplementedError("Orientation representation is not supported")
 
             # output are in camera frame, transform to world frame
             position_world = (
-                quaternion.quaternion_apply(camera_orientation, position)
+                quaternion_utils.quaternion_apply(camera_orientation, position)
                 + camera_position
             )
-            orientation_world = quaternion.quaternion_multiply(
+            orientation_world = quaternion_utils.quaternion_multiply(
                 camera_orientation, orientation_camera
             )
 
             if self.config["init_view"] == "first":
                 return latent_shape, position_world, scale, orientation_world
             elif self.config["init_view"] == "best":
-                if self.config["init"]["head"]["orientation_repr"] != "discretized":
+                if self.init_config["head"]["orientation_repr"] != "discretized":
                     raise NotImplementedError(
-                        '"Best" init strategy only supported with discretized '
+                        '"best" init strategy only supported with discretized '
                         "orientation representation"
                     )
                 maximum = orientation_repr.max()
@@ -622,48 +674,102 @@ class SDFPipeline:
             .to(self.device)
         )
 
+    def _create_animation_folders(self, animation_path: str) -> None:
+        """Create subfolders to store animation frames."""
+        os.makedirs(animation_path)
+        depth_path = os.path.join(animation_path, "depth")
+        os.makedirs(depth_path)
+        error_path = os.path.join(animation_path, "depth_error")
+        os.makedirs(error_path)
+        sdf_path = os.path.join(animation_path, "sdf")
+        os.makedirs(sdf_path)
 
-def main() -> None:
-    """Entry point of the program."""
-    # define the arguments
-    parser = argparse.ArgumentParser(description="SDF pose estimation in depth images")
+    def _save_inputs(
+        self,
+        animation_path: str,
+        color_images: torch.Tensor,
+        depth_images: torch.Tensor,
+        instance_masks: torch.Tensor,
+    ) -> None:
+        color_path = os.path.join(animation_path, "color_input.png")
+        plt.imshow(color_images[0].cpu().numpy())
+        plt.savefig(color_path)
+        plt.close()
+        depth_path = os.path.join(animation_path, "depth_input.png")
+        plt.imshow(depth_images[0].cpu().numpy())
+        plt.savefig(depth_path)
+        plt.close()
+        mask_path = os.path.join(animation_path, "mask.png")
+        plt.imshow(instance_masks[0].cpu().numpy())
+        plt.savefig(mask_path)
+        plt.close()
 
-    # parse arguments
-    parser.add_argument("--device")
-    parser.add_argument("--config", default="configs/default.yaml", nargs="+")
-    args = parser.parse_args()
-    config_dict = {k: v for k, v in vars(args).items() if v is not None}
-    config = yoco.load_config(config_dict)
+    def _save_preprocessed_inputs(
+        self,
+        animation_path: str,
+        depth_images: torch.Tensor,
+    ) -> None:
+        depth_path = os.path.join(animation_path, "preprocessed_depth_input.png")
+        plt.imshow(depth_images[0].cpu().numpy())
+        plt.savefig(depth_path)
+        plt.close()
 
-    pipeline = SDFPipeline(config)
+    def _save_current_state(
+        self,
+        depth_images: torch.Tensor,
+        animation_path: str,
+        camera_positions: torch.Tensor,
+        camera_orientations: torch.Tensor,
+        position: torch.Tensor,
+        orientation: torch.Tensor,
+        scale_inv: torch.Tensor,
+        sdf: torch.Tensor,
+    ) -> None:
+        q_w2c = quaternion_utils.quaternion_invert(camera_orientations[0])
+        position_c = quaternion_utils.quaternion_apply(
+            q_w2c, position - camera_positions[0]
+        )
+        orientation_c = quaternion_utils.quaternion_multiply(q_w2c, orientation)
+        current_depth = self.render(sdf[0, 0], position_c, orientation_c, scale_inv)
+        depth_path = os.path.join(
+            animation_path, "depth", f"{self._current_iteration:06}.png"
+        )
+        plt.imshow(current_depth.cpu().numpy(), interpolation="none")
+        plt.savefig(depth_path)
+        plt.close()
 
-    # generate test depth with same camera params
-    cam = Camera(**config["camera"])
-    mesh = synthetic.Mesh(
-        path="/home/leo/datasets/shapenet/mug_03797390/61c10dccfa8e508e2d66cbf6a91063/"
-        "models/model_normalized.obj",
-        scale=0.08,
-    )
-    mesh.position = np.array([-0.0, 0.1, 0.7])
-    mesh.orientation = np.array([1.0, 0.5, 0.0, -1.5])
-    mesh.orientation /= np.linalg.norm(mesh.orientation)
+        error_image = torch.abs(current_depth - depth_images[0])
+        error_image[depth_images[0] == 0] = 0
+        error_image[current_depth == 0] = 0
+        error_path = os.path.join(
+            animation_path, "depth_error", f"{self._current_iteration:06}.png"
+        )
+        plt.imshow(error_image.cpu().numpy(), interpolation="none")
+        plt.savefig(error_path)
+        plt.close()
 
-    # render depth image
-    test_depth = torch.tensor(
-        synthetic.draw_depth_geometry(mesh, cam), device=config["device"]
-    )
-    test_mask = test_depth != 0
+        unscaled_threshold = self.config["threshold"] * scale_inv.item()
+        mesh = sdf_utils.mesh_from_sdf(
+            sdf[0, 0].cpu().numpy(),
+            unscaled_threshold,
+            complete_mesh=True,
+        )
+        sdf_path = os.path.join(
+            animation_path, "sdf", f"{self._current_iteration:06}.png"
+        )
 
-    position, orientation, scale, shape = pipeline(
-        test_depth, test_mask, test_depth, visualize=True
-    )
+        # map y -> z; z -> y
+        transform = np.eye(4)
+        transform[0:3, 0:3] = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])
+        sdf_utils.plot_mesh(mesh, transform=transform)
+        plt.savefig(sdf_path)
+        plt.close()
 
-    with torch.no_grad():
-        # visualize pipeline output
-        out = pipeline.generate_depth(position, orientation, scale, shape)
-        plt.imshow(out.cpu())
-        plt.show()
-
-
-if __name__ == "__main__":
-    main()
+    def _create_animations(self, animation_path: str):
+        names = ["sdf", "depth", "depth_error"]
+        for name in names:
+            frame_folder = os.path.join(animation_path, name)
+            video_name = os.path.join(animation_path, f"{name}.mp4")
+            ffmpeg.input(
+                os.path.join(frame_folder, "*.png"), pattern_type="glob", framerate=30
+            ).output(video_name).run()

@@ -1,32 +1,13 @@
 config:
+    - "./discretized.yaml"
     - vae: "../vae_models/mug.yaml"
-    - generated_dataset: "./generated_dataset.yaml"
 
-generated_dataset:
-    z_min: 0.2
-    z_max: 1.5
-    extent_mean: 0.11
-    extent_std: 0.01
-
-# Training params
-batch_size: 32
-iterations: 500000
-learning_rate: 1.0e-3
-position_weight: 1000
-scale_weight: 1000
-orientation_weight: 1
-
-# Network params
-backbone_type: VanillaPointNet
-backbone:
-    in_size: 3  # dimension of input points
-    mlp_out_sizes: [64, 64, 64, 128, 1024]
-    batchnorm: True
-
-head_type: SDFPoseHead
-head:
-    in_size: 1024 # number of input features
-    mlp_out_sizes: [512, 256, 128] 
-    batchnorm: True
-    orientation_repr: discretized
-    grid_resolution: 1 # only for discretized orientation repr.
+# Category-specific config
+category_str: mug
+datasets:
+    generated_dataset:
+        config_dict:
+            z_min: 0.2
+            z_max: 1.5
+            extent_mean: 0.11
+            extent_std: 0.01

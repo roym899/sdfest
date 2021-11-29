@@ -1,6 +1,6 @@
 config:
   - ./default.yaml
-  - ./mug.yaml
+  - ../models/mug.yaml
 
 camera:
   width: 640

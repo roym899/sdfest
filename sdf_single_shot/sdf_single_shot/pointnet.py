@@ -1,4 +1,4 @@
-"""Parametrized PointNet."""
+"""Parametrized PointNet variations."""
 import torch
 import torch.nn as nn
 from typing import List
@@ -12,7 +12,14 @@ class VanillaPointNet(nn.Module):
         Qi, 2017
     """
 
-    def __init__(self, in_size: int, mlp_out_sizes: List, batchnorm: bool):
+    def __init__(
+        self,
+        in_size: int,
+        mlp_out_sizes: List,
+        batchnorm: bool,
+        residual: bool = False,
+        dense: bool = False,
+    ) -> None:
         """Initialize the VanillaPointNet module.
 
         This module will only implements the MLP + MaxPooling part of the pointnet.
@@ -29,6 +36,8 @@ class VanillaPointNet(nn.Module):
         self._in_size = in_size
         self._mlp_out_sizes = mlp_out_sizes
         self._batchnorm = batchnorm
+        self._residual = residual
+        self._dense = dense
 
         # define layers
         self._linear_layers = torch.nn.ModuleList([])
@@ -36,23 +45,31 @@ class VanillaPointNet(nn.Module):
             if i == 0:
                 self._linear_layers.append(nn.Linear(self._in_size, out_size))
             else:
-                self._linear_layers.append(nn.Linear(mlp_out_sizes[i - 1], out_size))
+                if dense:
+                    self._linear_layers.append(
+                        nn.Linear(2 * mlp_out_sizes[i - 1], out_size)
+                    )
+                else:
+                    self._linear_layers.append(
+                        nn.Linear(mlp_out_sizes[i - 1], out_size)
+                    )
 
         self._bn_layers = torch.nn.ModuleList([])
         if self._batchnorm:
             for out_size in mlp_out_sizes:
                 self._bn_layers.append(nn.BatchNorm1d(out_size))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the module.
 
-        Input has dimension NxMxC, where N is the batch size, M the number of points
-        per set, and C the number of channels per point.
+        Input has dimension NxMxC, where N is the batch size, M the number of points per
+        set, and C the number of channels per point.
 
         Args:
             x: batch of point sets
         """
-        out = x
+        set_size = x.shape[1]
+        out = prev_out = x
         for i, linear_layer in enumerate(self._linear_layers):
             out = linear_layer(out)
             if self._batchnorm:
@@ -62,8 +79,20 @@ class VanillaPointNet(nn.Module):
                 out = self._bn_layers[i](out_view)
                 out = out.view(-1, pts_per_set, self._mlp_out_sizes[i])
             out = nn.functional.relu(out)
+
+            if self._dense:
+                out_max, _ = torch.max(out, 1, keepdim=True)
+                if i != len(self._linear_layers) - 1:
+                    out = torch.cat((out, out_max.expand(-1, set_size, -1)), dim=2)
+
+            if self._residual:
+                if prev_out.shape == out.shape:
+                    out = prev_out + out
+            prev_out = out
+
         # Maximum over points in same set
         out, _ = torch.max(out, 1)
+
         return out
 
 
@@ -72,7 +101,7 @@ class IterativePointNet(nn.Module):
 
     def __init__(
         self, num_concat: int, in_size: int, mlp_out_sizes: List, batchnorm: bool
-    ):
+    ) -> None:
         """Initialize the IterativePointNet module.
 
         Args:
@@ -92,7 +121,7 @@ class IterativePointNet(nn.Module):
             in_size + mlp_out_sizes[-1], mlp_out_sizes, batchnorm
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
 
         Input has dimension NxMxC, where N is the batch size, M the number of points
@@ -142,7 +171,8 @@ class GeneralizedIterativePointNet(nn.Module):
         )
         self.iterative_pointnet_list.append(temp_iterative_pointnet)
         for iterative_pointnet_num in range(1, len(list_mlp_out_sizes)):
-            # the input size to new MLP should be the output size of the previous MLP plus previous input size
+            # the input size to new MLP should be the output size of the previous MLP
+            # plus previous input size
             in_size = list_mlp_out_sizes[iterative_pointnet_num - 1][-1] + init_in_size
             temp_iterative_pointnet = IterativePointNet(
                 list_concat[iterative_pointnet_num],
@@ -152,7 +182,7 @@ class GeneralizedIterativePointNet(nn.Module):
             )
             self.iterative_pointnet_list.append(temp_iterative_pointnet)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
 
         Input has dimension NxMxC, where N is the batch size, M the number of points
@@ -172,7 +202,7 @@ class GeneralizedIterativePointNet(nn.Module):
 
 
 if __name__ == "__main__":
-    #check if dimensions are consistent across pointnets
+    # check if dimensions are consistent across pointnets
 
     inp1 = torch.randn(2, 500, 3)
 
@@ -191,6 +221,3 @@ if __name__ == "__main__":
     out_ip2 = iterative_pointnet2(inp2)
 
     assert out_ip2.shape == (100, 1024)
-
-
-

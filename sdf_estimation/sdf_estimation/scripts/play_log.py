@@ -20,8 +20,8 @@ from tqdm import tqdm
 import torch
 
 from sdf_estimation.simple_setup import SDFPipeline
-from sdf_estimation import synthetic, quaternion
-from sdf_single_shot import pointset_utils
+from sdf_estimation import synthetic
+from sdf_single_shot import pointset_utils, quaternion_utils
 
 reset = False
 realtime = True
@@ -148,7 +148,7 @@ def main() -> None:
                         rel_scale=True,
                     )
                     frame_mesh.position = t_c2w.cpu().numpy()
-                    frame_mesh.orientation = quaternion.quaternion_multiply(
+                    frame_mesh.orientation = quaternion_utils.quaternion_multiply(
                         quat_c2w.cpu(), torch.tensor([1.0, 0, 0, 0])
                     ).numpy()
                     cam_meshes.append(frame_mesh.get_transformed_o3d_geometry())
@@ -164,12 +164,15 @@ def main() -> None:
                         depth_image, config["camera"]["fx"], normalize=False
                     )
                     pointcloud_torch = (
-                        quaternion.quaternion_apply(quat_c2w, points_c) + t_c2w
+                        quaternion_utils.quaternion_apply(quat_c2w, points_c) + t_c2w
                     )
                     pointcloud_numpy = pointcloud_torch.cpu().numpy()
                     pointcloud_o3d = o3d.geometry.PointCloud(
-                        o3d.utility.Vector3dVector(pointcloud_numpy))
-                    pointcloud_o3d.colors = o3d.utility.Vector3dVector(np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2]))
+                        o3d.utility.Vector3dVector(pointcloud_numpy)
+                    )
+                    pointcloud_o3d.colors = o3d.utility.Vector3dVector(
+                        np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2])
+                    )
 
                     pointclouds.append(pointcloud_o3d)
 

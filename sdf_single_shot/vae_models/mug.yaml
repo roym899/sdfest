@@ -27,7 +27,7 @@ encoder:
   - type: torch.nn.Flatten
     args: {}
 iterations: 100000
-batch_size: 8
+batch_size: 16
 l2_large_weight: 1.0
 l2_small_weight: 10.0
 l1_large_weight: 0.0
@@ -35,6 +35,6 @@ l1_small_weight: 0.0
 pc_weight: 1.0
 kld_weight: 3.0
 learning_rate: 0.001
-dataset_path: ./data/shapenet_core_processed/mug_filtered
-device: cuda:0
+dataset_path: ./data/shapenet_processed/mug_filtered/
 model: ./mug.pt
+device: cuda:1

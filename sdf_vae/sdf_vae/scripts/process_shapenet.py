@@ -95,6 +95,7 @@ def trimesh_decision_viewer(mesh, return_dict):
     v = pyrender.Viewer(scene, run_in_thread=True, use_raymond_lighting=True)
     inp = None
     from pynput import keyboard
+
     decision = None
 
     listener = keyboard.Listener(on_press=on_press)
@@ -152,8 +153,11 @@ def check_meshes(path):
             print(f"Progress: {progress:.2f}% Kept: {len(filtered_objects)}")
     return filtered_objects
 
-def conv_to_sdf(obj):
+
+def conv_to_sdf(obj: Object3D):
+    print(obj.mesh_path)
     return obj.convert_to_sdf(resolution, padding)
+
 
 def convert_to_sdf(objects: List[Object3D]) -> List[Object3D]:
     # convert to SDF
