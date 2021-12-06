@@ -15,4 +15,4 @@ camera:
 threshold: 0.003
 device: cuda
 dataset: "real275"
-max_iterations: 30
+max_iterations: 150

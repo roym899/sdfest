@@ -39,12 +39,9 @@ import open3d as o3d
 import pickle
 import torch
 import matplotlib.pyplot as plt
-import matplotlib
 import yoco
 
 from sdf_estimation.simple_setup import SDFPipeline
-
-# matplotlib.use("tkagg")
 
 
 def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
@@ -55,17 +52,17 @@ def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
 
     Returns:
         Tuple containing:
-            - The color image. np.array
-            - The depth image.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
             - The color path.
             - The depth path.
     """
     depth_path = rgb_path[:-10] + "_depth.png"
-    color_img = np.asarray(o3d.io.read_image(rgb_path))
+    color_img = np.asarray(o3d.io.read_image(rgb_path), dtype=np.float32) / 255
     depth_img = (
         np.asarray(
             o3d.io.read_image(depth_path),
-            dtype=np.float64,
+            dtype=np.float32,
         )
         * 0.001
     )
@@ -96,17 +93,17 @@ def load_rgbd_object_uw_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str
 
     Returns:
         Tuple containing:
-            - The color image. np.array
-            - The depth image.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
             - The color path.
             - The depth path.
     """
     depth_path = rgb_path[:-4] + "_depth" + rgb_path[-4:]
-    color_img = np.asarray(o3d.io.read_image(rgb_path))
+    color_img = np.asarray(o3d.io.read_image(rgb_path), dtype=np.float32) / 255
     depth_img = (
         np.asarray(
             o3d.io.read_image(depth_path),
-            dtype=np.float64,
+            dtype=np.float32,
         )
         * 0.001
     )
@@ -137,8 +134,8 @@ def load_redwood_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
 
     Returns:
         Tuple containing:
-            - The color image. np.array
-            - The depth image.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
             - The color path.
             - The depth path.
     """
@@ -152,12 +149,12 @@ def load_redwood_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
     ind = np.argmin(np.abs(depth_timestamps - rgb_timestamp))
     depth_path = depth_paths[ind]
 
-    color_img = np.asarray(o3d.io.read_image(rgb_path))
+    color_img = np.asarray(o3d.io.read_image(rgb_path), dtype=np.float32) / 255
 
     depth_img = (
         np.asarray(
             o3d.io.read_image(depth_path),
-            dtype=np.float64,
+            dtype=np.float32,
         )
         * 0.001
     )
@@ -172,8 +169,8 @@ def load_redwood_sample(folder: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
 
     Returns:
         Tuple containing:
-            - The color image.
-            - The depth image.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
             - The color path.
             - The depth path.
     """
@@ -199,10 +196,8 @@ def load_sample_from_folder(config: dict) -> Tuple[np.ndarray, np.ndarray, str, 
             "folder": the root folder of the dataset
     Returns:
         Tuple containing:
-            - The color image.
-            - The depth image.
-            - The color path.
-            - The depth path.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
     """
     if config["dataset"] == "redwood":
         return load_redwood_sample(config["folder"])
@@ -253,8 +248,8 @@ def load_rgbd(config: dict) -> Tuple[np.ndarray, np.ndarray, str, str]:
             "input": the path to the RGB image
     Returns:
         Tuple containing:
-            - The color image.
-            - The depth image.
+            - The color image, float32, RGB, 0-1, shape (H,W,C).
+            - The depth image, float32, in meters, shape (H,W).
             - The color path.
             - The depth path.
     """
@@ -367,6 +362,7 @@ def main() -> None:
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
         "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml"
     )
+
     predictor = detectron2.engine.DefaultPredictor(cfg)
     print("Segmentation model loaded.")
 
@@ -403,11 +399,15 @@ def main() -> None:
                     outputs = pickle.load(f)
             else:
                 # compute segmentation and save
-                outputs = predictor(color_img)
+                # detectron expects (H,C,W), BGR, 0-255 as input
+                detectron_color_img = color_img[:, :, ::-1] * 255
+                outputs = predictor(detectron_color_img)
                 with open(segmentation_path, "wb") as f:
                     pickle.dump(outputs, f)
         else:
-            outputs = predictor(color_img)
+            # detectron expects (H,C,W), BGR, 0-255 as input
+            detectron_color_img = color_img[:, :, ::-1] * 255
+            outputs = predictor(detectron_color_img)
 
         if timing_dict is not None:
             torch.cuda.synchronize()
@@ -441,19 +441,19 @@ def main() -> None:
 
             if config["visualize_input"]:
                 v = Visualizer(
-                    color_img[:, :, ::-1],
+                    color_img * 255,
                     MetadataCatalog.get(cfg.DATASETS.TRAIN[0]),
                     scale=1.2,
                 )
                 out = v.draw_instance_predictions(instance.to("cpu"))
-                plt.imshow(out.get_image()[:, :, ::-1])
+                plt.imshow(out.get_image())
                 plt.show()
                 plt.imshow(depth_img)
                 plt.show()
-            depth_tensor = torch.from_numpy(depth_img).float().to(config["device"])
+            depth_tensor = torch.from_numpy(depth_img).to(config["device"])
             instance_mask = instance.pred_masks.cuda()[0]
             color_img_tensor = (
-                torch.from_numpy(color_img).float().to(config["device"]) / 255
+                torch.from_numpy(color_img).to(config["device"])
             )
 
             position, orientation, scale, shape = pipeline(

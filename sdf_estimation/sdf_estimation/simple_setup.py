@@ -163,7 +163,7 @@ class SDFPipeline:
                 binary mask of the object to estimate, same shape as depth_images
             color_images:
                 the color image (currently only used in visualization),
-                shape (N, H, W, 3) or (H, W, 3)
+                shape (N, H, W, 3) or (H, W, 3), RGB, float, 0-1.
             visualize: Whether to visualize the intermediate steps and final result.
             camera_positions:
                 position of camera in world coordinates for each image,
