@@ -2,9 +2,12 @@
 config:
   - real275.yaml
   - category_configs:
-      mug: ../models/mug.yaml
-      bottle: ../models/bottle.yaml
-      bowl: ../models/bowl.yaml
+      mug: ../models/v2/mug.yaml
+      bottle: ../models/v2/bottle.yaml
+      bowl: ../models/v2/bowl.yaml
+      laptop: ../models/v2/laptop.yaml
+      can: ../models/v2/can.yaml
+      camera: ../models/v2/camera.yaml
 
 threshold: 0.005
 device: cuda
