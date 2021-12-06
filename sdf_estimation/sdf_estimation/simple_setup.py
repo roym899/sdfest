@@ -154,6 +154,8 @@ class SDFPipeline:
         If multiple images are passed the cameras are assumed to be fixed.
         All tensors should be on the same device as the pipeline.
 
+        Batch dimension N must be provided either for all or none of the arguments.
+
         Args:
             depth_images:
                 the depth map containing the distance along the camera's z-axis,
@@ -194,15 +196,17 @@ class SDFPipeline:
                 multiplying with
                 prior_orientation_distribution / training_orientation_distribution
                 and renormalizing.
-                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
-                used by the initialization network.
+                Tensor of shape (N,C,) or (C,) for single image.
+                C being the number of grid cells in the SO3Grid used by the
+                initialization network.
             training_orientation_distribution:
                 Distribution of orientations used for training initialization network.
                 If None, equal probability for each cell will be assumed.
                 Note this is only approximately the same as a uniform distribution.
                 Only used if prior_orientation_distribution is provided.
                 Tensor of shape (C,). C being the number of grid cells in the SO3Grid
-                used by the initialization network.
+                used by the initialization network. N not supported, since same
+                training network (and hence distribution) is used independent of view.
 
         Returns:
             - 3D pose of SDF center in world frame, shape (1,3,)
@@ -223,6 +227,8 @@ class SDFPipeline:
             if camera_positions is not None:
                 camera_positions.unsqueeze(0)
             if camera_orientations is not None:
+                camera_orientations.unsqueeze(0)
+            if prior_orientation_distribution is not None:
                 camera_orientations.unsqueeze(0)
 
         if animation_path is not None:
@@ -610,7 +616,7 @@ class SDFPipeline:
                 multiplying with
                 prior_orientation_distribution / training_orientation_distribution
                 and renormalizing.
-                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
+                Tensor of shape (N,C,). C being the number of grid cells in the SO3Grid
                 used by the initialization network.
             training_orientation_distribution:
                 Distribution of orientations used for training initialization network.
@@ -638,8 +644,8 @@ class SDFPipeline:
 
         best = 0
         best_result = None
-        for depth_image, camera_orientation, camera_position in zip(
-            depth_images, camera_orientations, camera_positions
+        for i, (depth_image, camera_orientation, camera_position) in enumerate(
+            zip(depth_images, camera_orientations, camera_positions)
         ):
             centroid = None
             if self.init_config["backbone_type"] == "VanillaPointNet":
@@ -666,7 +672,7 @@ class SDFPipeline:
                 if prior_orientation_distribution is not None:
                     posterior_orientation_dist = self._adjust_categorical_posterior(
                         posterior=posterior_orientation_dist,
-                        prior=prior_orientation_distribution,
+                        prior=prior_orientation_distribution[i],
                         train_prior=training_orientation_distribution,
                     )
 
@@ -699,7 +705,7 @@ class SDFPipeline:
                         '"best" init strategy only supported with discretized '
                         "orientation representation"
                     )
-                maximum = orientation_repr.max()
+                maximum = posterior_orientation_dist.max()
                 if maximum > best:
                     best = maximum
                     best_result = latent_shape, position_world, scale, orientation_world
