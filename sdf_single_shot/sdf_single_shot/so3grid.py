@@ -26,7 +26,7 @@ class SO3Grid:
         self._s2_theta, self._s2_phi = self._grid_s2(resol)
 
     def num_cells(self) -> int:
-        """Return the nuber of points in the grid."""
+        """Return the number of points in the grid."""
         return len(self._s1) * len(self._s2_theta)
 
     def hopf_to_index(self, psi, theta, phi):
