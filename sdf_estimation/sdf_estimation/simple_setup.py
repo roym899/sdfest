@@ -79,6 +79,9 @@ class SDFPipeline:
         self.init_config = config["init"]
         self.vae_config = config["vae"] if "vae" in config else self.init_config["vae"]
         self.camera_config = config["camera"]
+        self.result_selection_strategy = config.get(
+            "result_selection_strategy", "last_iteration"
+        )
 
         self.config = config
 
@@ -440,7 +443,13 @@ class SDFPipeline:
         if animation_path is not None:
             self._create_animations(animation_path)
 
-        return position, orientation, scale, latent_shape
+        if self.result_selection_strategy == "last_iteration":
+            return position, orientation, scale, latent_shape
+        else:
+            raise ValueError(
+                f"Result selection strategy {self.result_selection_strategy} is not"
+                "supported."
+            )
 
     def _log_data(self, data: dict) -> None:
         """Add dictionary with associated timestamp to log data list."""
@@ -572,9 +581,6 @@ class SDFPipeline:
             camera_orientations:
                 orientation of camera in world-frame as normalized quaternion,
                 quaternion is in scalar-last convention, shape (N, 4)
-            strategy:
-                how to handle multiple depth images
-                "first": return single state based on first depth image
 
         Returns:
             Tuple comprised of:
