@@ -771,7 +771,7 @@ class SDFPipeline:
         plt.savefig(sdf_path)
         plt.close()
 
-    def _create_animations(self, animation_path: str):
+    def _create_animations(self, animation_path: str) -> None:
         names = ["sdf", "depth", "depth_error"]
         for name in names:
             frame_folder = os.path.join(animation_path, name)
