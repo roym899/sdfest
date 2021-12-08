@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from pointnet_util import  PointNetSetAbstraction
-from transformer import TransformerBlock
+from sdf_single_shot.pointnet_util import *
+from sdf_single_shot.transformer import TransformerBlock
 from typing import TypedDict
 
 class Cfg(TypedDict):
@@ -63,7 +63,7 @@ class Backbone(nn.Module):
         return points, xyz_and_feats
 
 
-class PointTransformerCls(nn.Module):
+class PointTransformer(nn.Module):
     def __init__(self, cfg: Cfg = default_cfg):
         super().__init__()
 
@@ -102,9 +102,9 @@ if __name__ == '__main__':
     # cfg['transformer_dim'] = 512
 
 
-    inp = torch.randn(2, 1024, 3)
+    inp = torch.randn(2, 4096, 3)
 
-    point_transformer = PointTransformerCls()
+    point_transformer = PointTransformer()
     out = point_transformer(inp)
 
     print(f"out shape is {out.shape}")
