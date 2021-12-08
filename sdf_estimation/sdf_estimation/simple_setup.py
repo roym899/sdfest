@@ -313,7 +313,7 @@ class SDFPipeline:
             fig_vis, axes = plt.subplots(
                 2, 3, sharex=True, sharey=True, figsize=(12, 8)
             )
-            fig_loss, loss_ax = plt.subplots(1, 1)
+            fig_loss, (loss_ax, inlier_ax) = plt.subplots(1, 2)
             vmin, vmax = None, None
 
         depth_losses = []
@@ -471,9 +471,12 @@ class SDFPipeline:
                     loss_ax.plot(depth_losses, label="Depth")
                     loss_ax.plot(pointcloud_losses, label="Pointcloud")
                     loss_ax.plot(nn_losses, label="Nearest Neighbor")
-                    loss_ax.plot(inlier_ratios, label="Inlier Ratio")
                     loss_ax.plot(total_losses, label="Total")
                     loss_ax.legend()
+
+                    inlier_ax.clear()
+                    inlier_ax.plot(inlier_ratios, label="Inlier Ratio")
+                    inlier_ax.legend()
 
                     axes[1, 1].clear()
                     axes[1, 1].imshow(
