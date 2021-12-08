@@ -81,7 +81,10 @@ class SDFPipeline:
         self.camera_config = config["camera"]
         self.result_selection_strategy = config.get(
             "result_selection_strategy", "last_iteration"
-        )
+        )  # last_iteration | best_inlier_ratio
+        self._relative_inlier_threshold = config.get(
+            "relative_inlier_threshold", 0.03
+        )  # relative depth error threshold for pixel to be considered inlier
 
         self.config = config
 
@@ -138,6 +141,42 @@ class SDFPipeline:
 
         return loss_depth, loss_pc, loss_nn
 
+    def _compute_inlier_ratio(
+        self,
+        depth_input: torch.Tensor,
+        depth_estimate: torch.Tensor,
+    ) -> None:
+        """Compute ratio of pixels with small relative depth error."""
+        rel_depth_error = torch.abs(depth_input - depth_estimate) / depth_input
+        inlier_mask = rel_depth_error < self._relative_inlier_threshold
+        inliers = torch.count_nonzero(inlier_mask)
+        valid_depth_pixels = torch.count_nonzero(depth_input)
+        inlier_ratio = inliers / valid_depth_pixels
+        return inlier_ratio
+
+    def _update_best_estimate(
+        self,
+        depth_input: torch.Tensor,
+        depth_estimate: torch.Tensor,
+        position: torch.Tensor,
+        orientation: torch.Tensor,
+        scale: torch.Tensor,
+        latent_shape: torch.Tensor,
+    ) -> None:
+        """Update the best current estimate by keeping track of inlier ratio.
+
+        Returns:
+            Inlier ratio of this configuration.
+        """
+        inlier_ratio = self._compute_inlier_ratio(depth_input, depth_estimate)
+        if self._best_inlier_ratio is None or inlier_ratio > self._best_inlier_ratio:
+            self._best_inlier_ratio = inlier_ratio
+            self._best_position = position
+            self._best_orientation = orientation
+            self._best_scale = scale
+            self._best_latent_shape = latent_shape
+        return inlier_ratio
+
     def __call__(
         self,
         depth_images: torch.Tensor,
@@ -193,6 +232,9 @@ class SDFPipeline:
             - Size of SDF as length of half-width, shape (1,)
             - Latent shape representation of the object, shape (1,latent_size,).
         """
+        # initialize optimization
+        self._best_inlier_ratio = None
+
         if animation_path is not None:
             self._create_animation_folders(animation_path)
 
@@ -277,6 +319,7 @@ class SDFPipeline:
         depth_losses = []
         pointcloud_losses = []
         nn_losses = []
+        inlier_ratios = []
         total_losses = []
 
         opt_vars = [
@@ -338,14 +381,24 @@ class SDFPipeline:
             optimizer.step()
             optimizer.zero_grad()
 
+            with torch.no_grad():
+                orientation /= torch.sqrt(torch.sum(orientation ** 2))
+                scale = 1 / scale_inv
+                inlier_ratio = self._update_best_estimate(
+                    depth_image,
+                    depth_estimate,
+                    position,
+                    orientation,
+                    scale,
+                    latent_shape,
+                )
+
             if visualize:
                 depth_losses.append(loss_depth.item())
                 pointcloud_losses.append(loss_pc.item())
                 nn_losses.append(loss_nn.item())
+                inlier_ratios.append(inlier_ratio.item())
                 total_losses.append(loss.item())
-
-            with torch.no_grad():
-                orientation /= torch.sqrt(torch.sum(orientation ** 2))
 
             if log_path is not None:
                 torch.cuda.synchronize()
@@ -418,6 +471,7 @@ class SDFPipeline:
                     loss_ax.plot(depth_losses, label="Depth")
                     loss_ax.plot(pointcloud_losses, label="Pointcloud")
                     loss_ax.plot(nn_losses, label="Nearest Neighbor")
+                    loss_ax.plot(inlier_ratios, label="Inlier Ratio")
                     loss_ax.plot(total_losses, label="Total")
                     loss_ax.legend()
 
@@ -445,6 +499,13 @@ class SDFPipeline:
 
         if self.result_selection_strategy == "last_iteration":
             return position, orientation, scale, latent_shape
+        elif self.result_selection_strategy == "best_inlier_ratio":
+            return (
+                self._best_position,
+                self._best_orientation,
+                self._best_scale,
+                self._best_latent_shape,
+            )
         else:
             raise ValueError(
                 f"Result selection strategy {self.result_selection_strategy} is not"
