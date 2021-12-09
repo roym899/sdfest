@@ -1,4 +1,4 @@
-"""PointTransformer based on
+"""PointTransformer Network based on
 Zhao, Hengshuang, et al. "Point transformer."
 Proceedings of the IEEE/CVF International Conference on Computer Vision. 2021.
 
@@ -13,7 +13,7 @@ from typing import TypedDict
 
 
 class Cfg(TypedDict):
-    """Configuration dictionary of various point_transformer classes
+    """Configuration dictionary of various point_transformer classes.
 
     Attributes:
         n_points: Number of points in each batch
