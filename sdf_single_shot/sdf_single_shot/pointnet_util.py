@@ -102,11 +102,11 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False, knn=
         npoint:
         radius:
         nsample:
-        xyz: input points position data, [B, N, 3]
+        xyz: input points position data, [B, N, C]
         points: input points data, [B, N, D]
     Return:
-        new_xyz: sampled points position data, [B, npoint, nsample, 3]
-        new_points: sampled points data, [B, npoint, nsample, 3+D]
+        new_xyz: sampled points position data, [B, npoint, nsample, C]
+        new_points: sampled points data, [B, npoint, nsample, C+D]
     """
     B, N, C = xyz.shape
     S = npoint
@@ -139,10 +139,10 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False, knn=
 def sample_and_group_all(xyz, points):
     """
     Input:
-        xyz: input points position data, [B, N, 3]
+        xyz: input points position data, [B, N, C]
         points: input points data, [B, N, D]
     Return:
-        new_xyz: sampled points position data, [B, 1, 3]
+        new_xyz: sampled points position data, [B, 1, C]
         new_points: sampled points data, [B, 1, N, 3+D]
     """
     device = xyz.device
@@ -176,7 +176,7 @@ class PointNetSetAbstraction(nn.Module):
         """
         Input:
             xyz: input points position data, [B, N, C]
-            points: input points data, [B, N, C]
+            points: input points data, [B, N, D]
         Return:
             new_xyz: sampled points position data, [B, S, C]
             new_points_concat: sample points feature data, [B, S, D']
