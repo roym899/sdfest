@@ -3,6 +3,8 @@
 Inspired by PyTorch3D, but using scalar-last convention and not enforcing scalar > 0.
 https://github.com/facebookresearch/pytorch3d
 """
+import random
+import math
 
 import torch
 
@@ -91,3 +93,24 @@ def simple_quaternion_loss(q1: torch.Tensor, q2: torch.Tensor) -> torch.Tensor:
         Mean distance between the quaternions, scalar.
     """
     return torch.mean(1 - torch.sum(q1 * q2, 1) ** 2)
+
+
+def generate_uniform_quaternion() -> torch.Tensor:
+    """Generate a normalized uniform quaternion.
+
+    Following the method from K. Shoemake, Uniform Random Rotations, 1992.
+
+    See: http://planning.cs.uiuc.edu/node198.html
+
+    Returns:
+        Uniformly distributed unit quaternion on the estimator's device.
+    """
+    u1, u2, u3 = random.random(), random.random(), random.random()
+    return torch.tensor(
+        [
+            math.sqrt(1 - u1) * math.sin(2 * math.pi * u2),
+            math.sqrt(1 - u1) * math.cos(2 * math.pi * u2),
+            math.sqrt(u1) * math.sin(2 * math.pi * u3),
+            math.sqrt(u1) * math.cos(2 * math.pi * u3),
+        ]
+    )
