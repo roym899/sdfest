@@ -229,7 +229,7 @@ class SDFPipeline:
             if camera_orientations is not None:
                 camera_orientations.unsqueeze(0)
             if prior_orientation_distribution is not None:
-                camera_orientations.unsqueeze(0)
+                prior_orientation_distribution.unsqueeze(0)
 
         if animation_path is not None:
             self._save_inputs(animation_path, depth_images, color_images, masks)
