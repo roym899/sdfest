@@ -362,7 +362,6 @@ class SDFPipeline:
         latent_shape.requires_grad_()
 
         if visualize:
-            plt.ion()
             fig_vis, axes = plt.subplots(
                 2, 3, sharex=True, sharey=True, figsize=(12, 8)
             )
@@ -543,13 +542,13 @@ class SDFPipeline:
                         current_depth.detach().cpu(), vmin=vmin, vmax=vmax
                     )
                     axes[1, 1].set_title(f"loss {loss.item()}")
-                    plt.draw()
-                    plt.pause(0.001)
+                    fig_loss.canvas.draw()
+                    fig_vis.canvas.draw()
+                    plt.pause(0.1)
 
             self._current_iteration += 1
 
         if visualize:
-            plt.ioff()
             plt.show()
             plt.close(fig_loss)
             plt.close(fig_vis)
@@ -858,17 +857,20 @@ class SDFPipeline:
         instance_masks: torch.Tensor,
     ) -> None:
         color_path = os.path.join(animation_path, "color_input.png")
-        plt.imshow(color_images[0].cpu().numpy())
-        plt.savefig(color_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(color_images[0].cpu().numpy())
+        fig.savefig(color_path)
+        plt.close(fig)
         depth_path = os.path.join(animation_path, "depth_input.png")
-        plt.imshow(depth_images[0].cpu().numpy())
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(depth_images[0].cpu().numpy())
+        fig.savefig(depth_path)
+        plt.close(fig)
         mask_path = os.path.join(animation_path, "mask.png")
-        plt.imshow(instance_masks[0].cpu().numpy())
-        plt.savefig(mask_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(instance_masks[0].cpu().numpy())
+        fig.savefig(mask_path)
+        plt.close(fig)
 
     def _save_preprocessed_inputs(
         self,
@@ -876,9 +878,10 @@ class SDFPipeline:
         depth_images: torch.Tensor,
     ) -> None:
         depth_path = os.path.join(animation_path, "preprocessed_depth_input.png")
-        plt.imshow(depth_images[0].cpu().numpy())
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(depth_images[0].cpu().numpy())
+        fig.savefig(depth_path)
+        plt.close(fig)
 
     def _save_current_state(
         self,
@@ -900,9 +903,10 @@ class SDFPipeline:
         depth_path = os.path.join(
             animation_path, "depth", f"{self._current_iteration:06}.png"
         )
-        plt.imshow(current_depth.cpu().numpy(), interpolation="none")
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(current_depth.cpu().numpy(), interpolation="none")
+        fig.savefig(depth_path)
+        plt.close(fig)
 
         error_image = torch.abs(current_depth - depth_images[0])
         error_image[depth_images[0] == 0] = 0
@@ -910,9 +914,10 @@ class SDFPipeline:
         error_path = os.path.join(
             animation_path, "depth_error", f"{self._current_iteration:06}.png"
         )
-        plt.imshow(error_image.cpu().numpy(), interpolation="none")
-        plt.savefig(error_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(error_image.cpu().numpy(), interpolation="none")
+        fig.savefig(error_path)
+        plt.close(fig)
 
         unscaled_threshold = self.config["threshold"] * scale_inv.item()
         mesh = sdf_utils.mesh_from_sdf(
@@ -927,9 +932,10 @@ class SDFPipeline:
         # map y -> z; z -> y
         transform = np.eye(4)
         transform[0:3, 0:3] = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])
-        sdf_utils.plot_mesh(mesh, transform=transform)
-        plt.savefig(sdf_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        sdf_utils.plot_mesh(mesh, transform=transform, plot_object=ax)
+        fig.savefig(sdf_path)
+        plt.close(fig)
 
     def _create_animations(self, animation_path: str) -> None:
         names = ["sdf", "depth", "depth_error"]
