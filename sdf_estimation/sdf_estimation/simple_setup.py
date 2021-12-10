@@ -92,7 +92,7 @@ class SDFPipeline:
     def _compute_gradients(loss: torch.Tensor) -> None:
         loss.backward()
 
-    def _compute_losses(
+    def _compute_view_losses(
         self,
         depth_input: torch.Tensor,
         depth_estimate: torch.Tensor,
@@ -141,6 +141,19 @@ class SDFPipeline:
 
         return loss_depth, loss_pc, loss_nn
 
+    def _compute_point_constraint_loss(self, orientation: torch.Tensor) -> torch.Tensor:
+        """Compute loss for point constraint if specified."""
+        if self._point_constraint is not None:
+            loss_point_constraint = losses.point_constraint_loss(
+                orientation_q=orientation[0],
+                source=self._point_constraint[0],
+                target=self._point_constraint[1],
+            )
+            weight = self._point_constraint[2]
+            return weight * loss_point_constraint
+        else:
+            return orientation.new_tensor(0.0)
+
     def _compute_inlier_ratio(
         self,
         depth_input: torch.Tensor,
@@ -188,6 +201,7 @@ class SDFPipeline:
         log_path: Optional[str] = None,
         shape_optimization: bool = True,
         animation_path: Optional[str] = None,
+        point_constraint: Optional[Tuple[torch.Tensor]] = None,
         prior_orientation_distribution: Optional[torch.Tensor] = None,
         training_orientation_distribution: Optional[torch.Tensor] = None,
     ) -> tuple:
@@ -229,6 +243,10 @@ class SDFPipeline:
                 enable or disable shape optimization during iterative optimization
             animation_path:
                 file path to write rendering and error visualizations to
+            point_constraint:
+                tuple of source point and rotated target point and weight
+                a loss will be added that penalizes
+                    weight * || rotation @ source - target ||_2
             prior_orientation_distribution:
                 Prior distribution of orientations used for initialization.
                 If None, distribution of initialization network will not be modified.
@@ -258,6 +276,7 @@ class SDFPipeline:
         """
         # initialize optimization
         self._best_inlier_ratio = None
+        self._point_constraint = point_constraint
 
         if animation_path is not None:
             self._create_animation_folders(animation_path)
@@ -353,6 +372,7 @@ class SDFPipeline:
         depth_losses = []
         pointcloud_losses = []
         nn_losses = []
+        point_constraint_losses = []
         inlier_ratios = []
         total_losses = []
 
@@ -392,7 +412,7 @@ class SDFPipeline:
                     sdf[0, 0], position_c[0], orientation_c[0], scale_inv[0]
                 )
 
-                view_loss_depth, view_loss_pc, view_loss_nn = self._compute_losses(
+                view_loss_depth, view_loss_pc, view_loss_nn = self._compute_view_losses(
                     depth_image,
                     depth_estimate,
                     position_c[0],
@@ -404,10 +424,12 @@ class SDFPipeline:
                 loss_pc = loss_pc + view_loss_pc
                 loss_nn = loss_nn + view_loss_nn
 
+            loss_point_constraint = self._compute_point_constraint_loss(orientation)
             loss = (
                 self.config["depth_weight"] * loss_depth
                 + self.config["pc_weight"] * loss_pc
                 + self.config["nn_weight"] * loss_nn
+                + loss_point_constraint
             )
 
             self._compute_gradients(loss)
@@ -431,6 +453,7 @@ class SDFPipeline:
                 depth_losses.append(loss_depth.item())
                 pointcloud_losses.append(loss_pc.item())
                 nn_losses.append(loss_nn.item())
+                point_constraint_losses.append(loss_point_constraint.item())
                 inlier_ratios.append(inlier_ratio.item())
                 total_losses.append(loss.item())
 
@@ -505,7 +528,10 @@ class SDFPipeline:
                     loss_ax.plot(depth_losses, label="Depth")
                     loss_ax.plot(pointcloud_losses, label="Pointcloud")
                     loss_ax.plot(nn_losses, label="Nearest Neighbor")
+                    if self._point_constraint is not None:
+                        loss_ax.plot(point_constraint_losses, label="Point constraint")
                     loss_ax.plot(total_losses, label="Total")
+                    loss_ax.set_yscale("log")
                     loss_ax.legend()
 
                     inlier_ax.clear()
