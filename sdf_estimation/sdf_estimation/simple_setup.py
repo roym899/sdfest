@@ -188,11 +188,15 @@ class SDFPipeline:
         log_path: Optional[str] = None,
         shape_optimization: bool = True,
         animation_path: Optional[str] = None,
+        prior_orientation_distribution: Optional[torch.Tensor] = None,
+        training_orientation_distribution: Optional[torch.Tensor] = None,
     ) -> tuple:
         """Infer pose, size and latent representation from depth and mask.
 
         If multiple images are passed the cameras are assumed to be fixed.
         All tensors should be on the same device as the pipeline.
+
+        Batch dimension N must be provided either for all or none of the arguments.
 
         Args:
             depth_images:
@@ -225,6 +229,26 @@ class SDFPipeline:
                 enable or disable shape optimization during iterative optimization
             animation_path:
                 file path to write rendering and error visualizations to
+            prior_orientation_distribution:
+                Prior distribution of orientations used for initialization.
+                If None, distribution of initialization network will not be modified.
+                Only supported for initialization network with discretized orientation
+                representation.
+                Output distribution of initialization network will be adjusted by
+                multiplying with
+                prior_orientation_distribution / training_orientation_distribution
+                and renormalizing.
+                Tensor of shape (N,C,) or (C,) for single image.
+                C being the number of grid cells in the SO3Grid used by the
+                initialization network.
+            training_orientation_distribution:
+                Distribution of orientations used for training initialization network.
+                If None, equal probability for each cell will be assumed.
+                Note this is only approximately the same as a uniform distribution.
+                Only used if prior_orientation_distribution is provided.
+                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network. N not supported, since same
+                training network (and hence distribution) is used independent of view.
 
         Returns:
             - 3D pose of SDF center in world frame, shape (1,3,)
@@ -246,9 +270,15 @@ class SDFPipeline:
             masks = masks.unsqueeze(0)
             color_images = color_images.unsqueeze(0)
             if camera_positions is not None:
-                camera_positions.unsqueeze(0)
+                camera_positions = camera_positions.unsqueeze(0)
             if camera_orientations is not None:
-                camera_orientations.unsqueeze(0)
+                camera_orientations = camera_orientations.unsqueeze(0)
+            if prior_orientation_distribution is not None:
+                prior_orientation_distribution = (
+                    prior_orientation_distribution.unsqueeze(0)
+                )
+
+        # TODO assert all tensors have expected dimension
 
         if animation_path is not None:
             self._save_inputs(animation_path, depth_images, color_images, masks)
@@ -278,7 +308,11 @@ class SDFPipeline:
         with torch.no_grad():
             self._preprocess_depth(depth_images, masks)
             latent_shape, position, scale, orientation = self._nn_init(
-                depth_images, camera_positions, camera_orientations
+                depth_images,
+                camera_positions,
+                camera_orientations,
+                prior_orientation_distribution,
+                training_orientation_distribution,
             )
             scale_inv = 1 / scale
 
@@ -635,6 +669,8 @@ class SDFPipeline:
         depth_images: torch.Tensor,
         camera_positions: torch.Tensor,
         camera_orientations: torch.Tensor,
+        prior_orientation_distribution: Optional[torch.Tensor] = None,
+        training_orientation_distribution: Optional[torch.Tensor] = None,
     ) -> Tuple:
         """Estimate shape, pose, scale and orientation using initialization network.
 
@@ -645,6 +681,24 @@ class SDFPipeline:
             camera_orientations:
                 orientation of camera in world-frame as normalized quaternion,
                 quaternion is in scalar-last convention, shape (N, 4)
+            prior_orientation_distribution:
+                Prior distribution of orientations used for initialization.
+                If None, distribution of initialization network will not be modified.
+                Only supported for initialization network with discretized orientation
+                representation.
+                Output distribution of initialization network will be adjusted by
+                multiplying with
+                prior_orientation_distribution / training_orientation_distribution
+                and renormalizing.
+                Tensor of shape (N,C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network.
+            training_orientation_distribution:
+                Distribution of orientations used for training initialization network.
+                If None, equal probability for each cell will be assumed.
+                Note this is only approximately the same as a uniform distribution.
+                Only used if prior_orientation_distribution is provided.
+                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network.
 
         Returns:
             Tuple comprised of:
@@ -653,10 +707,19 @@ class SDFPipeline:
             - Size of SDF as length of half-width, (1,)
             - Orientation of SDF as normalized quaternion (1,4)
         """
+        if (
+            prior_orientation_distribution is not None
+            and self.init_config["head"]["orientation_repr"] != "discretized"
+        ):
+            raise ValueError(
+                "prior_orientation_distribution only supported for discretized "
+                "orientation representation."
+            )
+
         best = 0
         best_result = None
-        for depth_image, camera_orientation, camera_position in zip(
-            depth_images, camera_orientations, camera_positions
+        for i, (depth_image, camera_orientation, camera_position) in enumerate(
+            zip(depth_images, camera_orientations, camera_positions)
         ):
             centroid = None
             if self.init_config["backbone_type"] == "VanillaPointNet":
@@ -678,11 +741,18 @@ class SDFPipeline:
                 position += centroid
 
             if self.init_config["head"]["orientation_repr"] == "discretized":
-                orientation_repr = torch.softmax(orientation_repr, 1)
-                # print(torch.sort(orientation_repr, dim=1).values)
+                posterior_orientation_dist = torch.softmax(orientation_repr, -1)
+
+                if prior_orientation_distribution is not None:
+                    posterior_orientation_dist = self._adjust_categorical_posterior(
+                        posterior=posterior_orientation_dist,
+                        prior=prior_orientation_distribution[i],
+                        train_prior=training_orientation_distribution,
+                    )
+
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
-                        orientation_repr.argmax().item()
+                        posterior_orientation_dist.argmax().item()
                     ),
                     dtype=torch.float,
                     device=self.device,
@@ -709,7 +779,7 @@ class SDFPipeline:
                         '"best" init strategy only supported with discretized '
                         "orientation representation"
                     )
-                maximum = orientation_repr.max()
+                maximum = posterior_orientation_dist.max()
                 if maximum > best:
                     best = maximum
                     best_result = latent_shape, position_world, scale, orientation_world
@@ -843,3 +913,38 @@ class SDFPipeline:
             ffmpeg.input(
                 os.path.join(frame_folder, "*.png"), pattern_type="glob", framerate=30
             ).output(video_name).run()
+
+    @staticmethod
+    def _adjust_categorical_posterior(
+        posterior: torch.Tensor, prior: torch.Tensor, train_prior: torch.Tensor
+    ) -> torch.Tensor:
+        """Adjust categorical posterior distribution.
+
+        Posterior is calculated with a train_prior
+
+        Args:
+            posterior:
+                Posterior distribution computed assuming train_prior.
+                Shape (..., K). K being number of categories.
+            prior:
+                The desired new prior distribution.
+                Same shape as posterior.
+            train_prior:
+                The prior distribution used to compute the posterior.
+                If None, equal probability for each category will be assumed.
+                Same shape as posterior.
+
+        Returns:
+            The categorical posterior, adjusted such that prior is prior, instead of
+            train_prior.
+            Same shape as posterior.
+        """
+        adjusted_posterior = posterior.clone()
+        # adjust if prior different from training
+        adjusted_posterior *= prior
+        if train_prior is not None:
+            adjusted_posterior /= train_prior
+        adjusted_posterior = torch.nn.functional.normalize(
+            adjusted_posterior, p=1, dim=-1
+        )
+        return adjusted_posterior
