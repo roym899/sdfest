@@ -225,11 +225,15 @@ class SDFPipeline:
             masks = masks.unsqueeze(0)
             color_images = color_images.unsqueeze(0)
             if camera_positions is not None:
-                camera_positions.unsqueeze(0)
+                camera_positions = camera_positions.unsqueeze(0)
             if camera_orientations is not None:
-                camera_orientations.unsqueeze(0)
+                camera_orientations = camera_orientations.unsqueeze(0)
             if prior_orientation_distribution is not None:
-                prior_orientation_distribution.unsqueeze(0)
+                prior_orientation_distribution = (
+                    prior_orientation_distribution.unsqueeze(0)
+                )
+
+        # TODO assert all tensors have expected dimension
 
         if animation_path is not None:
             self._save_inputs(animation_path, depth_images, color_images, masks)
