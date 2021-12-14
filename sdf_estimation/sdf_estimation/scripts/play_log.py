@@ -28,6 +28,7 @@ realtime = True
 reconstruction_type = "mesh" or "pointcloud"
 animation_queued = False
 color = True
+camera_frames = True
 
 
 def quit_program(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
@@ -56,6 +57,14 @@ def toggle_color(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     global color
     color = not color
     print(f"Color: {color}")
+    return False
+
+
+def toggle_camera_frames(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
+    """Toggle realtime playback."""
+    global camera_frames
+    camera_frames = not camera_frames
+    print(f"Camera frames: {camera_frames}")
     return False
 
 
@@ -117,7 +126,7 @@ def main() -> None:
     vis.register_key_callback(key=ord("S"), callback_func=switch_reconstruction_type)
     vis.register_key_callback(key=ord("N"), callback_func=queue_animation)
     vis.register_key_callback(key=ord("C"), callback_func=toggle_color)
-    vis.register_key_callback(key=ord("C"), callback_func=toggle_color)
+    vis.register_key_callback(key=ord("F"), callback_func=toggle_camera_frames)
     vis.register_key_callback(key=KEY_ESCAPE, callback_func=quit_program)
     vis.create_window(width=640, height=480)
     print(
@@ -126,6 +135,7 @@ def main() -> None:
         "\ts: switch reconstruction_type\n",
         "\tn: queue animation\n",
         "\tc: toggle color\n",
+        "\tf: toggle camera frames\n",
     )
     first = True
     while True:
@@ -196,7 +206,9 @@ def main() -> None:
 
                     pointclouds.append(pointcloud_o3d)
 
-            geometries = [] + cam_meshes + pointclouds
+            geometries = [] + pointclouds
+            if camera_frames:
+                geometries += cam_meshes
             if "mesh" in log_entry:
                 geometries.append(log_entry[reconstruction_type])
             vis.clear_geometries()
