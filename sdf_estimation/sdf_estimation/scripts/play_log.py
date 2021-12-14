@@ -161,7 +161,7 @@ def main() -> None:
                     log_entry["camera_orientations"],
                 ):
                     points_c = pointset_utils.depth_to_pointcloud(
-                        depth_image, config["camera"]["fx"], normalize=False
+                        depth_image, pipeline.cam, normalize=False
                     )
                     pointcloud_torch = (
                         quaternion_utils.quaternion_apply(quat_c2w, points_c) + t_c2w

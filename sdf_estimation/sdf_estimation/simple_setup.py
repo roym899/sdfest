@@ -310,6 +310,18 @@ class SDFPipeline:
             camera_orientations = torch.zeros(n_imgs, 4, device=self.device)
             camera_orientations[:, 3] = 1.0
 
+        # Initialization
+        with torch.no_grad():
+            self._preprocess_depth(depth_images, masks)
+            latent_shape, position, scale, orientation = self._nn_init(
+                depth_images,
+                camera_positions,
+                camera_orientations,
+                prior_orientation_distribution,
+                training_orientation_distribution,
+            )
+            scale_inv = 1 / scale
+
         if log_path is not None:
             torch.cuda.synchronize()
             self._log_data(
@@ -322,18 +334,6 @@ class SDFPipeline:
                     "camera_orientations": camera_orientations,
                 },
             )
-
-        # Initialization
-        with torch.no_grad():
-            self._preprocess_depth(depth_images, masks)
-            latent_shape, position, scale, orientation = self._nn_init(
-                depth_images,
-                camera_positions,
-                camera_orientations,
-                prior_orientation_distribution,
-                training_orientation_distribution,
-            )
-            scale_inv = 1 / scale
 
         if log_path is not None:
             torch.cuda.synchronize()
