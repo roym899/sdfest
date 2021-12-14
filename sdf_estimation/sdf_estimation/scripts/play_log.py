@@ -23,9 +23,10 @@ from sdf_estimation.simple_setup import SDFPipeline
 from sdf_estimation import synthetic
 from sdf_single_shot import pointset_utils, quaternion_utils
 
+reconstruction_types = ["mesh", "pointcloud", "none"]
 reset = False
 realtime = True
-reconstruction_type = "mesh" or "pointcloud"
+reconstruction_type = "mesh"
 animation_queued = False
 color = True
 camera_frames = True
@@ -71,9 +72,9 @@ def toggle_camera_frames(_: o3d.visualization.VisualizerWithKeyCallback) -> bool
 def switch_reconstruction_type(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     """Switch between mesh and pointcloud reconstruction."""
     global reconstruction_type
-    reconstruction_type = (
-        "mesh" if reconstruction_type == "pointcloud" else "pointcloud"
-    )
+    cur_id = reconstruction_types.index(reconstruction_type)
+    cur_id = (cur_id + 1) % len(reconstruction_types)
+    reconstruction_type = reconstruction_types[cur_id]
     print(f"Reconstruction: {reconstruction_type}")
     return False
 
@@ -209,7 +210,7 @@ def main() -> None:
             geometries = [] + pointclouds
             if camera_frames:
                 geometries += cam_meshes
-            if "mesh" in log_entry:
+            if "mesh" in log_entry and reconstruction_type != "none":
                 geometries.append(log_entry[reconstruction_type])
             vis.clear_geometries()
             for i, geometry in enumerate(geometries):
