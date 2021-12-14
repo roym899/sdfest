@@ -310,9 +310,26 @@ class SDFPipeline:
             camera_orientations = torch.zeros(n_imgs, 4, device=self.device)
             camera_orientations[:, 3] = 1.0
 
-        # Initialization
         with torch.no_grad():
             self._preprocess_depth(depth_images, masks)
+
+        # store pointcloud without reconstruction
+        if log_path is not None:
+            torch.cuda.synchronize()
+            self._log_data(
+                {
+                    "timestamp": time.time() - start_time,
+                    "depth_images": depth_images,
+                    "color_images": color_images,
+                    "masks": masks,
+                    "color_images": color_images,
+                    "camera_positions": camera_positions,
+                    "camera_orientations": camera_orientations,
+                },
+            )
+
+        # Initialization
+        with torch.no_grad():
             latent_shape, position, scale, orientation = self._nn_init(
                 depth_images,
                 camera_positions,
@@ -327,20 +344,6 @@ class SDFPipeline:
             self._log_data(
                 {
                     "timestamp": time.time() - start_time,
-                    "depth_images": depth_images,
-                    "masks": masks,
-                    "color_images": color_images,
-                    "camera_positions": camera_positions,
-                    "camera_orientations": camera_orientations,
-                },
-            )
-
-        if log_path is not None:
-            torch.cuda.synchronize()
-            self._log_data(
-                {
-                    "timestamp": time.time() - start_time,
-                    "depth_images": depth_images,
                     "camera_positions": camera_positions,
                     "camera_orientations": camera_orientations,
                     "latent_shape": latent_shape,

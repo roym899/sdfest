@@ -27,6 +27,7 @@ reset = False
 realtime = True
 reconstruction_type = "mesh" or "pointcloud"
 animation_queued = False
+color = True
 
 
 def quit_program(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
@@ -47,6 +48,14 @@ def toggle_realtime(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     global realtime
     realtime = not realtime
     print(f"Realtime: {realtime}")
+    return False
+
+
+def toggle_color(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
+    """Toggle realtime playback."""
+    global color
+    color = not color
+    print(f"Color: {color}")
     return False
 
 
@@ -107,13 +116,16 @@ def main() -> None:
     vis.register_key_callback(key=ord("R"), callback_func=toggle_realtime)
     vis.register_key_callback(key=ord("S"), callback_func=switch_reconstruction_type)
     vis.register_key_callback(key=ord("N"), callback_func=queue_animation)
+    vis.register_key_callback(key=ord("C"), callback_func=toggle_color)
+    vis.register_key_callback(key=ord("C"), callback_func=toggle_color)
     vis.register_key_callback(key=KEY_ESCAPE, callback_func=quit_program)
     vis.create_window(width=640, height=480)
     print(
         "Controls\n\ta: reset view point & bounding box\n"
         "\tr: toggle realtime\n"
-        "\ts: switch reconstruction_type",
-        "\tn: queue animation",
+        "\ts: switch reconstruction_type\n",
+        "\tn: queue animation\n",
+        "\tc: toggle color\n",
     )
     first = True
     while True:
@@ -155,8 +167,9 @@ def main() -> None:
 
             if "depth_images" in log_entry:
                 pointclouds = []
-                for depth_image, t_c2w, quat_c2w in zip(
+                for depth_image, color_image, t_c2w, quat_c2w in zip(
                     log_entry["depth_images"],
+                    log_entry["color_images"],
                     log_entry["camera_positions"],
                     log_entry["camera_orientations"],
                 ):
@@ -170,9 +183,16 @@ def main() -> None:
                     pointcloud_o3d = o3d.geometry.PointCloud(
                         o3d.utility.Vector3dVector(pointcloud_numpy)
                     )
-                    pointcloud_o3d.colors = o3d.utility.Vector3dVector(
-                        np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2])
-                    )
+                    if color:
+                        pointcloud_colors_torch = color_image[depth_image != 0]
+                        pointcloud_colors_numpy = pointcloud_colors_torch.cpu().numpy()
+                        pointcloud_o3d.colors = o3d.utility.Vector3dVector(
+                            pointcloud_colors_numpy
+                        )
+                    else:
+                        pointcloud_o3d.colors = o3d.utility.Vector3dVector(
+                            np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2])
+                        )
 
                     pointclouds.append(pointcloud_o3d)
 
