@@ -1,3 +1,4 @@
+"""Utility functions for Point Transformer"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,43 +9,68 @@ import numpy as np
 # reference https://github.com/yanx27/Pointnet_Pointnet2_pytorch, modified by Yang You
 
 
-def timeit(tag, t):
-    print("{}: {}s".format(tag, time() - t))
-    return time()
-
-
-def pc_normalize(pc):
-    centroid = np.mean(pc, axis=0)
-    pc = pc - centroid
-    m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
-    pc = pc / m
-    return pc
+# def timeit(tag, t):
+#     """Timer function.
+#     Args:
+#         tag:
+#             Name of the function to time
+#         t:
+#             initial time
+#     """
+#     print("{}: {}s".format(tag, time() - t))
+#     return time()
+# 
+# 
+# def pc_normalize(pc):
+#     """Desc
+# 
+#     Further Desc
+# 
+#     Args:
+#         Args1:
+#             Desc1
+#         Args2:
+#             Desc2
+#     """
+#     centroid = np.mean(pc, axis=0)
+#     pc = pc - centroid
+#     m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
+#     pc = pc / m
+#     return pc
 
 
 def square_distance(src, dst):
-    """
-    Calculate Euclid distance between each two points.
+    """Calculate Euclid distance between each two points.
+
     src^T * dst = xn * xm + yn * ym + zn * zm；
     sum(src^2, dim=-1) = xn*xn + yn*yn + zn*zn;
     sum(dst^2, dim=-1) = xm*xm + ym*ym + zm*zm;
     dist = (xn - xm)^2 + (yn - ym)^2 + (zn - zm)^2
          = sum(src**2,dim=-1)+sum(dst**2,dim=-1)-2*src^T*dst
-    Input:
-        src: source points, [B, N, C]
-        dst: target points, [B, M, C]
-    Output:
-        dist: per-point square distance, [B, N, M]
+
+    Args:
+        src:
+            source points, [B, N, C]
+        dst:
+            target points, [B, M, C]
+    Return:
+        dist:
+            per-point square distance, [B, N, M]
     """
     return torch.sum((src[:, :, None] - dst[:, None]) ** 2, dim=-1)
 
 
 def index_points(points, idx):
-    """
-    Input:
-        points: input points data, [B, N, C]
-        idx: sample index data, [B, S, [K]]
+    """Return indexed points.
+
+    Args:
+        points:
+            input points data, [B, N, C]
+        idx:
+            sample index data, [B, S, [K]]
     Return:
-        new_points:, indexed points data, [B, S, [K], C]
+        new_points:
+            indexed points data, [B, S, [K], C]
     """
     raw_size = idx.size()
     idx = idx.reshape(raw_size[0], -1)
@@ -53,12 +79,16 @@ def index_points(points, idx):
 
 
 def farthest_point_sample(xyz, npoint):
-    """
-    Input:
-        xyz: pointcloud data, [B, N, 3]
-        npoint: number of samples
+    """Calculate farthest poimt
+
+    Args:
+        xyz:
+            pointcloud data, [B, N, 3]
+        npoint:
+            number of samples
     Return:
-        centroids: sampled pointcloud index, [B, npoint]
+        centroids:
+            sampled pointcloud index, [B, npoint]
     """
     device = xyz.device
     B, N, C = xyz.shape
@@ -76,8 +106,8 @@ def farthest_point_sample(xyz, npoint):
 
 
 def query_ball_point(radius, nsample, xyz, new_xyz):
-    """
-    Input:
+    """ 
+    Args:
         radius: local region radius
         nsample: max sample number in local region
         xyz: all points, [B, N, 3]
@@ -101,11 +131,11 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
 
 
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False, knn=False):
-    """
-    Input:
-        npoint:
-        radius:
-        nsample:
+    """ 
+    Args:
+        npoint: Number of Points
+        radius: Radius of the distance
+        nsample: Number of Samples
         xyz: input points position data, [B, N, C]
         points: input points data, [B, N, D]
     Return:
@@ -144,7 +174,7 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False, knn=
 
 def sample_and_group_all(xyz, points):
     """
-    Input:
+    Args:
         xyz: input points position data, [B, N, C]
         points: input points data, [B, N, D]
     Return:
@@ -164,6 +194,16 @@ def sample_and_group_all(xyz, points):
 
 class PointNetSetAbstraction(nn.Module):
     def __init__(self, npoint, radius, nsample, in_channel, mlp, group_all, knn=False):
+        """Desc
+
+            Further Desc
+
+            Args:
+                Args1:
+                    Desc1
+                Args2:
+                    Desc2
+        """
         super(PointNetSetAbstraction, self).__init__()
         self.npoint = npoint
         self.radius = radius
@@ -180,7 +220,7 @@ class PointNetSetAbstraction(nn.Module):
 
     def forward(self, xyz, points):
         """
-        Input:
+        Args:
             xyz: input points position data, [B, N, C]
             points: input points data, [B, N, D]
         Return:
@@ -208,6 +248,16 @@ class PointNetSetAbstractionMsg(nn.Module):
     def __init__(
         self, npoint, radius_list, nsample_list, in_channel, mlp_list, knn=False
     ):
+        """Desc
+
+        Further Desc
+
+        Args:
+            Args1:
+                Desc1
+            Args2:
+                Desc2
+        """
         super(PointNetSetAbstractionMsg, self).__init__()
         self.npoint = npoint
         self.radius_list = radius_list
@@ -228,7 +278,7 @@ class PointNetSetAbstractionMsg(nn.Module):
 
     def forward(self, xyz, points, seed_idx=None):
         """
-        Input:
+        Args:
             xyz: input points position data, [B, C, N]
             points: input points data, [B, D, N]
         Return:
@@ -272,6 +322,16 @@ class PointNetSetAbstractionMsg(nn.Module):
 # NoteL this function swaps N and C
 class PointNetFeaturePropagation(nn.Module):
     def __init__(self, in_channel, mlp):
+        """Desc
+
+        Further Desc
+
+        Args:
+            Args1:
+                Desc1
+            Args2:
+                Desc2
+        """
         super(PointNetFeaturePropagation, self).__init__()
         self.mlp_convs = nn.ModuleList()
         self.mlp_bns = nn.ModuleList()
@@ -283,7 +343,7 @@ class PointNetFeaturePropagation(nn.Module):
 
     def forward(self, xyz1, xyz2, points1, points2):
         """
-        Input:
+        Args:
             xyz1: input points position data, [B, C, N]
             xyz2: sampled input points position data, [B, C, S]
             points1: input points data, [B, D, N]

@@ -6,13 +6,14 @@ Generally following:
 https://github.com/qq456cvb/Point-Transformers/tree/master/models/Hengshuang
 """
 import torch
+import yoco
 import torch.nn as nn
 from sdf_single_shot.pointnet_util import *
 from sdf_single_shot.transformer import TransformerBlock
 from typing import TypedDict
 
 
-class Cfg(TypedDict):
+class Cfg(TypedDict, total=False):
     """Configuration dictionary of various point_transformer classes.
 
     Attributes:
@@ -96,6 +97,7 @@ class Backbone(nn.Module):
             cfg: a dictionary comprising of class Cfg
         """
         super().__init__()
+
         n_points, n_blocks, n_neighbors, n_c, d_points = (
             cfg["n_points"],
             cfg["n_blocks"],
@@ -158,6 +160,7 @@ class PointTransformer(nn.Module):
         super().__init__()
 
         # initialize backbone
+        cfg = yoco.load_config(cfg, default_dict=default_cfg)
         self.backbone = Backbone(cfg)
         n_points, n_blocks, n_neighbors, n_c, d_points = (
             cfg["n_points"],
