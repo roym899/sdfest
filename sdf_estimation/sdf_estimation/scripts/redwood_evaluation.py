@@ -1,7 +1,7 @@
-"""Script to run randomized rendering evaluation on synthetic data.
+"""Script to run evaluation on Redwood dataset.
 
 Usage:
-  python rendering_evaluation.py --config configs/config.yaml --ann_path ./anns/
+  python redwood_evaluation.py --config configs/config.yaml --ann_path ./anns/
   --data_path ./redwood/ --out_folder ./results
 
 ann_path expected structure:
