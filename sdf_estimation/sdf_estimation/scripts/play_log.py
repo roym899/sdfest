@@ -23,10 +23,14 @@ from sdf_estimation.simple_setup import SDFPipeline
 from sdf_estimation import synthetic
 from sdf_single_shot import pointset_utils, quaternion_utils
 
+reconstruction_types = ["mesh", "pointcloud", "none"]
 reset = False
 realtime = True
-reconstruction_type = "mesh" or "pointcloud"
+reconstruction_type = "mesh"
 animation_queued = False
+color = True
+camera_frames = True
+pause = False
 
 
 def quit_program(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
@@ -50,12 +54,36 @@ def toggle_realtime(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     return False
 
 
+def toggle_pause(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
+    """Toggle pause."""
+    global pause
+    pause = not pause
+    print(f"Pause: {pause}")
+    return False
+
+
+def toggle_color(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
+    """Toggle color pointcloud."""
+    global color
+    color = not color
+    print(f"Color: {color}")
+    return False
+
+
+def toggle_camera_frames(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
+    """Toggle camera frame visualization."""
+    global camera_frames
+    camera_frames = not camera_frames
+    print(f"Camera frames: {camera_frames}")
+    return False
+
+
 def switch_reconstruction_type(_: o3d.visualization.VisualizerWithKeyCallback) -> bool:
     """Switch between mesh and pointcloud reconstruction."""
     global reconstruction_type
-    reconstruction_type = (
-        "mesh" if reconstruction_type == "pointcloud" else "pointcloud"
-    )
+    cur_id = reconstruction_types.index(reconstruction_type)
+    cur_id = (cur_id + 1) % len(reconstruction_types)
+    reconstruction_type = reconstruction_types[cur_id]
     print(f"Reconstruction: {reconstruction_type}")
     return False
 
@@ -107,13 +135,19 @@ def main() -> None:
     vis.register_key_callback(key=ord("R"), callback_func=toggle_realtime)
     vis.register_key_callback(key=ord("S"), callback_func=switch_reconstruction_type)
     vis.register_key_callback(key=ord("N"), callback_func=queue_animation)
+    vis.register_key_callback(key=ord("C"), callback_func=toggle_color)
+    vis.register_key_callback(key=ord("F"), callback_func=toggle_camera_frames)
+    vis.register_key_callback(key=ord(" "), callback_func=toggle_pause)
     vis.register_key_callback(key=KEY_ESCAPE, callback_func=quit_program)
     vis.create_window(width=640, height=480)
     print(
         "Controls\n\ta: reset view point & bounding box\n"
         "\tr: toggle realtime\n"
-        "\ts: switch reconstruction_type",
-        "\tn: queue animation",
+        "\ts: switch reconstruction_type\n",
+        "\tn: queue animation\n",
+        "\tc: toggle color\n",
+        "\tf: toggle camera frames\n",
+        "\tspace: pause loop\n",
     )
     first = True
     while True:
@@ -155,13 +189,14 @@ def main() -> None:
 
             if "depth_images" in log_entry:
                 pointclouds = []
-                for depth_image, t_c2w, quat_c2w in zip(
+                for depth_image, color_image, t_c2w, quat_c2w in zip(
                     log_entry["depth_images"],
+                    log_entry["color_images"],
                     log_entry["camera_positions"],
                     log_entry["camera_orientations"],
                 ):
                     points_c = pointset_utils.depth_to_pointcloud(
-                        depth_image, config["camera"]["fx"], normalize=False
+                        depth_image, pipeline.cam, normalize=False
                     )
                     pointcloud_torch = (
                         quaternion_utils.quaternion_apply(quat_c2w, points_c) + t_c2w
@@ -170,20 +205,35 @@ def main() -> None:
                     pointcloud_o3d = o3d.geometry.PointCloud(
                         o3d.utility.Vector3dVector(pointcloud_numpy)
                     )
-                    pointcloud_o3d.colors = o3d.utility.Vector3dVector(
-                        np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2])
-                    )
+                    if color:
+                        pointcloud_colors_torch = color_image[depth_image != 0]
+                        pointcloud_colors_numpy = pointcloud_colors_torch.cpu().numpy()
+                        pointcloud_o3d.colors = o3d.utility.Vector3dVector(
+                            pointcloud_colors_numpy
+                        )
+                    else:
+                        pointcloud_o3d.colors = o3d.utility.Vector3dVector(
+                            np.ones_like(pointcloud_numpy) * np.array([1.0, 0.2, 0.2])
+                        )
 
                     pointclouds.append(pointcloud_o3d)
 
-            geometries = [] + cam_meshes + pointclouds
-            if "mesh" in log_entry:
-                geometries.append(log_entry[reconstruction_type])
-            vis.clear_geometries()
-            for i, geometry in enumerate(geometries):
-                vis.add_geometry(geometry, reset_bounding_box=first or reset)
-                if i == len(geometries) - 1:
-                    reset = first = False
+            while True:
+                geometries = [] + pointclouds
+                if camera_frames:
+                    geometries += cam_meshes
+                if "mesh" in log_entry and reconstruction_type != "none":
+                    geometries.append(log_entry[reconstruction_type])
+                vis.clear_geometries()
+                for i, geometry in enumerate(geometries):
+                    vis.add_geometry(geometry, reset_bounding_box=first or reset)
+                    if i == len(geometries) - 1:
+                        reset = first = False
+                if not pause:
+                    break
+                else:
+                    vis.poll_events()
+                    vis.update_renderer()
 
             if animation_folder is not None:
                 vis.poll_events()

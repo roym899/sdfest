@@ -79,6 +79,12 @@ class SDFPipeline:
         self.init_config = config["init"]
         self.vae_config = config["vae"] if "vae" in config else self.init_config["vae"]
         self.camera_config = config["camera"]
+        self.result_selection_strategy = config.get(
+            "result_selection_strategy", "last_iteration"
+        )  # last_iteration | best_inlier_ratio
+        self._relative_inlier_threshold = config.get(
+            "relative_inlier_threshold", 0.03
+        )  # relative depth error threshold for pixel to be considered inlier
 
         self.config = config
 
@@ -86,7 +92,7 @@ class SDFPipeline:
     def _compute_gradients(loss: torch.Tensor) -> None:
         loss.backward()
 
-    def _compute_losses(
+    def _compute_view_losses(
         self,
         depth_input: torch.Tensor,
         depth_estimate: torch.Tensor,
@@ -135,6 +141,55 @@ class SDFPipeline:
 
         return loss_depth, loss_pc, loss_nn
 
+    def _compute_point_constraint_loss(self, orientation: torch.Tensor) -> torch.Tensor:
+        """Compute loss for point constraint if specified."""
+        if self._point_constraint is not None:
+            loss_point_constraint = losses.point_constraint_loss(
+                orientation_q=orientation[0],
+                source=self._point_constraint[0],
+                target=self._point_constraint[1],
+            )
+            weight = self._point_constraint[2]
+            return weight * loss_point_constraint
+        else:
+            return orientation.new_tensor(0.0)
+
+    def _compute_inlier_ratio(
+        self,
+        depth_input: torch.Tensor,
+        depth_estimate: torch.Tensor,
+    ) -> None:
+        """Compute ratio of pixels with small relative depth error."""
+        rel_depth_error = torch.abs(depth_input - depth_estimate) / depth_input
+        inlier_mask = rel_depth_error < self._relative_inlier_threshold
+        inliers = torch.count_nonzero(inlier_mask)
+        valid_depth_pixels = torch.count_nonzero(depth_input)
+        inlier_ratio = inliers / valid_depth_pixels
+        return inlier_ratio
+
+    def _update_best_estimate(
+        self,
+        depth_input: torch.Tensor,
+        depth_estimate: torch.Tensor,
+        position: torch.Tensor,
+        orientation: torch.Tensor,
+        scale: torch.Tensor,
+        latent_shape: torch.Tensor,
+    ) -> None:
+        """Update the best current estimate by keeping track of inlier ratio.
+
+        Returns:
+            Inlier ratio of this configuration.
+        """
+        inlier_ratio = self._compute_inlier_ratio(depth_input, depth_estimate)
+        if self._best_inlier_ratio is None or inlier_ratio > self._best_inlier_ratio:
+            self._best_inlier_ratio = inlier_ratio
+            self._best_position = position
+            self._best_orientation = orientation
+            self._best_scale = scale
+            self._best_latent_shape = latent_shape
+        return inlier_ratio
+
     def __call__(
         self,
         depth_images: torch.Tensor,
@@ -146,11 +201,16 @@ class SDFPipeline:
         log_path: Optional[str] = None,
         shape_optimization: bool = True,
         animation_path: Optional[str] = None,
+        point_constraint: Optional[Tuple[torch.Tensor]] = None,
+        prior_orientation_distribution: Optional[torch.Tensor] = None,
+        training_orientation_distribution: Optional[torch.Tensor] = None,
     ) -> tuple:
         """Infer pose, size and latent representation from depth and mask.
 
         If multiple images are passed the cameras are assumed to be fixed.
         All tensors should be on the same device as the pipeline.
+
+        Batch dimension N must be provided either for all or none of the arguments.
 
         Args:
             depth_images:
@@ -183,6 +243,30 @@ class SDFPipeline:
                 enable or disable shape optimization during iterative optimization
             animation_path:
                 file path to write rendering and error visualizations to
+            point_constraint:
+                tuple of source point and rotated target point and weight
+                a loss will be added that penalizes
+                    weight * || rotation @ source - target ||_2
+            prior_orientation_distribution:
+                Prior distribution of orientations used for initialization.
+                If None, distribution of initialization network will not be modified.
+                Only supported for initialization network with discretized orientation
+                representation.
+                Output distribution of initialization network will be adjusted by
+                multiplying with
+                prior_orientation_distribution / training_orientation_distribution
+                and renormalizing.
+                Tensor of shape (N,C,) or (C,) for single image.
+                C being the number of grid cells in the SO3Grid used by the
+                initialization network.
+            training_orientation_distribution:
+                Distribution of orientations used for training initialization network.
+                If None, equal probability for each cell will be assumed.
+                Note this is only approximately the same as a uniform distribution.
+                Only used if prior_orientation_distribution is provided.
+                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network. N not supported, since same
+                training network (and hence distribution) is used independent of view.
 
         Returns:
             - 3D pose of SDF center in world frame, shape (1,3,)
@@ -190,6 +274,10 @@ class SDFPipeline:
             - Size of SDF as length of half-width, shape (1,)
             - Latent shape representation of the object, shape (1,latent_size,).
         """
+        # initialize optimization
+        self._best_inlier_ratio = None
+        self._point_constraint = point_constraint
+
         if animation_path is not None:
             self._create_animation_folders(animation_path)
 
@@ -201,9 +289,15 @@ class SDFPipeline:
             masks = masks.unsqueeze(0)
             color_images = color_images.unsqueeze(0)
             if camera_positions is not None:
-                camera_positions.unsqueeze(0)
+                camera_positions = camera_positions.unsqueeze(0)
             if camera_orientations is not None:
-                camera_orientations.unsqueeze(0)
+                camera_orientations = camera_orientations.unsqueeze(0)
+            if prior_orientation_distribution is not None:
+                prior_orientation_distribution = (
+                    prior_orientation_distribution.unsqueeze(0)
+                )
+
+        # TODO assert all tensors have expected dimension
 
         if animation_path is not None:
             self._save_inputs(animation_path, depth_images, color_images, masks)
@@ -216,12 +310,17 @@ class SDFPipeline:
             camera_orientations = torch.zeros(n_imgs, 4, device=self.device)
             camera_orientations[:, 3] = 1.0
 
+        with torch.no_grad():
+            self._preprocess_depth(depth_images, masks)
+
+        # store pointcloud without reconstruction
         if log_path is not None:
             torch.cuda.synchronize()
             self._log_data(
                 {
                     "timestamp": time.time() - start_time,
                     "depth_images": depth_images,
+                    "color_images": color_images,
                     "masks": masks,
                     "color_images": color_images,
                     "camera_positions": camera_positions,
@@ -231,9 +330,12 @@ class SDFPipeline:
 
         # Initialization
         with torch.no_grad():
-            self._preprocess_depth(depth_images, masks)
             latent_shape, position, scale, orientation = self._nn_init(
-                depth_images, camera_positions, camera_orientations
+                depth_images,
+                camera_positions,
+                camera_orientations,
+                prior_orientation_distribution,
+                training_orientation_distribution,
             )
             scale_inv = 1 / scale
 
@@ -242,7 +344,6 @@ class SDFPipeline:
             self._log_data(
                 {
                     "timestamp": time.time() - start_time,
-                    "depth_images": depth_images,
                     "camera_positions": camera_positions,
                     "camera_orientations": camera_orientations,
                     "latent_shape": latent_shape,
@@ -264,16 +365,17 @@ class SDFPipeline:
         latent_shape.requires_grad_()
 
         if visualize:
-            plt.ion()
             fig_vis, axes = plt.subplots(
                 2, 3, sharex=True, sharey=True, figsize=(12, 8)
             )
-            fig_loss, loss_ax = plt.subplots(1, 1)
+            fig_loss, (loss_ax, inlier_ax) = plt.subplots(1, 2)
             vmin, vmax = None, None
 
         depth_losses = []
         pointcloud_losses = []
         nn_losses = []
+        point_constraint_losses = []
+        inlier_ratios = []
         total_losses = []
 
         opt_vars = [
@@ -312,7 +414,7 @@ class SDFPipeline:
                     sdf[0, 0], position_c[0], orientation_c[0], scale_inv[0]
                 )
 
-                view_loss_depth, view_loss_pc, view_loss_nn = self._compute_losses(
+                view_loss_depth, view_loss_pc, view_loss_nn = self._compute_view_losses(
                     depth_image,
                     depth_estimate,
                     position_c[0],
@@ -324,10 +426,12 @@ class SDFPipeline:
                 loss_pc = loss_pc + view_loss_pc
                 loss_nn = loss_nn + view_loss_nn
 
+            loss_point_constraint = self._compute_point_constraint_loss(orientation)
             loss = (
                 self.config["depth_weight"] * loss_depth
                 + self.config["pc_weight"] * loss_pc
                 + self.config["nn_weight"] * loss_nn
+                + loss_point_constraint
             )
 
             self._compute_gradients(loss)
@@ -335,14 +439,25 @@ class SDFPipeline:
             optimizer.step()
             optimizer.zero_grad()
 
+            with torch.no_grad():
+                orientation /= torch.sqrt(torch.sum(orientation ** 2))
+                scale = 1 / scale_inv
+                inlier_ratio = self._update_best_estimate(
+                    depth_image,
+                    depth_estimate,
+                    position,
+                    orientation,
+                    scale,
+                    latent_shape,
+                )
+
             if visualize:
                 depth_losses.append(loss_depth.item())
                 pointcloud_losses.append(loss_pc.item())
                 nn_losses.append(loss_nn.item())
+                point_constraint_losses.append(loss_point_constraint.item())
+                inlier_ratios.append(inlier_ratio.item())
                 total_losses.append(loss.item())
-
-            with torch.no_grad():
-                orientation /= torch.sqrt(torch.sum(orientation ** 2))
 
             if log_path is not None:
                 torch.cuda.synchronize()
@@ -415,21 +530,28 @@ class SDFPipeline:
                     loss_ax.plot(depth_losses, label="Depth")
                     loss_ax.plot(pointcloud_losses, label="Pointcloud")
                     loss_ax.plot(nn_losses, label="Nearest Neighbor")
+                    if self._point_constraint is not None:
+                        loss_ax.plot(point_constraint_losses, label="Point constraint")
                     loss_ax.plot(total_losses, label="Total")
+                    loss_ax.set_yscale("log")
                     loss_ax.legend()
+
+                    inlier_ax.clear()
+                    inlier_ax.plot(inlier_ratios, label="Inlier Ratio")
+                    inlier_ax.legend()
 
                     axes[1, 1].clear()
                     axes[1, 1].imshow(
                         current_depth.detach().cpu(), vmin=vmin, vmax=vmax
                     )
                     axes[1, 1].set_title(f"loss {loss.item()}")
-                    plt.draw()
-                    plt.pause(0.001)
+                    fig_loss.canvas.draw()
+                    fig_vis.canvas.draw()
+                    plt.pause(0.1)
 
             self._current_iteration += 1
 
         if visualize:
-            plt.ioff()
             plt.show()
             plt.close(fig_loss)
             plt.close(fig_vis)
@@ -440,7 +562,20 @@ class SDFPipeline:
         if animation_path is not None:
             self._create_animations(animation_path)
 
-        return position, orientation, scale, latent_shape
+        if self.result_selection_strategy == "last_iteration":
+            return position, orientation, scale, latent_shape
+        elif self.result_selection_strategy == "best_inlier_ratio":
+            return (
+                self._best_position,
+                self._best_orientation,
+                self._best_scale,
+                self._best_latent_shape,
+            )
+        else:
+            raise ValueError(
+                f"Result selection strategy {self.result_selection_strategy} is not"
+                "supported."
+            )
 
     def _log_data(self, data: dict) -> None:
         """Add dictionary with associated timestamp to log data list."""
@@ -562,6 +697,8 @@ class SDFPipeline:
         depth_images: torch.Tensor,
         camera_positions: torch.Tensor,
         camera_orientations: torch.Tensor,
+        prior_orientation_distribution: Optional[torch.Tensor] = None,
+        training_orientation_distribution: Optional[torch.Tensor] = None,
     ) -> Tuple:
         """Estimate shape, pose, scale and orientation using initialization network.
 
@@ -572,9 +709,24 @@ class SDFPipeline:
             camera_orientations:
                 orientation of camera in world-frame as normalized quaternion,
                 quaternion is in scalar-last convention, shape (N, 4)
-            strategy:
-                how to handle multiple depth images
-                "first": return single state based on first depth image
+            prior_orientation_distribution:
+                Prior distribution of orientations used for initialization.
+                If None, distribution of initialization network will not be modified.
+                Only supported for initialization network with discretized orientation
+                representation.
+                Output distribution of initialization network will be adjusted by
+                multiplying with
+                prior_orientation_distribution / training_orientation_distribution
+                and renormalizing.
+                Tensor of shape (N,C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network.
+            training_orientation_distribution:
+                Distribution of orientations used for training initialization network.
+                If None, equal probability for each cell will be assumed.
+                Note this is only approximately the same as a uniform distribution.
+                Only used if prior_orientation_distribution is provided.
+                Tensor of shape (C,). C being the number of grid cells in the SO3Grid
+                used by the initialization network.
 
         Returns:
             Tuple comprised of:
@@ -583,10 +735,19 @@ class SDFPipeline:
             - Size of SDF as length of half-width, (1,)
             - Orientation of SDF as normalized quaternion (1,4)
         """
+        if (
+            prior_orientation_distribution is not None
+            and self.init_config["head"]["orientation_repr"] != "discretized"
+        ):
+            raise ValueError(
+                "prior_orientation_distribution only supported for discretized "
+                "orientation representation."
+            )
+
         best = 0
         best_result = None
-        for depth_image, camera_orientation, camera_position in zip(
-            depth_images, camera_orientations, camera_positions
+        for i, (depth_image, camera_orientation, camera_position) in enumerate(
+            zip(depth_images, camera_orientations, camera_positions)
         ):
             centroid = None
             if self.init_config["backbone_type"] == "VanillaPointNet":
@@ -608,11 +769,18 @@ class SDFPipeline:
                 position += centroid
 
             if self.init_config["head"]["orientation_repr"] == "discretized":
-                orientation_repr = torch.softmax(orientation_repr, 1)
-                # print(torch.sort(orientation_repr, dim=1).values)
+                posterior_orientation_dist = torch.softmax(orientation_repr, -1)
+
+                if prior_orientation_distribution is not None:
+                    posterior_orientation_dist = self._adjust_categorical_posterior(
+                        posterior=posterior_orientation_dist,
+                        prior=prior_orientation_distribution[i],
+                        train_prior=training_orientation_distribution,
+                    )
+
                 orientation_camera = torch.tensor(
                     self.init_network._head._grid.index_to_quat(
-                        orientation_repr.argmax().item()
+                        posterior_orientation_dist.argmax().item()
                     ),
                     dtype=torch.float,
                     device=self.device,
@@ -639,7 +807,7 @@ class SDFPipeline:
                         '"best" init strategy only supported with discretized '
                         "orientation representation"
                     )
-                maximum = orientation_repr.max()
+                maximum = posterior_orientation_dist.max()
                 if maximum > best:
                     best = maximum
                     best_result = latent_shape, position_world, scale, orientation_world
@@ -692,17 +860,20 @@ class SDFPipeline:
         instance_masks: torch.Tensor,
     ) -> None:
         color_path = os.path.join(animation_path, "color_input.png")
-        plt.imshow(color_images[0].cpu().numpy())
-        plt.savefig(color_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(color_images[0].cpu().numpy())
+        fig.savefig(color_path)
+        plt.close(fig)
         depth_path = os.path.join(animation_path, "depth_input.png")
-        plt.imshow(depth_images[0].cpu().numpy())
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(depth_images[0].cpu().numpy())
+        fig.savefig(depth_path)
+        plt.close(fig)
         mask_path = os.path.join(animation_path, "mask.png")
-        plt.imshow(instance_masks[0].cpu().numpy())
-        plt.savefig(mask_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(instance_masks[0].cpu().numpy())
+        fig.savefig(mask_path)
+        plt.close(fig)
 
     def _save_preprocessed_inputs(
         self,
@@ -710,9 +881,10 @@ class SDFPipeline:
         depth_images: torch.Tensor,
     ) -> None:
         depth_path = os.path.join(animation_path, "preprocessed_depth_input.png")
-        plt.imshow(depth_images[0].cpu().numpy())
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(depth_images[0].cpu().numpy())
+        fig.savefig(depth_path)
+        plt.close(fig)
 
     def _save_current_state(
         self,
@@ -734,9 +906,10 @@ class SDFPipeline:
         depth_path = os.path.join(
             animation_path, "depth", f"{self._current_iteration:06}.png"
         )
-        plt.imshow(current_depth.cpu().numpy(), interpolation="none")
-        plt.savefig(depth_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(current_depth.cpu().numpy(), interpolation="none")
+        fig.savefig(depth_path)
+        plt.close(fig)
 
         error_image = torch.abs(current_depth - depth_images[0])
         error_image[depth_images[0] == 0] = 0
@@ -744,9 +917,10 @@ class SDFPipeline:
         error_path = os.path.join(
             animation_path, "depth_error", f"{self._current_iteration:06}.png"
         )
-        plt.imshow(error_image.cpu().numpy(), interpolation="none")
-        plt.savefig(error_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        ax.imshow(error_image.cpu().numpy(), interpolation="none")
+        fig.savefig(error_path)
+        plt.close(fig)
 
         unscaled_threshold = self.config["threshold"] * scale_inv.item()
         mesh = sdf_utils.mesh_from_sdf(
@@ -761,11 +935,12 @@ class SDFPipeline:
         # map y -> z; z -> y
         transform = np.eye(4)
         transform[0:3, 0:3] = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])
-        sdf_utils.plot_mesh(mesh, transform=transform)
-        plt.savefig(sdf_path)
-        plt.close()
+        fig, ax = plt.subplots()
+        sdf_utils.plot_mesh(mesh, transform=transform, plot_object=ax)
+        fig.savefig(sdf_path)
+        plt.close(fig)
 
-    def _create_animations(self, animation_path: str):
+    def _create_animations(self, animation_path: str) -> None:
         names = ["sdf", "depth", "depth_error"]
         for name in names:
             frame_folder = os.path.join(animation_path, name)
@@ -773,3 +948,38 @@ class SDFPipeline:
             ffmpeg.input(
                 os.path.join(frame_folder, "*.png"), pattern_type="glob", framerate=30
             ).output(video_name).run()
+
+    @staticmethod
+    def _adjust_categorical_posterior(
+        posterior: torch.Tensor, prior: torch.Tensor, train_prior: torch.Tensor
+    ) -> torch.Tensor:
+        """Adjust categorical posterior distribution.
+
+        Posterior is calculated with a train_prior
+
+        Args:
+            posterior:
+                Posterior distribution computed assuming train_prior.
+                Shape (..., K). K being number of categories.
+            prior:
+                The desired new prior distribution.
+                Same shape as posterior.
+            train_prior:
+                The prior distribution used to compute the posterior.
+                If None, equal probability for each category will be assumed.
+                Same shape as posterior.
+
+        Returns:
+            The categorical posterior, adjusted such that prior is prior, instead of
+            train_prior.
+            Same shape as posterior.
+        """
+        adjusted_posterior = posterior.clone()
+        # adjust if prior different from training
+        adjusted_posterior *= prior
+        if train_prior is not None:
+            adjusted_posterior /= train_prior
+        adjusted_posterior = torch.nn.functional.normalize(
+            adjusted_posterior, p=1, dim=-1
+        )
+        return adjusted_posterior

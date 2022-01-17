@@ -2,6 +2,8 @@
 
 import torch
 
+from sdf_single_shot import quaternion_utils
+
 
 def nn_loss(points_from: torch.Tensor, points_to: torch.Tensor) -> torch.Tensor:
     """Compute the distance to the closest neighbor in the other set of points.
@@ -131,3 +133,21 @@ def pc_loss(
     ]
     sdf_value[mask] = 0
     return sdf_value * scale
+
+
+def point_constraint_loss(
+    orientation_q: torch.Tensor, source: torch.Tensor, target: torch.Tensor
+) -> torch.Tensor:
+    """Compute Euclidean distance between rotated source point and target point.
+
+    Args:
+        orientation_q:
+            Orientation of object in world / camera frame as quaternion.
+            Scalar-last convention. Shape (4,).
+        source: Point in object frame, which will be transformed. (3,).
+        target: Point in rotated oject frame. Shape (3,).
+    Returns:
+        Euclidean norm between R(orientation_q) @ source - target. Scalar.
+    """
+    rotated_source = quaternion_utils.quaternion_apply(orientation_q, source)
+    return torch.linalg.norm(rotated_source - target)
