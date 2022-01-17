@@ -337,7 +337,6 @@ class SDFPipeline:
                 prior_orientation_distribution,
                 training_orientation_distribution,
             )
-            scale_inv = 1 / scale
 
         if log_path is not None:
             torch.cuda.synchronize()
@@ -348,7 +347,7 @@ class SDFPipeline:
                     "camera_orientations": camera_orientations,
                     "latent_shape": latent_shape,
                     "position": position,
-                    "scale_inv": scale_inv,
+                    "scale_inv": 1 / scale,
                     "orientation": orientation,
                 },
             )
@@ -360,7 +359,7 @@ class SDFPipeline:
         self._current_iteration = 1
 
         position.requires_grad_()
-        scale_inv.requires_grad_()
+        scale.requires_grad_()
         orientation.requires_grad_()
         latent_shape.requires_grad_()
 
@@ -381,7 +380,7 @@ class SDFPipeline:
         opt_vars = [
             {"params": position, "lr": 1e-3},
             {"params": orientation, "lr": 1e-2},
-            {"params": scale_inv, "lr": 1e-2},
+            {"params": scale, "lr": 1e-3},
             {"params": latent_shape, "lr": 1e-2},
         ]
         optimizer = torch.optim.Adam(opt_vars)
@@ -411,7 +410,7 @@ class SDFPipeline:
                 )
 
                 depth_estimate = self.render(
-                    sdf[0, 0], position_c[0], orientation_c[0], scale_inv[0]
+                    sdf[0, 0], position_c[0], orientation_c[0], 1 / scale[0]
                 )
 
                 view_loss_depth, view_loss_pc, view_loss_nn = self._compute_view_losses(
@@ -419,7 +418,7 @@ class SDFPipeline:
                     depth_estimate,
                     position_c[0],
                     orientation_c[0],
-                    1 / scale_inv[0],
+                    scale[0],
                     sdf[0, 0],
                 )
                 loss_depth = loss_depth + view_loss_depth
@@ -441,7 +440,6 @@ class SDFPipeline:
 
             with torch.no_grad():
                 orientation /= torch.sqrt(torch.sum(orientation ** 2))
-                scale = 1 / scale_inv
                 inlier_ratio = self._update_best_estimate(
                     depth_image,
                     depth_estimate,
@@ -466,7 +464,7 @@ class SDFPipeline:
                         "timestamp": time.time() - start_time,
                         "latent_shape": latent_shape,
                         "position": position,
-                        "scale_inv": scale_inv,
+                        "scale_inv": 1 / scale,
                         "orientation": orientation,
                     },
                 )
@@ -480,7 +478,7 @@ class SDFPipeline:
                         camera_orientations,
                         position,
                         orientation,
-                        scale_inv,
+                        1 / scale,
                         sdf,
                     )
 
@@ -497,7 +495,7 @@ class SDFPipeline:
                     )
 
                     current_depth = self.render(
-                        sdf[0, 0], position_c, orientation_c, scale_inv
+                        sdf[0, 0], position_c, orientation_c, 1 / scale
                     )
 
                     depth_image = depth_images[0]
