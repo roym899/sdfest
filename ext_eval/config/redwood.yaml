@@ -1,0 +1,19 @@
+config:
+  - method_configs:
+      cass: ./cass.yaml
+      nocs: ./nocs.yaml
+
+camera:
+  width: 640
+  height: 480
+  fx: 525
+  fy: 525
+  cx: 319.5
+  cy: 239.5
+  pixel_center: 0
+visualize_input: False
+visualize_output: False
+visualize_gt: False
+dataset: "redwood"
+segmentation: "gt"
+run_name: ""

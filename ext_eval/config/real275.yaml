@@ -1,0 +1,30 @@
+# Standalone config to use with real275_evaluation.py
+config:
+  - methods:
+      cass: 
+        config_dict: ./cass.yaml
+      nocs:
+        config_dict: ./nocs.yaml
+
+methods:
+  cass:
+    type: cass.CASSWrapper
+  nocs:
+    type: nocs.NOCSWrapper
+
+# See https://github.com/hughw19/NOCS_CVPR2019/blob/master/detect_eval.py for camera
+# intrinsics (seems to be different from info.txt in the dataset folder).
+camera:
+  width: 640
+  height: 480
+  fx: 591.0125
+  fy: 590.16775
+  cx: 322.525
+  cy: 244.11084
+  pixel_center: 0
+visualize_input: False
+visualize_output: False
+visualize_gt: False
+dataset: "nocs"
+detection: "gt"
+run_name: ""
