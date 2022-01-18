@@ -8,9 +8,9 @@ config:
 
 methods:
   cass:
-    type: cass.CASSWrapper
+    type: method_wrappers.CASSWrapper
   nocs:
-    type: nocs.NOCSWrapper
+    type: method_wrappers.NOCSWrapper
 
 # See https://github.com/hughw19/NOCS_CVPR2019/blob/master/detect_eval.py for camera
 # intrinsics (seems to be different from info.txt in the dataset folder).
