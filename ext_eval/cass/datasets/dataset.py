@@ -29,10 +29,15 @@ def align(class_ids, masks, coords, depth, intr):
             continue
         coord_pts = coords[idxs[0], idxs[1], :] - 0.5
 
-        scale, rotation, trans, _ = dutils.estimateSimilarityTranform(
-            coord_pts, pts)
-        if rotation is None or trans is None or np.any(np.isnan(rotation)) or np.any(np.isnan(trans))\
-                or np.any(np.isinf(trans)) or np.any(np.isinf(rotation)):
+        scale, rotation, trans, _ = dutils.estimateSimilarityTranform(coord_pts, pts)
+        if (
+            rotation is None
+            or trans is None
+            or np.any(np.isnan(rotation))
+            or np.any(np.isnan(trans))
+            or np.any(np.isinf(trans))
+            or np.any(np.isinf(rotation))
+        ):
             RTs[i] = np.eye(4)
             continue
 
@@ -53,16 +58,16 @@ def load_obj(path, ori_path, num_points):
         return dutils.load_obj(path)
     else:
         vertex = dutils.sample_obj(ori_path, num_points, True)
-        dutils.save_obj(vertex, path[:-3]+"ply")
+        dutils.save_obj(vertex, path[:-3] + "ply")
         return np.asarray(vertex)
 
 
 class PoseDataset(data.Dataset):
     def __init__(self, mode, num_pt, root):
-        if mode == 'train':
-            self.path = 'datasets/dataset_config/train_data_list.txt'
-        elif mode == 'test':
-            self.path = 'datasets/dataset_config/test_data_list.txt'
+        if mode == "train":
+            self.path = "datasets/dataset_config/train_data_list.txt"
+        elif mode == "test":
+            self.path = "datasets/dataset_config/test_data_list.txt"
         self.num_pt = num_pt
         self.root = root
 
@@ -102,7 +107,8 @@ class PoseDataset(data.Dataset):
         self.minimum_num_pt = 50
 
         self.norm = transforms.Normalize(
-            mean=[0.51, 0.47, 0.44], std=[0.29, 0.27, 0.28])
+            mean=[0.51, 0.47, 0.44], std=[0.29, 0.27, 0.28]
+        )
         self.symmetry_obj_idx = [0, 1, 3]
 
         self.class_names = PoseDataset.get_class_names()
@@ -117,17 +123,24 @@ class PoseDataset(data.Dataset):
 
         return class_names
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         try:
-            img = np.array(cv2.imread(
-                '{0}/{1}_color.png'.format(self.root, self.list[index]))) / 255.
-            depth = np.array(cv2.imread(
-                '{0}/{1}_depth.png'.format(self.root, self.list[index]), -1))
+            img = (
+                np.array(
+                    cv2.imread("{0}/{1}_color.png".format(self.root, self.list[index]))
+                )
+                / 255.0
+            )
+            depth = np.array(
+                cv2.imread("{0}/{1}_depth.png".format(self.root, self.list[index]), -1)
+            )
             if len(depth.shape) == 3:
-                depth = np.uint16(depth[:, :, 1] * 256) + \
-                    np.uint16(depth[:, :, 2])
-            label = np.array(cv2.imread(
-                '{0}/{1}_mask.png'.format(self.root, self.list[index]))[:, :, 2])
+                depth = np.uint16(depth[:, :, 1] * 256) + np.uint16(depth[:, :, 2])
+            label = np.array(
+                cv2.imread("{0}/{1}_mask.png".format(self.root, self.list[index]))[
+                    :, :, 2
+                ]
+            )
 
             meta = dict()
             with open("{0}/{1}_meta.txt".format(self.root, self.list[index]), "r") as f:
@@ -138,20 +151,36 @@ class PoseDataset(data.Dataset):
                         continue
                     d = {"cls_id": line[1], "inst_name": line[2]}
                     if "real_train" in self.list[index]:
-                        d["inst_dir"] = os.path.join(self.root, "obj_models", "real_train",
-                                                     line[2]+"_{}.ply".format(self.num_pt))
-                        d["ori_inst_dir"] = os.path.join(self.root,
-                                                         "obj_models", "real_train", line[2]+".obj")
-                    elif "real_test" in self.list[index]:
-                        d["inst_dir"] = os.path.join(self.root, "obj_models", "real_test",
-                                                     line[2]+"_{}.ply".format(self.num_pt))
+                        d["inst_dir"] = os.path.join(
+                            self.root,
+                            "obj_models",
+                            "real_train",
+                            line[2] + "_{}.ply".format(self.num_pt),
+                        )
                         d["ori_inst_dir"] = os.path.join(
-                            self.root, "obj_models", "real_test", line[2]+".obj")
+                            self.root, "obj_models", "real_train", line[2] + ".obj"
+                        )
+                    elif "real_test" in self.list[index]:
+                        d["inst_dir"] = os.path.join(
+                            self.root,
+                            "obj_models",
+                            "real_test",
+                            line[2] + "_{}.ply".format(self.num_pt),
+                        )
+                        d["ori_inst_dir"] = os.path.join(
+                            self.root, "obj_models", "real_test", line[2] + ".obj"
+                        )
                     else:
-                        d["inst_dir"] = os.path.join(self.root, "obj_models", "train",
-                                                     *line[2:], "model_{}.ply".format(self.num_pt))
-                        d["ori_inst_dir"] = os.path.join(self.root, "obj_models", "train",
-                                                         *line[2:], "model.obj")
+                        d["inst_dir"] = os.path.join(
+                            self.root,
+                            "obj_models",
+                            "train",
+                            *line[2:],
+                            "model_{}.ply".format(self.num_pt)
+                        )
+                        d["ori_inst_dir"] = os.path.join(
+                            self.root, "obj_models", "train", *line[2:], "model.obj"
+                        )
                     meta[int(line[0])] = d
 
             if not self.list[index].startswith("real"):
@@ -175,52 +204,80 @@ class PoseDataset(data.Dataset):
                 if len(mask.nonzero()[0]) > self.minimum_num_pt:
                     break
             else:
-                print("Can't find any valid training object in {}".format(
-                    self.list[index]))
+                print(
+                    "Can't find any valid training object in {}".format(
+                        self.list[index]
+                    )
+                )
                 raise ValueError
 
             # A method to load target_r and target_t
-            if os.path.isfile("{}/gts/{}_poses.txt".format(self.root, self.list[index])) and os.path.isfile("{}/gts/{}_scales.txt".format(self.root, self.list[index])):
+            if os.path.isfile(
+                "{}/gts/{}_poses.txt".format(self.root, self.list[index])
+            ) and os.path.isfile(
+                "{}/gts/{}_scales.txt".format(self.root, self.list[index])
+            ):
                 meta["poses"] = np.loadtxt(
-                    "{}/gts/{}_poses.txt".format(self.root, self.list[index])).reshape(-1, 4, 4)
+                    "{}/gts/{}_poses.txt".format(self.root, self.list[index])
+                ).reshape(-1, 4, 4)
                 meta["scales"] = np.loadtxt(
-                    "{}/gts/{}_scales.txt".format(self.root, self.list[index])).reshape(-1, 3)
+                    "{}/gts/{}_scales.txt".format(self.root, self.list[index])
+                ).reshape(-1, 3)
             else:
                 coord = cv2.imread(
-                    '{0}/{1}_coord.png'.format(self.root, self.list[index]))[:, :, :3][:, :, (2, 1, 0)]
-                coord = np.array(coord, dtype=np.float32) / 255.
+                    "{0}/{1}_coord.png".format(self.root, self.list[index])
+                )[:, :, :3][:, :, (2, 1, 0)]
+                coord = np.array(coord, dtype=np.float32) / 255.0
                 coord[:, :, 2] = 1.0 - coord[:, :, 2]
                 intr = np.array(
-                    [[cam_fx, 0, cam_cx], [0, cam_fy, cam_cy], [0., 0., 1.]])
+                    [[cam_fx, 0, cam_cx], [0, cam_fy, cam_cy], [0.0, 0.0, 1.0]]
+                )
                 poses, scales = align(obj, label, coord, depth, intr)
-                os.makedirs(os.path.dirname(
-                    "{}/gts/{}_poses.txt".format(self.root, self.list[index])), exist_ok=True)
-                np.savetxt("{}/gts/{}_poses.txt".format(self.root, self.list[index]),
-                           poses.reshape(-1, 4))
-                np.savetxt("{}/gts/{}_scales.txt".format(self.root,
-                                                         self.list[index]), scales.reshape(-1, 3))
+                os.makedirs(
+                    os.path.dirname(
+                        "{}/gts/{}_poses.txt".format(self.root, self.list[index])
+                    ),
+                    exist_ok=True,
+                )
+                np.savetxt(
+                    "{}/gts/{}_poses.txt".format(self.root, self.list[index]),
+                    poses.reshape(-1, 4),
+                )
+                np.savetxt(
+                    "{}/gts/{}_scales.txt".format(self.root, self.list[index]),
+                    scales.reshape(-1, 3),
+                )
                 meta["poses"] = poses
                 meta["scales"] = scales
             rmin, rmax, cmin, cmax = get_bbox(mask_label)
             img_masked = np.transpose(img, (2, 0, 1))[:, rmin:rmax, cmin:cmax]
-            target_r = meta['poses'][idx][:3, 0:3]
-            target_t = np.array([meta['poses'][idx][:3, 3:4].flatten()])
+            target_r = meta["poses"][idx][:3, 0:3]
+            target_t = np.array([meta["poses"][idx][:3, 3:4].flatten()])
 
             choose = mask[rmin:rmax, cmin:cmax].flatten().nonzero()[0]
             if len(choose) > self.num_pt:
                 c_mask = np.zeros(len(choose), dtype=int)
-                c_mask[:self.num_pt] = 1
+                c_mask[: self.num_pt] = 1
                 np.random.shuffle(c_mask)
                 choose = choose[c_mask.nonzero()]
             else:
-                choose = np.pad(choose, (0, self.num_pt - len(choose)), 'wrap')
+                choose = np.pad(choose, (0, self.num_pt - len(choose)), "wrap")
 
-            depth_masked = depth[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
-            xmap_masked = self.xmap[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
-            ymap_masked = self.ymap[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
+            depth_masked = (
+                depth[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
+            xmap_masked = (
+                self.xmap[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
+            ymap_masked = (
+                self.ymap[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
             choose = np.array([choose])
 
             cam_scale = 1000.0
@@ -231,7 +288,9 @@ class PoseDataset(data.Dataset):
 
             model_points = load_obj(
                 path=meta[obj[idx]]["inst_dir"],
-                ori_path=meta[obj[idx]]["ori_inst_dir"], num_points=self.num_pt)
+                ori_path=meta[obj[idx]]["ori_inst_dir"],
+                num_points=self.num_pt,
+            )
 
             model_points = model_points * meta["scales"][idx]
 
@@ -241,16 +300,18 @@ class PoseDataset(data.Dataset):
             matrix[:3, :3] = target_r
             quat = quaternion_from_matrix(matrix)
 
-            return torch.from_numpy(cloud.astype(np.float32)), \
-                torch.LongTensor(choose.astype(np.int32)), \
-                self.norm(torch.from_numpy(img_masked.astype(np.float32))), \
-                torch.from_numpy(target.astype(np.float32)), \
-                torch.from_numpy(model_points.astype(np.float32)), \
-                torch.LongTensor([int(meta[obj[idx]]["cls_id"])-1]), \
-                torch.from_numpy(quat.astype(np.float32)), \
-                torch.from_numpy(target_t.astype(np.float32))
+            return (
+                torch.from_numpy(cloud.astype(np.float32)),
+                torch.LongTensor(choose.astype(np.int32)),
+                self.norm(torch.from_numpy(img_masked.astype(np.float32))),
+                torch.from_numpy(target.astype(np.float32)),
+                torch.from_numpy(model_points.astype(np.float32)),
+                torch.LongTensor([int(meta[obj[idx]]["cls_id"]) - 1]),
+                torch.from_numpy(quat.astype(np.float32)),
+                torch.from_numpy(target_t.astype(np.float32)),
+            )
         except:
-            return self.__getitem__(index//2)
+            return self.__getitem__(index // 2)
 
     def __len__(self):
         return self.length
@@ -262,8 +323,26 @@ class PoseDataset(data.Dataset):
         return self.num_pt
 
 
-border_list = [-1, 40, 80, 120, 160, 200, 240, 280,
-               320, 360, 400, 440, 480, 520, 560, 600, 640, 680]
+border_list = [
+    -1,
+    40,
+    80,
+    120,
+    160,
+    200,
+    240,
+    280,
+    320,
+    360,
+    400,
+    440,
+    480,
+    520,
+    560,
+    600,
+    640,
+    680,
+]
 img_width = 480
 img_length = 640
 

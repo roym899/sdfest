@@ -6,10 +6,8 @@ import os
 import cv2
 import numpy as np
 import numpy.ma as ma
-import open3d as o3d
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.transforms as transforms
 import tqdm as tqdm
 from torch.autograd import Variable
@@ -19,32 +17,46 @@ import _init_paths
 import utils
 from datasets.dataset import get_bbox, load_obj, PoseDataset
 from lib.models import CASS
-from lib.transformations import (quaternion_from_matrix,
-                                 quaternion_matrix)
+from lib.transformations import quaternion_from_matrix, quaternion_matrix
 
 try:
     from metrics.evaluation_metrics import EMD_CD
 except:
-    raise "Failed to import EMD_CD metric. Please Compile `metric` if you want ti do reconstruction evaluation. Otherwise, just command this line."
+    raise "Failed to import EMD_CD metric. Please Compile `metric` if you want to do reconstruction evaluation. Otherwise, just command this line."
 
 parser = argparse.ArgumentParser(description="eval CASS model")
-parser.add_argument("--resume_model", type=str, default="cass_best.pth",
-                    help="resume model in 'trained_models' folder.")
-parser.add_argument("--dataset_dir", type=str, default="",
-                    help="dataset root of nocs")
+parser.add_argument(
+    "--resume_model",
+    type=str,
+    default="cass_best.pth",
+    help="resume model in 'trained_models' folder.",
+)
+parser.add_argument("--dataset_dir", type=str, default="", help="dataset root of nocs")
 parser.add_argument("--cuda", action="store_true", default=False)
-parser.add_argument("--draw", action="store_true", default=False,
-                    help="whether to draw the pointcloud image while evaluation.")
-parser.add_argument("--save_dir", type=str, default="",
-                    help="dictionary to save evaluation result.")
-parser.add_argument("--eval", action="store_true",
-                    help="whether to re-calculate result for cass")
-parser.add_argument("--mode", type=str, default="cass",
-                    choices=["cass", "nocs"], help="eval cass or nocs")
+parser.add_argument(
+    "--draw",
+    action="store_true",
+    default=False,
+    help="whether to draw the pointcloud image while evaluation.",
+)
+parser.add_argument(
+    "--save_dir", type=str, default="", help="dictionary to save evaluation result."
+)
+parser.add_argument(
+    "--eval", action="store_true", help="whether to re-calculate result for cass"
+)
+parser.add_argument(
+    "--mode",
+    type=str,
+    default="cass",
+    choices=["cass", "nocs"],
+    help="eval cass or nocs",
+)
 
 opt = parser.parse_args()
 opt.intrinsics = np.array(
-    [[591.0125, 0, 322.525], [0, 590.16775, 244.11084], [0, 0, 1]])
+    [[591.0125, 0, 322.525], [0, 590.16775, 244.11084], [0, 0, 1]]
+)
 
 
 norm = transforms.Normalize(mean=[0.51, 0.47, 0.44], std=[0.29, 0.27, 0.28])
@@ -89,8 +101,7 @@ class Model(nn.Module):
 
     def load_model(self):
         cass = CASS(self.opt)
-        resume_path = os.path.join(
-            "trained_models", opt.resume_model)
+        resume_path = os.path.join("trained_models", opt.resume_model)
         try:
             cass.load_state_dict(torch.load(resume_path), strict=True)
         except:
@@ -109,14 +120,15 @@ def get_predict_scales(recd):
 
 def calculate_emd_cf(point_a, point_b):
     obj = torch.from_numpy(point_a).unsqueeze(dim=0)
-    pre_points = torch.from_numpy(
-        point_b).unsqueeze(dim=0)
+    pre_points = torch.from_numpy(point_b).unsqueeze(dim=0)
     obj = to_device(obj).float()
     pre_points = to_device(pre_points).float()
 
     res = EMD_CD(pre_points, obj, 1, accelerated_cd=True)
-    res = {k: (v.cpu().detach().item() if not isinstance(
-        v, float) else v) for k, v in res.items()}
+    res = {
+        k: (v.cpu().detach().item() if not isinstance(v, float) else v)
+        for k, v in res.items()
+    }
 
     return res["MMD-CD"], res["MMD-EMD"]
 
@@ -133,8 +145,9 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
         cass = model.get_model(cls_ids[i] - 1)
         try:
             mask_depth = ma.getmaskarray(ma.masked_not_equal(depth, 0))
-            mask_label = ma.getmaskarray(ma.masked_equal(
-                masks, i))  # nocs mask is start from 1
+            mask_label = ma.getmaskarray(
+                ma.masked_equal(masks, i)
+            )  # nocs mask is start from 1
             mask = mask_label * mask_depth
 
             rmin, rmax, cmin, cmax = get_bbox(mask)
@@ -146,14 +159,23 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
                 np.random.shuffle(c_mask)
                 choose = choose[c_mask.nonzero()]
             else:
-                choose = np.pad(choose, (0, num_points - len(choose)), 'wrap')
+                choose = np.pad(choose, (0, num_points - len(choose)), "wrap")
 
-            depth_masked = depth[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
-            xmap_masked = xmap[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
-            ymap_masked = ymap[rmin:rmax, cmin:cmax].flatten(
-            )[choose][:, np.newaxis].astype(np.float32)
+            depth_masked = (
+                depth[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
+            xmap_masked = (
+                xmap[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
+            ymap_masked = (
+                ymap[rmin:rmax, cmin:cmax]
+                .flatten()[choose][:, np.newaxis]
+                .astype(np.float32)
+            )
             choose = np.array([choose])
 
             pt2 = depth_masked / cam_scale
@@ -176,15 +198,15 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
             index = to_device(Variable(index))
 
             cloud = cloud.view(1, num_points, 3)
-            img_masked = img_masked.view(1, 3, img_masked.size()[
-                                         1], img_masked.size()[2])
+            img_masked = img_masked.view(
+                1, 3, img_masked.size()[1], img_masked.size()[2]
+            )
 
             folding_encode = cass.foldingnet.encode(img_masked, cloud, choose)
             posenet_encode = cass.estimator.encode(img_masked, cloud, choose)
 
             pred_r, pred_t, pred_c = cass.estimator.pose(
-                torch.cat([posenet_encode, folding_encode], dim=1),
-                index
+                torch.cat([posenet_encode, folding_encode], dim=1), index
             )
             recd = cass.foldingnet.recon(folding_encode)
 
@@ -197,13 +219,20 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
                     model_path = info["model_path"]
                     model_scale = cad_model_scale[ii]
 
-                    cad_model = load_obj(path=os.path.join(opt.dataset_dir, model_path[:-4]+"_{}.ply".format(
-                        num_points)), ori_path=os.path.join(opt.dataset_dir, model_path), num_points=num_points)
+                    cad_model = load_obj(
+                        path=os.path.join(
+                            opt.dataset_dir,
+                            model_path[:-4] + "_{}.ply".format(num_points),
+                        ),
+                        ori_path=os.path.join(opt.dataset_dir, model_path),
+                        num_points=num_points,
+                    )
                     # change to the real size.
                     cad_model = cad_model * model_scale
 
                     cd, emd = calculate_emd_cf(
-                        cad_model, recd.detach()[0].cpu().numpy())
+                        cad_model, recd.detach()[0].cpu().numpy()
+                    )
                     chamfer_dis_cass[i] = cd
                     emd_dis_cass[i] = emd
                     break
@@ -224,16 +253,23 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
             if cls_ids[i] - 1 not in symmetric:
                 # Do refine for non-symmetry class and this would be useful.
                 for ite in range(0, iteration):
-                    T = to_device(Variable(torch.from_numpy(my_t.astype(np.float32))).view(
-                        1, 3).repeat(num_points, 1).contiguous().view(1, num_points, 3))
+                    T = to_device(
+                        Variable(torch.from_numpy(my_t.astype(np.float32)))
+                        .view(1, 3)
+                        .repeat(num_points, 1)
+                        .contiguous()
+                        .view(1, num_points, 3)
+                    )
                     my_mat = quaternion_matrix(my_r)
-                    R = to_device(Variable(torch.from_numpy(
-                        my_mat[:3, :3].astype(np.float32))).view(1, 3, 3))
+                    R = to_device(
+                        Variable(
+                            torch.from_numpy(my_mat[:3, :3].astype(np.float32))
+                        ).view(1, 3, 3)
+                    )
                     my_mat[0:3, 3] = my_t
 
                     new_cloud = torch.bmm((cloud - T), R).contiguous()
-                    pred_r, pred_t = cass.refiner(
-                        new_cloud, folding_encode, index)
+                    pred_r, pred_t = cass.refiner(new_cloud, folding_encode, index)
                     pred_r = pred_r.view(1, 1, -1)
                     pred_r = pred_r / (torch.norm(pred_r, dim=2).view(1, 1, 1))
                     my_r_2 = pred_r.view(-1).cpu().data.numpy()
@@ -247,7 +283,8 @@ def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale
                     my_r_final[0:3, 3] = 0
                     my_r_final = quaternion_from_matrix(my_r_final, True)
                     my_t_final = np.array(
-                        [my_mat_final[0][3], my_mat_final[1][3], my_mat_final[2][3]])
+                        [my_mat_final[0][3], my_mat_final[1][3], my_mat_final[2][3]]
+                    )
 
                     my_pred = np.append(my_r_final, my_t_final)
                     my_r = my_r_final
@@ -279,16 +316,24 @@ def eval_interface(model, opt, result):
     # do dataloading object here
     # as for gt mask the value is store in last channle, but we are store in first channel
     path = result["image_path"]
-    masks = np.array(cv2.imread(os.path.join(
-        opt.dataset_dir, path+"_nocs_segmentation.png"))[:, :, 0])
-    img = np.array(cv2.imread(os.path.join(
-        opt.dataset_dir, path+"_color.png"))) / 255.0
-    depth = np.array(cv2.imread(os.path.join(
-        opt.dataset_dir, path+"_depth.png"), -1))
+    masks = np.array(
+        cv2.imread(os.path.join(opt.dataset_dir, path + "_nocs_segmentation.png"))[
+            :, :, 0
+        ]
+    )
+    img = (
+        np.array(cv2.imread(os.path.join(opt.dataset_dir, path + "_color.png"))) / 255.0
+    )
+    depth = np.array(cv2.imread(os.path.join(opt.dataset_dir, path + "_depth.png"), -1))
 
     my_result_ret, scales, chamfer_dis_cass, emd_dis_cass = eval_nocs(
-        model, img, depth, masks, result["pred_class_ids"], cad_model_info=result[
-            "model_information"], cad_model_scale=result["gt_scales_for_model_in_CASS"]
+        model,
+        img,
+        depth,
+        masks,
+        result["pred_class_ids"],
+        cad_model_info=result["model_information"],
+        cad_model_scale=result["gt_scales_for_model_in_CASS"],
     )
 
     my_result_ret = np.array(my_result_ret)
@@ -296,29 +341,43 @@ def eval_interface(model, opt, result):
     chamfer_dis_cass = np.array(chamfer_dis_cass)
     emd_dis_cass = np.array(emd_dis_cass)
 
-    return my_result_ret.tolist(), scales.tolist(), chamfer_dis_cass.tolist(), emd_dis_cass.tolist()
+    return (
+        my_result_ret.tolist(),
+        scales.tolist(),
+        chamfer_dis_cass.tolist(),
+        emd_dis_cass.tolist(),
+    )
 
 
 def draw(opt, result):
-    """ Load data and draw visualization results.
+    """Load data and draw visualization results.
+
+    This draws points from true mesh when transformed with predicted transform.
+    Does not visualize predicted pointcloud.
     """
     path = result["image_path"]
-    image = cv2.imread(os.path.join(opt.dataset_dir, path+"_color.png"))
+    image = cv2.imread(os.path.join(opt.dataset_dir, path + "_color.png"))
 
     # Load GT Models
     models_for_nocs = []
     models_for_cass = []
     for i, mf in enumerate(result["model_information"]):
         model_path = mf["model_path"]
-        cad_model = load_obj(path=os.path.join(opt.dataset_dir, model_path[:-4]+"_{}.ply".format(
-            num_points)), ori_path=os.path.join(opt.dataset_dir, model_path), num_points=num_points)
+        cad_model = load_obj(
+            path=os.path.join(
+                opt.dataset_dir, model_path[:-4] + "_{}.ply".format(num_points)
+            ),
+            ori_path=os.path.join(opt.dataset_dir, model_path),
+            num_points=num_points,
+        )
 
         # As for nocs, the model normalized is gt points.
         models_for_nocs.append(copy.deepcopy(cad_model))
 
         # As for cass, the model normalized should multiply scale to get the real size.
-        models_for_cass.append(copy.deepcopy(
-            cad_model * result["gt_scales_for_model_in_CASS"][i]))
+        models_for_cass.append(
+            copy.deepcopy(cad_model * result["gt_scales_for_model_in_CASS"][i])
+        )
 
     # Get the correct RTs for Class_ids. If the target is missing we will return np.eye(). If multi-target is matched, we only keep the first.
     RTs_cass = []
@@ -343,15 +402,33 @@ def draw(opt, result):
         RTs_cass.append(rts_cass)
 
     (h, w) = image.shape[:2]
-    center = (w/2, h/2)
+    center = (w / 2, h / 2)
 
     M = cv2.getRotationMatrix2D(center, 180, 1.0)
     rotated = cv2.warpAffine(image, M, (w, h))
 
-    utils.draw(rotated, RTs_cass, models_for_cass, class_ids=result["gt_class_ids"], misses=misses, intrinsics=opt.intrinsics, save_path=os.path.join(
-        opt.save_dir, "vis", "_".join(path.split("/"))+"_cass.png"))
-    utils.draw(image, RTs_nocs, models_for_nocs, class_ids=result["gt_class_ids"], misses=misses, intrinsics=opt.intrinsics, save_path=os.path.join(
-        opt.save_dir, "vis", "_".join(path.split("/"))+"_nocs.png"))
+    utils.draw(
+        rotated,
+        RTs_cass,
+        models_for_cass,
+        class_ids=result["gt_class_ids"],
+        misses=misses,
+        intrinsics=opt.intrinsics,
+        save_path=os.path.join(
+            opt.save_dir, "vis", "_".join(path.split("/")) + "_cass.png"
+        ),
+    )
+    utils.draw(
+        image,
+        RTs_nocs,
+        models_for_nocs,
+        class_ids=result["gt_class_ids"],
+        misses=misses,
+        intrinsics=opt.intrinsics,
+        save_path=os.path.join(
+            opt.save_dir, "vis", "_".join(path.split("/")) + "_nocs.png"
+        ),
+    )
 
 
 if __name__ == "__main__":
@@ -361,12 +438,10 @@ if __name__ == "__main__":
     os.makedirs(eval_dir, exist_ok=True)
 
     if opt.mode == "cass":
-
         if opt.eval:
             model = to_device(Model(opt)).eval()
 
-        result_json_list = glob.glob(
-            os.path.join(opt.save_dir, "gt", "*.json"))
+        result_json_list = glob.glob(os.path.join(opt.save_dir, "gt", "*.json"))
         result_json_list = sorted(result_json_list)
 
         final_results = []
@@ -376,8 +451,12 @@ if __name__ == "__main__":
                 with open(filename, "r") as f:
                     result = json.load(f)
 
-                pred_RTs_cass, pred_scales_cass, chamfer_dis_cass, emd_dis_cass = eval_interface(
-                    model, opt, result)
+                (
+                    pred_RTs_cass,
+                    pred_scales_cass,
+                    chamfer_dis_cass,
+                    emd_dis_cass,
+                ) = eval_interface(model, opt, result)
 
                 result["pred_RTs_cass"] = pred_RTs_cass
                 result["pred_scales_cass"] = pred_scales_cass
@@ -426,16 +505,18 @@ if __name__ == "__main__":
             i["gt_RTs"] = i["gt_RTs_for_CASS"]
             eval_results.append(i)
         aps = utils.compute_degree_cm_mAP(
-            eval_results, synset_names, eval_dir,
+            eval_results,
+            synset_names,
+            eval_dir,
             degree_thresholds=range(0, 61, 1),
-            shift_thresholds=np.linspace(0, 1, 31)*15,
+            shift_thresholds=np.linspace(0, 1, 31) * 15,
             iou_3d_thresholds=np.linspace(0, 1, 101),
             iou_pose_thres=0.1,
-            use_matches_for_pose=True, eval_recon=True
+            use_matches_for_pose=True,
+            eval_recon=True,
         )
     elif opt.mode == "nocs":
-        result_json_list = glob.glob(
-            os.path.join(opt.save_dir, "gt", "*.json"))
+        result_json_list = glob.glob(os.path.join(opt.save_dir, "gt", "*.json"))
         result_json_list = sorted(result_json_list)
 
         final_results = []
@@ -455,10 +536,13 @@ if __name__ == "__main__":
         synset_names = ["BG"] + opt.class_names
 
         aps = utils.compute_degree_cm_mAP(
-            final_results, synset_names, eval_dir,
+            final_results,
+            synset_names,
+            eval_dir,
             degree_thresholds=range(0, 61, 1),
-            shift_thresholds=np.linspace(0, 1, 31)*15,
+            shift_thresholds=np.linspace(0, 1, 31) * 15,
             iou_3d_thresholds=np.linspace(0, 1, 101),
             iou_pose_thres=0.1,
-            use_matches_for_pose=True, eval_recon=False
+            use_matches_for_pose=True,
+            eval_recon=False,
         )
