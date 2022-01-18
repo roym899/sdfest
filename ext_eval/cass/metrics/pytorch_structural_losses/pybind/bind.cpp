@@ -2,7 +2,7 @@
 
 #include <torch/extension.h>
 
-#include "pybind/extern.hpp"
+#include "extern.hpp"
 
 namespace py = pybind11;
 
