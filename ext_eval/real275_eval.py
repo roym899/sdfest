@@ -10,6 +10,7 @@ import glob
 import os
 import pickle
 import random
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,17 +32,17 @@ from sdf_estimation.scripts.real_data import load_real275_rgbd
 def visualize_estimation(
     color_image: torch.Tensor,
     depth_image: torch.Tensor,
-    instance_mask: torch.Tensor,
     local_cv_position: torch.Tensor,
     local_cv_orientation: torch.Tensor,
     camera: Camera,
+    instance_mask: Optional[torch.Tensor] = None,
 ) -> None:
     """Visualize prediction and ask for confirmation.
 
     Args:
         color_image: The unmasked color image. Shape (H,W,3), RGB, 0-1, float.
         depth_image: The unmasked depth image. Shape (H,W), float (meters along z).
-        instance_mask: The instance mask. Shape (H,W).
+        instance_mask: The instance mask. No masking if None. Shape (H,W).
         category: Category string.
         local_cv_position: The position in the OpenCV camera frame. Shape (3,).
         local_cv_orientation:
@@ -54,7 +55,10 @@ def visualize_estimation(
     local_cv_position = local_cv_position.cpu().double().numpy()  # shape (3,)
     local_cv_orientation = local_cv_orientation.cpu().double().numpy()  # shape (4,)
 
-    valid_depth_mask = (depth_image != 0) * instance_mask
+    if instance_mask is not None:
+        valid_depth_mask = (depth_image != 0) * instance_mask
+    else:
+        valid_depth_mask = (depth_image != 0)
     pointset_colors = color_image[valid_depth_mask]
     masked_pointset = pointset_utils.depth_to_pointcloud(
         depth_image,
@@ -150,23 +154,28 @@ class REAL275Evaluator:
                 plt.show()
 
             prediction = method_wrapper.inference(
-                image=sample["color"],
-                depth=sample["depth"],
-                mask=sample["mask"],
-                category=sample["category_id"],
+                color_image=sample["color"],
+                depth_image=sample["depth"],
+                instance_mask=sample["mask"],
+                category_id=sample["category_id"],
             )
 
             if self._visualize_gt:
                 visualize_estimation(
                     color_image=sample["color"],
                     depth_image=sample["depth"],
-                    instance_mask=sample["mask"],
                     local_cv_position=sample["position"],
                     local_cv_orientation=sample["quaternion"],
                     camera=self._cam,
                 )
             if self._visualize_output:
-                pass
+                visualize_estimation(
+                    color_image=sample["color"],
+                    depth_image=sample["depth"],
+                    local_cv_position=sample["position"],
+                    local_cv_orientation=sample["quaternion"],
+                    camera=self._cam,
+                )
 
             # nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
             # results_dict = copy.deepcopy(nocs_dict)

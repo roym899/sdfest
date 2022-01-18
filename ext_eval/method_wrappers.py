@@ -1,19 +1,44 @@
 """Wrapper for pose and shape estimation methods."""
 from abc import ABC
+from typing import Optional, TypedDict
 
 import torch
 
 from sdf_differentiable_renderer import Camera
 
 
+class PredictionDict(TypedDict):
+    """Pose and shape prediction.
+
+    Attributes:
+        position:
+            Position of object center in camera frame. OpenCV convention. Shape (3,).
+        orientation:
+            Orientation of object in camera frame. OpenCV convention.
+            Scalar-last quaternion, shape (4,).
+        extents:
+            Bounding box side lengths., shape (3,).
+        reconstructed_pointcloud:
+            Reconstructed pointcloud in object frame.
+            None if method does not perform reconstruction.
+    """
+
+    position: torch.Tensor
+    orientation: torch.Tensor
+    extents: torch.Tensor
+    reconstructed_pointcloud: Optional[torch.Tensor]
+
+
 class MethodWrapper(ABC):
+    """Interface class for pose and shape estimation methods."""
+
     def inference(
         self,
-        image: torch.Tensor,
-        depth: torch.Tensor,
-        mask: torch.Tensor,
-        category: int,
-    ) -> None:
+        color_image: torch.Tensor,
+        depth_image: torch.Tensor,
+        instance_mask: torch.Tensor,
+        category_id: int,
+    ) -> PredictionDict:
         pass
 
 
@@ -26,11 +51,11 @@ class CASSWrapper(MethodWrapper):
 
     def inference(
         self,
-        image: torch.Tensor,
-        depth: torch.Tensor,
-        mask: torch.Tensor,
-        category: int,
-    ) -> dict:
+        color_image: torch.Tensor,
+        depth_image: torch.Tensor,
+        instance_mask: torch.Tensor,
+        category_id: int,
+    ) -> PredictionDict:
         pass
 
 
@@ -47,5 +72,5 @@ class NOCSWrapper:
         depth: torch.Tensor,
         mask: torch.Tensor,
         category: int,
-    ):
+    ) -> PredictionDict:
         pass
