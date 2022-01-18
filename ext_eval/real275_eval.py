@@ -6,10 +6,12 @@ https://github.com/xuchen-ethz/neural_object_fitting
 """
 import argparse
 import copy
+import glob
 import os
 import pickle
 import random
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
@@ -18,6 +20,7 @@ import yoco
 import open3d as o3d
 from sdf_single_shot import pointset_utils
 from sdf_differentiable_renderer import Camera
+from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.utils import str_to_object
 
 from sdf_estimation.simple_setup import SDFPipeline
@@ -89,13 +92,32 @@ class REAL275Evaluator:
 
     def _parse_config(self, config: dict) -> None:
         """Read config and initialize method wrappers."""
-        self._cam = Camera(**config["camera"])
-        self._init_wrappers(config["methods"])
         self._visualize_input = config["visualize_input"]
         self._visualize_output = config["visualize_output"]
         self._visualize_gt = config["visualize_gt"]
         self._detection = config["detection"]
         self._run_name = config["run_name"]
+
+        self._cam = Camera(**config["camera"])
+        self._init_wrappers(config["methods"])
+        self._init_dataset(config)
+
+    def _init_dataset(self, config: dict) -> None:
+        """Initialize reading of dataset.
+
+        This includes sanity checks whether the provided path is correct.
+        """
+        print("Initializing NOCS dataset...")
+        self._dataset = NOCSDataset(
+            config={
+                "root_dir": config["data_path"],
+                "split": "real_test",
+            }
+        )
+        if len(self._dataset) == 0:
+            print(f"No images found for data path {config['data_path']}")
+            exit()
+        print(f"{len(self._dataset)} detections found.")
 
     def _init_wrappers(self, method_configs: dict) -> None:
         """Initialize method wrappers."""
@@ -111,7 +133,38 @@ class REAL275Evaluator:
 
     def run(self) -> None:
         """Run the evaluation."""
-        pass
+        for sample in tqdm(self._dataset):
+            # rgb, depth, _, _ = load_real275_rgbd(rgb_path)
+            if self._visualize_input:
+                _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
+                ax1.imshow(sample["color"].numpy())
+                ax2.imshow(sample["depth"].numpy())
+                ax3.imshow(sample["mask"].numpy())
+                plt.show()
+
+            if self._visualize_gt:
+                pass
+
+            if self._visualize_output:
+                pass
+
+            # nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
+            # results_dict = copy.deepcopy(nocs_dict)
+            # nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
+            # masks = nocs_dict["pred_mask"]  # (rows, cols, num_masks,), binary masks
+            # category_ids = nocs_dict["pred_class_ids"] - 1  # (num_masks,), class ids
+            # results_dict["pred_RTs_sdfest"] = np.zeros_like(results_dict["pred_RTs"])
+
+            # for mask_id, category_id in enumerate(category_ids):
+            #     category = categories[category_id]  # name of category
+            #     mask = masks[:, :, mask_id]  # (rows, cols,)
+
+            #     # skip unsupported category
+            #     if category not in pipeline_dict:
+            #         results_dict["pred_RTs_sdfest"][mask_id] = np.eye(4, 4)
+            #         continue
+
+            #     # apply estimation
 
 
 def main() -> None:

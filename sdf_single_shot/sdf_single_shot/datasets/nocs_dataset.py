@@ -485,6 +485,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "quaternion": orientation_q,
             "scale": scale,
             "color_path": sample_data["color_path"],
+            "category_id": sample_data["category_id"],
         }
         return sample
 
