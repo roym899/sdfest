@@ -137,14 +137,9 @@ class REAL275Evaluator:
                 config=method_dict["config_dict"], camera=self._cam
             )
 
-    def run(self) -> None:
-        """Run the evaluation."""
-        for method_name, method_wrapper in self._wrappers.items():
-            print(f"Evaluate {method_name}...")
-            self._eval_method(method_wrapper)
-
-    def _eval_method(self, method_wrapper: MethodWrapper) -> None:
-        """Run the evaluation."""
+    def _run_method(self, method_name: str, method_wrapper: MethodWrapper) -> None:
+        """Run the method on all samples, store the predictions on disk."""
+        print(f"Run {method_name}...")
         for sample in tqdm(self._dataset):
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
@@ -177,6 +172,7 @@ class REAL275Evaluator:
                     camera=self._cam,
                 )
 
+            self._save_prediction(method_name)
             # nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
             # results_dict = copy.deepcopy(nocs_dict)
             # nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
@@ -194,6 +190,23 @@ class REAL275Evaluator:
             #         continue
 
             #     # apply estimation
+
+    def _save_prediction(self, method_name: str, prediction: dict) -> None:
+        """Save predictions on disk."""
+        # TODO evaluate results and compute metrics
+        pass
+
+    def _eval_predictions(self, method_name: str) -> None:
+        """Evaluate predictions stored on disk."""
+        print(f"Evaluate {method_name} results...")
+        # TODO evaluate results and compute metrics
+
+    def run(self) -> None:
+        """Run the evaluation."""
+        for method_name, method_wrapper in self._wrappers.items():
+            # TODO check if predictions are already saved on disk, ask if redo
+            self._run_method(method_name, method_wrapper)
+            self._eval_predictions(method_name)
 
 
 def main() -> None:
