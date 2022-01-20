@@ -29,6 +29,7 @@ from sdf_estimation.simple_setup import SDFPipeline
 from sdf_estimation.scripts.real_data import load_real275_rgbd
 
 
+# TODO visualize bounding box
 def visualize_estimation(
     color_image: torch.Tensor,
     depth_image: torch.Tensor,
@@ -98,7 +99,7 @@ class REAL275Evaluator:
     def _parse_config(self, config: dict) -> None:
         """Read config and initialize method wrappers."""
         self._visualize_input = config["visualize_input"]
-        self._visualize_output = config["visualize_output"]
+        self._visualize_prediction = config["visualize_prediction"]
         self._visualize_gt = config["visualize_gt"]
         self._detection = config["detection"]
         self._run_name = config["run_name"]
@@ -163,12 +164,12 @@ class REAL275Evaluator:
                     local_cv_orientation=sample["quaternion"],
                     camera=self._cam,
                 )
-            if self._visualize_output:
+            if self._visualize_prediction:
                 visualize_estimation(
                     color_image=sample["color"],
                     depth_image=sample["depth"],
                     local_cv_position=sample["position"],
-                    local_cv_orientation=sample["quaternion"],
+                    local_cv_orientation=sample["orientation"],
                     camera=self._cam,
                 )
 

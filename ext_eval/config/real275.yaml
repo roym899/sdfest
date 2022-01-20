@@ -23,7 +23,7 @@ camera:
   cy: 244.11084
   pixel_center: 0
 visualize_input: False
-visualize_output: False
+visualize_prediction: False
 visualize_gt: False
 dataset: "nocs"
 detection: "gt"
