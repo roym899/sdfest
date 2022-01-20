@@ -25,6 +25,24 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
+store_visualization: False
 dataset: "nocs"
 detection: "gt"
 run_name: ""
+metrics:
+  correct_position:
+    position_thresholds: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, null]
+    deg_thresholds: [null]
+    iou_thresholds: [null]
+  correct_degree:
+    position_thresholds: [null]
+    deg_thresholds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    iou_thresholds: [null]
+  correct_5deg5cm:
+    position_thresholds: [0.05]
+    deg_thresholds: [5]
+    iou_thresholds: [null]
+  correct_180deg1000cm:
+    position_thresholds: [10.0]
+    deg_thresholds: [180]
+    iou_thresholds: [null]

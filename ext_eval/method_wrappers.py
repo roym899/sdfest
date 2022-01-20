@@ -56,7 +56,12 @@ class CASSWrapper(MethodWrapper):
         instance_mask: torch.Tensor,
         category_id: int,
     ) -> PredictionDict:
-        pass
+        return {
+            "position": torch.tensor([0,0,0]),
+            "orientation": torch.tensor([0,0,0,1]),
+            "extents": torch.tensor([1,1,1]),
+            "reconstructed_pointcloud": torch.tensor([[0,0,0]])
+        }
 
 
 class NOCSWrapper:
@@ -68,9 +73,14 @@ class NOCSWrapper:
 
     def inference(
         self,
-        image: torch.Tensor,
-        depth: torch.Tensor,
-        mask: torch.Tensor,
-        category: int,
+        color_image: torch.Tensor,
+        depth_image: torch.Tensor,
+        instance_mask: torch.Tensor,
+        category_id: int,
     ) -> PredictionDict:
-        pass
+        return {
+            "position": torch.tensor([0,0,0]),
+            "orientation": torch.tensor([0,0,0,1]),
+            "extents": torch.tensor([1,1,1]),
+            "reconstructed_pointcloud": torch.tensor([[0,0,0]])
+        }

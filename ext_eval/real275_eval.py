@@ -8,10 +8,12 @@ import argparse
 import copy
 import glob
 import os
+from datetime import datetime
 import pickle
 import random
 from typing import Optional
 
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -23,10 +25,11 @@ from sdf_single_shot import pointset_utils
 from sdf_differentiable_renderer import Camera
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.utils import str_to_object
-from method_wrappers import MethodWrapper
+from method_wrappers import MethodWrapper, PredictionDict
 
 from sdf_estimation.simple_setup import SDFPipeline
 from sdf_estimation.scripts.real_data import load_real275_rgbd
+from sdf_estimation import metrics
 
 
 # TODO visualize bounding box
@@ -59,7 +62,7 @@ def visualize_estimation(
     if instance_mask is not None:
         valid_depth_mask = (depth_image != 0) * instance_mask
     else:
-        valid_depth_mask = (depth_image != 0)
+        valid_depth_mask = depth_image != 0
     pointset_colors = color_image[valid_depth_mask]
     masked_pointset = pointset_utils.depth_to_pointcloud(
         depth_image,
@@ -92,6 +95,8 @@ def visualize_estimation(
 class REAL275Evaluator:
     """Class to evaluate various pose and shape estimation algorithms on REAL275."""
 
+    NUM_CATEGORIES = 6  # (excluding all)
+
     def __init__(self, config: dict) -> None:
         """Initialize model wrappers and evaluator."""
         self._parse_config(config)
@@ -101,12 +106,20 @@ class REAL275Evaluator:
         self._visualize_input = config["visualize_input"]
         self._visualize_prediction = config["visualize_prediction"]
         self._visualize_gt = config["visualize_gt"]
+        self._store_visualization = config["store_visualization"]
         self._detection = config["detection"]
-        self._run_name = config["run_name"]
+        self._run_name = (
+            f"real275_eval_{config['run_name']}_"
+            f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        )
+        self._out_folder = config["out_folder"]
+        self._metrics = config["metrics"]
 
         self._cam = Camera(**config["camera"])
         self._init_wrappers(config["methods"])
         self._init_dataset(config)
+
+        self._config = config
 
     def _init_dataset(self, config: dict) -> None:
         """Initialize reading of dataset.
@@ -119,8 +132,11 @@ class REAL275Evaluator:
                 "root_dir": config["data_path"],
                 "split": "real_test",
                 "camera_convention": "opencv",
+                "scale_convention": "full",
             }
         )
+        # Faster but probably only worth it if whole evaluation supports batches
+        # self._dataloader = DataLoader(self._dataset, 1, num_workers=8)
         if len(self._dataset) == 0:
             print(f"No images found for data path {config['data_path']}")
             exit()
@@ -138,10 +154,15 @@ class REAL275Evaluator:
                 config=method_dict["config_dict"], camera=self._cam
             )
 
-    def _run_method(self, method_name: str, method_wrapper: MethodWrapper) -> None:
-        """Run the method on all samples, store the predictions on disk."""
+    def _eval_method(self, method_name: str, method_wrapper: MethodWrapper) -> None:
+        """Run and evaluate method on all samples."""
         print(f"Run {method_name}...")
+        self._init_metrics()
+        count = 0
         for sample in tqdm(self._dataset):
+            count += 1
+            if count > 1000:
+                break
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
                 ax1.imshow(sample["color"].numpy())
@@ -172,42 +193,94 @@ class REAL275Evaluator:
                     local_cv_orientation=sample["orientation"],
                     camera=self._cam,
                 )
+            if self._store_visualization:
+                # TODO store visualization of result on disk
+                pass
 
-            self._save_prediction(method_name)
-            # nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
-            # results_dict = copy.deepcopy(nocs_dict)
-            # nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
-            # masks = nocs_dict["pred_mask"]  # (rows, cols, num_masks,), binary masks
-            # category_ids = nocs_dict["pred_class_ids"] - 1  # (num_masks,), class ids
-            # results_dict["pred_RTs_sdfest"] = np.zeros_like(results_dict["pred_RTs"])
+            self._eval_prediction(prediction, sample)
+        self._finalize_metrics(method_name)
 
-            # for mask_id, category_id in enumerate(category_ids):
-            #     category = categories[category_id]  # name of category
-            #     mask = masks[:, :, mask_id]  # (rows, cols,)
+    def _eval_prediction(self, prediction: PredictionDict, sample: dict) -> None:
+        """Evaluate all metrics for a prediction."""
+        # correctness metric
+        for metric_name in self._metrics.keys():
+            self._eval_metric(metric_name, prediction, sample)
 
-            #     # skip unsupported category
-            #     if category not in pipeline_dict:
-            #         results_dict["pred_RTs_sdfest"][mask_id] = np.eye(4, 4)
-            #         continue
+    def _init_metrics(self) -> None:
+        """Initialize metrics."""
+        self._correct_counters = {}
+        self._total_counters = {}
+        for metric_name, metric_dict in self._metrics.items():
+            pts = metric_dict["position_thresholds"]
+            dts = metric_dict["deg_thresholds"]
+            its = metric_dict["iou_thresholds"]
+            self._correct_counters[metric_name] = np.zeros(
+                (len(pts), len(dts), len(its), self.NUM_CATEGORIES + 1)
+            )
+            self._total_counters[metric_name] = np.zeros(self.NUM_CATEGORIES + 1)
 
-            #     # apply estimation
+    def _eval_metric(
+        self, metric_name: str, prediction: PredictionDict, sample: dict
+    ) -> None:
+        """Evaluate and update single metric for a single prediction."""
+        metric_dict = self._metrics[metric_name]
+        correct_counter = self._correct_counters[metric_name]
+        total_counter = self._total_counters[metric_name]
+        for pi, p in enumerate(metric_dict["position_thresholds"]):
+            for di, d in enumerate(metric_dict["deg_thresholds"]):
+                for ii, i in enumerate(metric_dict["iou_thresholds"]):
+                    correct = metrics.correct_thresh(
+                        position_gt=sample["position"].cpu().numpy(),
+                        position_prediction=prediction["position"].cpu().numpy(),
+                        orientation_gt=Rotation.from_quat(sample["quaternion"]),
+                        orientation_prediction=Rotation.from_quat(
+                            prediction["orientation"]
+                        ),
+                        extent_gt=sample["scale"].cpu().numpy(),
+                        extent_prediction=prediction["extents"].cpu().numpy(),
+                        position_threshold=p,
+                        degree_threshold=d,
+                        iou_3d_threshold=i,
+                        rotational_symmetry_axis=None,  # TODO where to get this from hardcode?
+                    )
+                    cat = sample["category_id"]
+                    correct_counter[pi, di, ii, cat - 1] += correct
+                    correct_counter[pi, di, ii, 6] += correct  # all
+                    total_counter[cat - 1] += 1
+                    total_counter[6] += 1
 
-    def _save_prediction(self, method_name: str, prediction: dict) -> None:
-        """Save predictions on disk."""
-        # TODO evaluate results and compute metrics
-        pass
+        # TODO posed / or canonical reconstruction metric (chamfer ?)
 
-    def _eval_predictions(self, method_name: str) -> None:
-        """Evaluate predictions stored on disk."""
-        print(f"Evaluate {method_name} results...")
-        # TODO evaluate results and compute metrics
+    def _prepare_metric_args(self, prediction: PredictionDict, sample: dict) -> dict:
+        """Convert prediction and sample dicts to format required by metric."""
+        return {}
+
+    def _finalize_metrics(self, method_name: str) -> None:
+        """Finalize metrics after all samples have been evaluated.
+
+        Also writes results to disk and create plot if applicable.
+        """
+        out_folder = os.path.join(self._out_folder, self._run_name)
+        os.makedirs(out_folder, exist_ok=True)
+        yaml_path = os.path.join(out_folder, "results.yaml")
+
+        self._results_dict[method_name] = {}
+        for metric_name, metric_dict in self._metrics.items():
+            correct_counter = self._correct_counters[metric_name]
+            total_counter = self._total_counters[metric_name]
+            correct_percentage = correct_counter / total_counter
+            self._results_dict[method_name][metric_name] = correct_percentage.tolist()
+            # TODO create plot if applicable
+
+        results_dict = {**self._config, "results": self._results_dict}
+        yoco.save_config_to_file(yaml_path, results_dict)
+        print(f"Results saved to: {yaml_path}")
 
     def run(self) -> None:
         """Run the evaluation."""
+        self._results_dict = {}
         for method_name, method_wrapper in self._wrappers.items():
-            # TODO check if predictions are already saved on disk, ask if redo
-            self._run_method(method_name, method_wrapper)
-            self._eval_predictions(method_name)
+            self._eval_method(method_name, method_wrapper)
 
 
 def main() -> None:
