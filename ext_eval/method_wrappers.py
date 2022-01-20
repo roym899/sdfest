@@ -6,6 +6,9 @@ import torch
 
 from sdf_differentiable_renderer import Camera
 
+import yoco
+import cass.lib
+
 
 class PredictionDict(TypedDict):
     """Pose and shape prediction.
@@ -45,8 +48,26 @@ class MethodWrapper(ABC):
 class CASSWrapper(MethodWrapper):
     """Wrapper class for CASS."""
 
-    def __init__(self, config: dict, camera: Camera) -> None:
+    class Config(TypedDict):
+        """Configuration dictionary for CASS.
+
+        Attributes:
+            model: Path to model.
+        """
+
+        model: str
+
+    default_config: Config = {
+        "model": None,
+    }
+
+    def __init__(self, config: Config, camera: Camera) -> None:
         """Initialize and load CASS model."""
+        config = yoco.load_config(config, default_dict=CASSWrapper.default_config)
+        self._parse_config(config)
+        self._camera = camera
+
+    def _parse_config(config: Config) -> None:
         pass
 
     def inference(
@@ -57,10 +78,10 @@ class CASSWrapper(MethodWrapper):
         category_id: int,
     ) -> PredictionDict:
         return {
-            "position": torch.tensor([0,0,0]),
-            "orientation": torch.tensor([0,0,0,1]),
-            "extents": torch.tensor([1,1,1]),
-            "reconstructed_pointcloud": torch.tensor([[0,0,0]])
+            "position": torch.tensor([0, 0, 0]),
+            "orientation": torch.tensor([0, 0, 0, 1]),
+            "extents": torch.tensor([1, 1, 1]),
+            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
         }
 
 
@@ -79,8 +100,8 @@ class NOCSWrapper:
         category_id: int,
     ) -> PredictionDict:
         return {
-            "position": torch.tensor([0,0,0]),
-            "orientation": torch.tensor([0,0,0,1]),
-            "extents": torch.tensor([1,1,1]),
-            "reconstructed_pointcloud": torch.tensor([[0,0,0]])
+            "position": torch.tensor([0, 0, 0]),
+            "orientation": torch.tensor([0, 0, 0, 1]),
+            "extents": torch.tensor([1, 1, 1]),
+            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
         }

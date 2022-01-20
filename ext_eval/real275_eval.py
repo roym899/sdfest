@@ -251,10 +251,6 @@ class REAL275Evaluator:
 
         # TODO posed / or canonical reconstruction metric (chamfer ?)
 
-    def _prepare_metric_args(self, prediction: PredictionDict, sample: dict) -> dict:
-        """Convert prediction and sample dicts to format required by metric."""
-        return {}
-
     def _finalize_metrics(self, method_name: str) -> None:
         """Finalize metrics after all samples have been evaluated.
 
