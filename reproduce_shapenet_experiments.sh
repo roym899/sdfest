@@ -26,8 +26,8 @@ python -m sdf_estimation.scripts.rendering_evaluation \
     --out_folder ./results \
     --run_name nodeslam
 
-# Ablation study
-python -m sdf_estimation.scripts.rendering_evaluation \
-    --config sdf_estimation/configs/ablation_study.yaml \
-    --out_folder ./results/ \
-    --data_path data/shapenet/03797390
+# # Ablation study
+# python -m sdf_estimation.scripts.rendering_evaluation \
+#     --config sdf_estimation/configs/ablation_study.yaml \
+#     --out_folder ./results/ \
+#     --data_path data/shapenet/03797390

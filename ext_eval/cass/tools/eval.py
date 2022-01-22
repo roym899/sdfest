@@ -16,13 +16,16 @@ import argparse
 import _init_paths
 import utils
 from datasets.dataset import get_bbox, load_obj, PoseDataset
-from lib.models import CASS
-from lib.transformations import quaternion_from_matrix, quaternion_matrix
+from ..lib.models import CASS
+from ..lib.transformations import quaternion_from_matrix, quaternion_matrix
 
 try:
     from metrics.evaluation_metrics import EMD_CD
 except:
-    raise "Failed to import EMD_CD metric. Please Compile `metric` if you want to do reconstruction evaluation. Otherwise, just command this line."
+    raise (
+        "Failed to import EMD_CD metric. Please Compile `metric` if you want to do "
+        "reconstruction evaluation. Otherwise, just comment this line."
+    )
 
 parser = argparse.ArgumentParser(description="eval CASS model")
 parser.add_argument(
@@ -93,14 +96,16 @@ def to_device(x):
 
 
 class Model(nn.Module):
+    """Wrapper around CASS model that allows learning weights from disk."""
     def __init__(self, opt):
         super().__init__()
         self.opt = opt
 
         self.casses = self.load_model()
 
-    def load_model(self):
-        cass = CASS(self.opt)
+    def load_model(self) -> nn.Module:
+        """Create and load weights for CASS model."""
+        cass = CASS(num_points=opt.num_points, num_obj=opt.num_objects)
         resume_path = os.path.join("trained_models", opt.resume_model)
         try:
             cass.load_state_dict(torch.load(resume_path), strict=True)
@@ -109,7 +114,12 @@ class Model(nn.Module):
 
         return cass
 
-    def get_model(self, cls_idx):
+    def get_model(self, cls_idx) -> nn.Module:
+        """Return the CASS model.
+        Args:
+            cls_index: 
+                Not used right now. Probably meant for different models per category.
+        """
         return self.casses
 
 
@@ -133,7 +143,14 @@ def calculate_emd_cf(point_a, point_b):
     return res["MMD-CD"], res["MMD-EMD"]
 
 
-def eval_nocs(model, img, depth, masks, cls_ids, cad_model_info, cad_model_scale):
+def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, cad_model_info, cad_model_scale):
+    """
+    
+    Args:
+        model: The CASS model wrapper.
+        img: Color image, shape (H,W,3), BGR.
+        depth: Depth image, shape (H,W), ???
+    """
     my_result = np.zeros((len(cls_ids), 7))
     scales = np.zeros((len(cls_ids), 3))
     chamfer_dis_cass = np.zeros((len(cls_ids)))

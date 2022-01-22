@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from lib.pointnet import PointNetGlobalMax, get_MLP_layers, PointNetVanilla, PointwiseMLP
-from lib.utils import make_box, make_sphere, make_cylinder
+from .pointnet import PointNetGlobalMax, get_MLP_layers, PointNetVanilla, PointwiseMLP
+from .utils import make_box, make_sphere, make_cylinder
 
 class ChamfersDistance3(nn.Module):
     '''

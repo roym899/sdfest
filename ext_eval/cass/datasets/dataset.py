@@ -7,8 +7,8 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
-import datasets.utils as dutils
-from lib.transformations import quaternion_from_matrix
+from . import utils as dutils
+from ..lib.transformations import quaternion_from_matrix
 
 
 def align(class_ids, masks, coords, depth, intr):

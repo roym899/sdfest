@@ -1,5 +1,5 @@
-import lib.network as dlib
-import lib.foldingnet as flib
+from . import network as dlib
+from . import foldingnet as flib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -83,6 +83,14 @@ class ModifiedPoseNet(nn.Module):
         self.posing = ModifiedPose(num_points, num_obj)
 
     def encode(self, img, x, choose):
+        """
+        
+        Args:
+            img: Image input. Shape (B,3,H,W).
+            x: Points, shape (N, 3). (?)
+            choose:
+                Flattened indices of x in img. (?)
+        """
         return self.encoding(img, x, choose)
 
     def pose(self, codeword, obj):
@@ -95,7 +103,13 @@ class ModifiedPoseRefineNet(dlib.PoseRefineNet):
 
 
 class CASS(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, num_points: int, num_obj: int):
+        """Create CASS model.
+        
+        Args:
+            num_points: Number of points in reference and output pointcloud.
+            num_obj: Number of categories.
+        """
         super().__init__()
 
         MLP_dims = (3, 64, 64, 64, 128, 1024)
@@ -103,14 +117,12 @@ class CASS(nn.Module):
         Folding1_dims = (1408+9, 512, 512, 3)
         Folding2_dims = (1408+3, 512, 512, 3)
         MLP_doLastRelu = False
-        self.opt = opt
         self.estimator = ModifiedPoseNet(
-            num_points=opt.num_points, num_obj=opt.num_objects
+            num_points=num_points, num_obj=num_obj
         )
         self.refiner = ModifiedPoseRefineNet(
-            num_points=opt.num_points, num_obj=opt.num_objects
+            num_points=num_points, num_obj=num_obj
         )
         self.foldingnet = ModifiedFoldingNetShapes(
-            opt.num_points,
-            MLP_dims, FC_dims, Folding1_dims, Folding2_dims, MLP_doLastRelu
+            num_points, MLP_dims, FC_dims, Folding1_dims, Folding2_dims, MLP_doLastRelu
         )
