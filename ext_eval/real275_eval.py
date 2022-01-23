@@ -133,6 +133,8 @@ class REAL275Evaluator:
                 "split": "real_test",
                 "camera_convention": "opencv",
                 "scale_convention": "full",
+                "remap_y_axis": "y",  # ShapeNet convention
+                "remap_x_axis": "-z",  # ShapeNet convention
             }
         )
         # Faster but probably only worth it if whole evaluation supports batches
@@ -189,8 +191,8 @@ class REAL275Evaluator:
                 visualize_estimation(
                     color_image=sample["color"],
                     depth_image=sample["depth"],
-                    local_cv_position=sample["position"],
-                    local_cv_orientation=sample["orientation"],
+                    local_cv_position=prediction["position"],
+                    local_cv_orientation=prediction["orientation"],
                     camera=self._cam,
                 )
             if self._store_visualization:

@@ -367,20 +367,20 @@ class NOCSDataset(torch.utils.data.Dataset):
         """Return list of paths of color images of the selected split."""
         if self._split == "camera_train":
             glob_pattern = os.path.join(self._root_dir, "train", "**", "*_color.png")
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "camera_val":
             glob_pattern = os.path.join(self._root_dir, "val", "**", "*_color.png")
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "real_train":
             glob_pattern = os.path.join(
                 self._root_dir, "real_train", "**", "*_color.png"
             )
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "real_test":
             glob_pattern = os.path.join(
                 self._root_dir, "real_test", "**", "*_color.png"
             )
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
 

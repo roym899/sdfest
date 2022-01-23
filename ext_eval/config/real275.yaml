@@ -36,7 +36,7 @@ metrics:
     iou_thresholds: [null]
   correct_degree:
     position_thresholds: [null]
-    deg_thresholds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    deg_thresholds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40]
     iou_thresholds: [null]
   correct_5deg5cm:
     position_thresholds: [0.05]

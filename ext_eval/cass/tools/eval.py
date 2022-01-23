@@ -2,6 +2,7 @@ import copy
 import glob
 import json
 import os
+import sys
 
 import cv2
 import numpy as np
@@ -13,16 +14,15 @@ import tqdm as tqdm
 from torch.autograd import Variable
 import argparse
 
-import _init_paths
-import utils
-from datasets.dataset import get_bbox, load_obj, PoseDataset
-from ..lib.models import CASS
-from ..lib.transformations import quaternion_from_matrix, quaternion_matrix
+from . import utils
+from cass.datasets.dataset import get_bbox, load_obj, PoseDataset
+from cass.lib.models import CASS
+from cass.lib.transformations import quaternion_from_matrix, quaternion_matrix
 
 try:
-    from metrics.evaluation_metrics import EMD_CD
+    from cass.metrics.evaluation_metrics import EMD_CD
 except:
-    raise (
+    raise ImportError(
         "Failed to import EMD_CD metric. Please Compile `metric` if you want to do "
         "reconstruction evaluation. Otherwise, just comment this line."
     )
@@ -219,6 +219,17 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
                 1, 3, img_masked.size()[1], img_masked.size()[2]
             )
 
+            # import matplotlib.pyplot as plt
+            # print(img_masked.shape, img_masked.dtype)
+            # print(cloud.shape, cloud.dtype)
+            # print(choose.shape, choose.dtype)
+            # plt.imshow(img_masked.cpu()[0].permute([1,2,0]).numpy())
+            # plt.show()
+            # from sdf_single_shot import pointset_utils
+            # pointset_utils.visualize_pointset(cloud[0])
+            # print(choose)
+            # print(index)
+
             folding_encode = cass.foldingnet.encode(img_masked, cloud, choose)
             posenet_encode = cass.estimator.encode(img_masked, cloud, choose)
 
@@ -226,6 +237,7 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
                 torch.cat([posenet_encode, folding_encode], dim=1), index
             )
             recd = cass.foldingnet.recon(folding_encode)
+            # pointset_utils.visualize_pointset(recd[0])
 
             # get pred_scales
             scale = get_predict_scales(recd[0].detach().cpu().numpy())
@@ -246,10 +258,12 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
                     )
                     # change to the real size.
                     cad_model = cad_model * model_scale
+                    # pointset_utils.visualize_pointset(torch.tensor(cad_model))
 
                     cd, emd = calculate_emd_cf(
                         cad_model, recd.detach()[0].cpu().numpy()
                     )
+                    # print(cd)
                     chamfer_dis_cass[i] = cd
                     emd_dis_cass[i] = emd
                     break
@@ -267,6 +281,8 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
 
             my_r = pred_r[0][which_max[0]].view(-1).cpu().data.numpy()
             my_t = (points + pred_t)[which_max[0]].view(-1).cpu().data.numpy()
+            # print(my_t)
+            # print(my_r)
             if cls_ids[i] - 1 not in symmetric:
                 # Do refine for non-symmetry class and this would be useful.
                 for ite in range(0, iteration):
@@ -309,6 +325,9 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
             else:
                 my_pred = np.append(my_r, my_t)
 
+            # print(my_t)
+            # print(my_r)
+
             # Here 'my_pred' is the final pose estimation result after refinement ('my_r': quaternion, 'my_t': translation)
             my_result[i] = my_pred
         except:
@@ -319,6 +338,7 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
 
             emd_dis_cass[i] = 0.0
             chamfer_dis_cass[i] = 0.0
+
     # convert to RTs
     my_result_ret = []
     for i in range(len(cls_ids)):
@@ -333,6 +353,7 @@ def eval_interface(model, opt, result):
     # do dataloading object here
     # as for gt mask the value is store in last channle, but we are store in first channel
     path = result["image_path"]
+    print(path)
     masks = np.array(
         cv2.imread(os.path.join(opt.dataset_dir, path + "_nocs_segmentation.png"))[
             :, :, 0
@@ -458,7 +479,8 @@ if __name__ == "__main__":
         if opt.eval:
             model = to_device(Model(opt)).eval()
 
-        result_json_list = glob.glob(os.path.join(opt.save_dir, "gt", "*.json"))
+        glob_pattern = os.path.join(opt.save_dir, "gt", "*.json")
+        result_json_list = glob.glob(glob_pattern)
         result_json_list = sorted(result_json_list)
 
         final_results = []

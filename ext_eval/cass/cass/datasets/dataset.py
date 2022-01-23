@@ -65,9 +65,9 @@ def load_obj(path, ori_path, num_points):
 class PoseDataset(data.Dataset):
     def __init__(self, mode, num_pt, root):
         if mode == "train":
-            self.path = "datasets/dataset_config/train_data_list.txt"
+            self.path = "cass/datasets/dataset_config/train_data_list.txt"
         elif mode == "test":
-            self.path = "datasets/dataset_config/test_data_list.txt"
+            self.path = "cass/datasets/dataset_config/test_data_list.txt"
         self.num_pt = num_pt
         self.root = root
 
@@ -117,7 +117,7 @@ class PoseDataset(data.Dataset):
     @staticmethod
     def get_class_names():
         class_names = []
-        with open("datasets/dataset_config/classes.txt", "r") as f:
+        with open("cass/datasets/dataset_config/classes.txt", "r") as f:
             class_names = ["_".join(line.split("_")[1:2]) for line in f]
         class_names = [c.replace("\n", "") for c in class_names]
 

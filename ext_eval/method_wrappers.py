@@ -7,11 +7,11 @@ import torch
 import torchvision.transforms.functional as TF
 
 from sdf_differentiable_renderer import Camera
-from sdf_single_shot import pointset_utils
+from sdf_single_shot import pointset_utils, quaternion_utils
 
 import yoco
-from cass.lib.models import CASS
-from cass.datasets.dataset import get_bbox
+from cass.cass.lib.models import CASS
+from cass.cass.datasets.dataset import get_bbox
 
 
 class PredictionDict(TypedDict):
@@ -139,7 +139,6 @@ class CASSWrapper(MethodWrapper):
             convention="opencv",
         )
         if len(points) < self._num_points:
-            print(len(points))
             wrap_indices = np.pad(
                 np.arange(len(points)), (0, self._num_points - len(points)), mode="wrap"
             )
@@ -147,8 +146,8 @@ class CASSWrapper(MethodWrapper):
             point_indices_input = point_indices_input[wrap_indices]
 
         # x, y inverted for some reason...
-        points[:,0] *= -1
-        points[:,1] *= -1
+        points[:, 0] *= -1
+        points[:, 1] *= -1
         points = points.unsqueeze(0)
         point_indices_input = point_indices_input.unsqueeze(0)
 
@@ -157,11 +156,21 @@ class CASSWrapper(MethodWrapper):
         points = points.to(self._device)
         point_indices_input = point_indices_input.to(self._device)
 
-        # TODO: compare inputs to running eval script to make sure they are equal
+        # DEBUG
+        # import matplotlib.pyplot as plt
+        # print(color_input.shape, color_input.dtype)
+        # print(points.shape, points.dtype)
+        # print(point_indices_input.shape, point_indices_input.dtype)
+
+        # plt.imshow(color_input.cpu()[0].permute([1, 2, 0]).numpy())
+        # plt.show()
+        # pointset_utils.visualize_pointset(points[0])
+        # print(point_indices_input)
 
         # CASS model uses 0-indexed categories, same order as NOCSDataset
         category_index = torch.tensor([category_id - 1], device=self._device)
 
+        # Call CASS network
         folding_encode = self._cass.foldingnet.encode(
             color_input, points, point_indices_input
         )
@@ -171,18 +180,41 @@ class CASSWrapper(MethodWrapper):
         pred_r, pred_t, pred_c = self._cass.estimator.pose(
             torch.cat([posenet_encode, folding_encode], dim=1), category_index
         )
+        reconstructed_points = self._cass.foldingnet.recon(folding_encode)[0]
 
-        # print(pred_r.shape, pred_t.shape, pred_c.shape)
-        # # what is pred_c (probably confidence, similar to DenseFusion)
-        # reconstructed_points = self._cass.foldingnet.recon(folding_encode)[0]
-        # print(pred_t)
-        # pointset_utils.visualize_pointset(reconstructed_points[0])
-        # exit()
+        # Postprocess outputs
+        reconstructed_points = reconstructed_points.view(-1, 3).cpu()
+        pred_c = pred_c.view(1, self._num_points)
+        _, max_index = torch.max(pred_c, 1)
+        pred_t = pred_t.view(self._num_points, 1, 3)
+        orientation_q = pred_r[0][max_index[0]].view(-1).cpu()
+        points = points.view(self._num_points, 1, 3)
+        position = (points + pred_t)[max_index[0]].view(-1).cpu()
+        # output is scalar-first -> scalar-last
+        print(orientation_q)
+        orientation_q = torch.tensor([*orientation_q[1:], orientation_q[0]])
+        print(orientation_q)
+
+        # Flip x and y axis of position and orientation (undo flipping of points)
+        # (x-left, y-up, z-forward) convention -> OpenCV convention
+        position[0] *= -1
+        position[1] *= -1
+        cam_fix = torch.tensor([0.0, 0.0, 1.0, 0.0])
+        # NOCS Object -> ShapeNet Object convention
+        obj_fix = torch.tensor([0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)])
+        orientation_q = quaternion_utils.quaternion_multiply(cam_fix, orientation_q)
+        orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
+
+        # TODO refinement code from cass.tools.eval? (not mentioned in paper??)
+
+        # TODO compute extents from reconstructed_points
+
+        # pointset_utils.visualize_pointset(reconstructed_points)
         return {
-            "position": torch.tensor([0, 0, 0]),
-            "orientation": torch.tensor([0, 0, 0, 1]),
+            "position": position.detach(),
+            "orientation": orientation_q.detach(),
             "extents": torch.tensor([1, 1, 1]),
-            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+            "reconstructed_pointcloud": reconstructed_points.detach(),
         }
 
 
