@@ -224,10 +224,19 @@ class REAL275Evaluator:
     def _eval_metric(
         self, metric_name: str, prediction: PredictionDict, sample: dict
     ) -> None:
-        """Evaluate and update single metric for a single prediction."""
+        """Evaluate and update single metric for a single prediction.
+
+        Args:
+            metric_name: Name of metric to evaluate.
+            prediction: Dictionary containing prediction data.
+            sample: Sample containing ground truth information.
+        """
         metric_dict = self._metrics[metric_name]
         correct_counter = self._correct_counters[metric_name]
         total_counter = self._total_counters[metric_name]
+        cat = sample["category_id"]
+        total_counter[cat - 1] += 1
+        total_counter[6] += 1
         for pi, p in enumerate(metric_dict["position_thresholds"]):
             for di, d in enumerate(metric_dict["deg_thresholds"]):
                 for ii, i in enumerate(metric_dict["iou_thresholds"]):
@@ -245,11 +254,8 @@ class REAL275Evaluator:
                         iou_3d_threshold=i,
                         rotational_symmetry_axis=None,  # TODO where to get this from hardcode?
                     )
-                    cat = sample["category_id"]
                     correct_counter[pi, di, ii, cat - 1] += correct
                     correct_counter[pi, di, ii, 6] += correct  # all
-                    total_counter[cat - 1] += 1
-                    total_counter[6] += 1
 
         # TODO posed / or canonical reconstruction metric (chamfer ?)
 
@@ -293,139 +299,6 @@ def main() -> None:
 
     evaluator = REAL275Evaluator(config)
     evaluator.run()
-
-
-def old_stuff():
-    os.makedirs(config["out_folder"], exist_ok=True)
-
-    categories = ["bottle", "bowl", "camera", "can", "laptop", "mug"]
-    pipeline_dict = {}  # maps category to category-specific pipeline
-
-    # create per-categry models
-    for category in categories:
-        if category in config["category_configs"]:
-            category_config = yoco.load_config(
-                config["category_configs"][category], copy.deepcopy(config)
-            )
-            pipeline_dict[category] = SDFPipeline(category_config)
-
-    nocs_file_names = sorted(os.listdir(os.path.join(config["data_path"], "nocs_det")))
-    random.shuffle(nocs_file_names)
-
-    for nocs_file_name in tqdm(nocs_file_names):
-        nocs_file_path = os.path.join(config["data_path"], "nocs_det", nocs_file_name)
-        nocs_dict = pickle.load(open(nocs_file_path, "rb"), encoding="utf-8")
-        results_dict = copy.deepcopy(nocs_dict)
-        rgb_file_path = (
-            nocs_dict["image_path"].replace("data/real/test", config["data_path"])
-            + "_color.png"
-        )
-        rgb, depth, _, _ = load_real275_rgbd(rgb_file_path)
-        masks = nocs_dict["pred_mask"]  # (rows, cols, num_masks,), binary masks
-        category_ids = nocs_dict["pred_class_ids"] - 1  # (num_masks,), class ids
-        results_dict["pred_RTs_sdfest"] = np.zeros_like(results_dict["pred_RTs"])
-
-        for mask_id, category_id in enumerate(category_ids):
-            category = categories[category_id]  # name of category
-            mask = masks[:, :, mask_id]  # (rows, cols,)
-
-            # skip unsupported category
-            if category not in pipeline_dict:
-                results_dict["pred_RTs_sdfest"][mask_id] = np.eye(4, 4)
-                continue
-
-            # apply estimation
-            pipeline = pipeline_dict[category]
-            depth_tensor = torch.from_numpy(depth).float().to(config["device"])
-            rgb_tensor = torch.from_numpy(rgb).to(config["device"])
-            mask_tensor = torch.from_numpy(mask).to(config["device"]) != 0
-
-            position, orientation, scale, shape = pipeline(
-                depth_tensor.clone(),
-                mask_tensor,
-                rgb_tensor,
-                visualize=config["visualize_optimization"],
-            )
-
-            position_gl = position.detach().cpu()
-            orientation_gl = orientation.detach().cpu()
-
-            # visualize prediction
-            # position_cv = pointset_utils.change_position_camera_convention(
-            #     position_gl, "opengl", "opencv"
-            # )
-            # orientation_cv = pointset_utils.change_orientation_camera_convention(
-            #     orientation_gl, "opengl", "opencv"
-            # )
-            # visualize_estimation(
-            #     rgb_tensor,
-            #     depth_tensor,
-            #     mask_tensor,
-            #     position_cv,
-            #     orientation_cv,
-            #     pipeline.cam,
-            # )
-
-            rot_matrix = Rotation.from_quat(orientation_gl).as_matrix()
-
-            transform_gl = np.eye(4)
-            transform_gl[0:3, 0:3] = rot_matrix * scale.detach().cpu().numpy() * 2
-            transform_gl[0:3, 3] = position_gl
-
-            # TODO compute tight bounding box with marching cubes
-
-            # OpenGL -> OpenCV convention
-            transform_cv = transform_gl.copy()
-            transform_cv[1, :] *= -1
-            transform_cv[2, :] *= -1
-
-            # fix canonical convention
-            fix = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
-            transform_cv[0:3, 0:3] = transform_cv[0:3, 0:3] @ fix
-
-            # NOCS Format
-            # RT is 4x4 transformation matrix, where the rotation matrix
-            # includes isotropic NOCS scale
-            # RT is the transform from NOCS coordinate to camera coordinates
-            # scale includes the tight bb size di separate for each axis
-            # isotropic NOCS scale is sqrt(d1^2+d2^2+d3^2)
-
-            # print(rot_matrix @ np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]))
-            # nocs_rot = nocs_dict["gt_RTs"][mask_id][0:3, 0:3]
-            # nocs_rot_scale = np.sqrt((nocs_rot @ nocs_rot.T)[0, 0])
-            # print(np.cbrt(np.linalg.det(nocs_rot)), nocs_rot_scale)
-            # nocs_rot_noscale = nocs_rot / nocs_rot_scale
-            # print(np.linalg.det(nocs_rot_noscale))
-            # print(np.linalg.det(nocs_dict["pred_RTs"][mask_id, 0:3, 0:3]))
-            # print(transform_cv)
-            # print(nocs_rot_noscale)
-            # print(transform_cv[0:3,0:3] @ np.array([1,0,0]))
-            # print(nocs_rot_noscale[0:3,0:3] @ np.array([1,0,0]))
-            # print(nocs_rot, nocs_rot_scale)
-            # print(nocs_dict["gt_RTs"][3])
-            # print(r_no_scale)
-            # print(np.linalg.det(r_no_scale))
-
-            # Visualize Ground Truth (show full depth, as masks <-> RTs order doesn't match)
-            # gt_position = torch.from_numpy(nocs_dict["gt_RTs"][mask_id][0:3, 3])[None]
-            # gt_orientation = torch.from_numpy(
-            #     Rotation.from_matrix(nocs_rot_noscale).as_quat()
-            # )[None]
-            # visualize_estimation(
-            #     rgb_tensor,
-            #     depth_tensor,
-            #     depth_tensor != 0,
-            #     gt_position,
-            #     gt_orientation,
-            #     pipeline.cam,
-            # )
-
-            # store result
-            results_dict["pred_RTs_sdfest"][mask_id] = transform_cv
-
-        f = open(os.path.join(config["out_folder"], nocs_file_name), "wb")
-        pickle.dump(results_dict, f, -1)  # Why -1 (from xuchen-ethz's repo)?
-        f.close()
 
 
 if __name__ == "__main__":
