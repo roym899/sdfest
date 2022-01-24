@@ -25,7 +25,6 @@ import yoco
 from method_wrappers import MethodWrapper, PredictionDict
 
 
-# TODO visualize bounding box
 def visualize_estimation(
     color_image: torch.Tensor,
     depth_image: torch.Tensor,
@@ -295,11 +294,67 @@ class REAL275Evaluator:
             total_counter = self._total_counters[metric_name]
             correct_percentage = correct_counter / total_counter
             self._results_dict[method_name][metric_name] = correct_percentage.tolist()
-            # TODO create plot if applicable
+            self._create_metric_plot(
+                method_name, metric_name, metric_dict, correct_percentage, out_folder
+            )
 
         results_dict = {**self._config, "results": self._results_dict}
         yoco.save_config_to_file(yaml_path, results_dict)
         print(f"Results saved to: {yaml_path}")
+
+    def _create_metric_plot(
+        self,
+        method_name: str,
+        metric_name: str,
+        metric_dict: dict,
+        correct_percentage: np.ndarray,
+        out_folder: str,
+    ) -> None:
+        """Create metric plot if applicable.
+
+        Applicable means only one of the thresholds has multiple values.
+
+        Args:
+            correct_percentage:
+                Array holding the percentage of correct predictions.
+                Shape (NUM_POS_THRESH,NUM_DEG_THRESH,NUM_IOU_THRESH,NUM_CATEGORIES + 1).
+        """
+        axis = None
+        for i, s in enumerate(correct_percentage.shape[:3]):
+            if s != 1 and axis is None:
+                axis = i
+            elif s != 1:  # multiple axis with != 1 size
+                return
+        if axis is None:
+            return
+        axis_to_threshold_key = {
+            0: "position_thresholds",
+            1: "deg_thresholds",
+            2: "iou_thresholds"
+        }
+        threshold_key = axis_to_threshold_key[axis]
+        x_values = metric_dict[threshold_key]
+
+        category_id_to_str = {
+            0: "bottle",
+            1: "bowl",
+            2: "camera",
+            3: "can",
+            4: "laptop",
+            5: "mug",
+            6: "all",
+        }
+        for category_id in range(7):
+            y_values = correct_percentage[..., category_id].flatten()
+            plt.plot(x_values, y_values, label=category_id_to_str[category_id])
+
+        figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}.png")
+        plt.xlabel(threshold_key)
+        plt.ylabel("Correct / %%")
+        plt.legend()
+        plt.grid()
+        plt.savefig(figure_path)
+        plt.close()
 
     def run(self) -> None:
         """Run the evaluation."""

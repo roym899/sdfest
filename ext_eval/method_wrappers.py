@@ -191,9 +191,7 @@ class CASSWrapper(MethodWrapper):
         points = points.view(self._num_points, 1, 3)
         position = (points + pred_t)[max_index[0]].view(-1).cpu()
         # output is scalar-first -> scalar-last
-        print(orientation_q)
         orientation_q = torch.tensor([*orientation_q[1:], orientation_q[0]])
-        print(orientation_q)
 
         # Flip x and y axis of position and orientation (undo flipping of points)
         # (x-left, y-up, z-forward) convention -> OpenCV convention
