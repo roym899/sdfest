@@ -4,6 +4,7 @@ import copy
 from typing import Optional, TypedDict
 
 import numpy as np
+import open3d as o3d
 import torch
 import torchvision.transforms.functional as TF
 
@@ -30,12 +31,16 @@ class PredictionDict(TypedDict):
         reconstructed_pointcloud:
             Reconstructed pointcloud in object frame.
             None if method does not perform reconstruction.
+        reconstructed_mesh:
+            Reconstructed mesh in object frame.
+            None if method does not perform reconstruction.
     """
 
     position: torch.Tensor
     orientation: torch.Tensor
     extents: torch.Tensor
     reconstructed_pointcloud: Optional[torch.Tensor]
+    reconstructed_mesh: Optional[o3d.geometry.TriangleMesh]
 
 
 class MethodWrapper(ABC):
@@ -224,6 +229,7 @@ class CASSWrapper(MethodWrapper):
             "orientation": orientation_q.detach(),
             "extents": extents.detach(),
             "reconstructed_pointcloud": reconstructed_points.detach(),
+            "reconstructed_mesh": None,
         }
 
 
@@ -248,6 +254,7 @@ class NOCSWrapper:
             "orientation": torch.tensor([0, 0, 0, 1]),
             "extents": torch.tensor([1, 1, 1]),
             "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+            "reconstructed_mesh": None,
         }
 
 
@@ -259,6 +266,7 @@ class SDFEstWrapper:
         self._pipeline_dict = {}  # maps category to category-specific pipeline
         self._device = config["device"]
         self._visualize_optimization = config["visualize_optimization"]
+        self._num_points = config["num_points"]
 
         # create per-categry models
         for category_str in config["category_configs"].keys():
@@ -286,6 +294,7 @@ class SDFEstWrapper:
                 "orientation": torch.tensor([0, 0, 0, 1]),
                 "extents": torch.tensor([1, 1, 1]),
                 "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+                "reconstructed_mesh": None,
             }
 
         pipeline = self._pipeline_dict[category_str]
@@ -303,9 +312,26 @@ class SDFEstWrapper:
             visualize=True,
         )
 
+        # outputs of SDFEst are OpenGL camera, ShapeNet object convention
+        position_cv = pointset_utils.change_position_camera_convention(
+            position[0], "opengl", "opencv"
+        )
+        orientation_cv = pointset_utils.change_orientation_camera_convention(
+            orientation[0], "opengl", "opencv"
+        )
+
+        # reconstruction + extent
+        mesh = pipeline.generate_mesh(shape, scale, True).get_transformed_o3d_geometry()
+        reconstructed_points = torch.from_numpy(
+            np.asarray(mesh.sample_points_uniformly(self._num_points).points)
+        )
+        extents, _ = reconstructed_points.abs().max(dim=0)
+        extents *= 2.0
+
         return {
-            "position": torch.tensor([0, 0, 0]),
-            "orientation": torch.tensor([0, 0, 0, 1]),
-            "extents": torch.tensor([1, 1, 1]),
-            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+            "position": position_cv.detach().cpu(),
+            "orientation": orientation_cv.detach().cpu(),
+            "extents": extents,
+            "reconstructed_pointcloud": reconstructed_points,
+            "reconstructed_mesh": mesh,
         }

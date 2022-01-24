@@ -29,6 +29,7 @@ def visualize_estimation(
     instance_mask: Optional[torch.Tensor] = None,
     extents: Optional[torch.Tensor] = None,
     reconstructed_points: Optional[torch.Tensor] = None,
+    reconstructed_mesh: Optional[o3d.geometry.TriangleMesh] = None,
 ) -> None:
     """Visualize prediction and ask for confirmation.
 
@@ -101,6 +102,14 @@ def visualize_estimation(
         )
         o3d_rec_points.translate(local_cv_position[:, None])
         o3d_geometries.append(o3d_rec_points)
+
+    if reconstructed_mesh is not None:
+        reconstructed_mesh.rotate(
+            local_cv_orientation_m,
+            center=np.array([0.0, 0.0, 0.0])[:, None],
+        )
+        reconstructed_mesh.translate(local_cv_position[:, None])
+        o3d_geometries.append(reconstructed_mesh)
 
     o3d.visualization.draw_geometries(o3d_geometries)
 
@@ -207,6 +216,7 @@ class REAL275Evaluator:
                     local_cv_orientation_q=prediction["orientation"],
                     extents=prediction["extents"],
                     reconstructed_points=prediction["reconstructed_pointcloud"],
+                    reconstructed_mesh=prediction["reconstructed_mesh"],
                     camera=self._cam,
                 )
             if self._store_visualization:
