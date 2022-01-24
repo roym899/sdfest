@@ -1,12 +1,15 @@
 # Standalone config to use with real275_evaluation.py
 config:
   - methods:
+      sdfest:
+        config_dict: ./sdfest.yaml
       cass: 
         config_dict: ./cass.yaml
       nocs:
         config_dict: ./nocs.yaml
-
 methods:
+  sdfest:
+    type: method_wrappers.SDFEstWrapper
   cass:
     type: method_wrappers.CASSWrapper
   nocs:

@@ -141,7 +141,6 @@ class NOCSDataset(torch.utils.data.Dataset):
         "category_str": None,
         "remap_y_axis": None,
         "remap_x_axis": None,
-        "category_str": None,
     }
 
     def __init__(
@@ -486,6 +485,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             "scale": scale,
             "color_path": sample_data["color_path"],
             "category_id": sample_data["category_id"],
+            "category_str": NOCSDataset.category_id_to_str[sample_data["category_id"]],
         }
         return sample
 

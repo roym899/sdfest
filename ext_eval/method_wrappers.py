@@ -1,5 +1,6 @@
 """Wrapper for pose and shape estimation methods."""
 from abc import ABC
+import copy
 from typing import Optional, TypedDict
 
 import numpy as np
@@ -8,6 +9,7 @@ import torchvision.transforms.functional as TF
 
 from sdf_differentiable_renderer import Camera
 from sdf_single_shot import pointset_utils, quaternion_utils
+from sdf_estimation.simple_setup import SDFPipeline
 
 import yoco
 from cass.cass.lib.models import CASS
@@ -45,6 +47,7 @@ class MethodWrapper(ABC):
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
         category_id: int,
+        category_str: str,
     ) -> PredictionDict:
         """Run a method to predict pose and shape of an object.
 
@@ -99,6 +102,7 @@ class CASSWrapper(MethodWrapper):
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
         category_id: int,
+        category_str: str,
     ) -> PredictionDict:
         """See MethodWrapper.inference.
 
@@ -227,7 +231,7 @@ class NOCSWrapper:
     """Wrapper class for NOCS."""
 
     def __init__(self, config: dict, camera: Camera) -> None:
-        """Initialize and load NOCS model."""
+        """Initialize and load NOCS models."""
         pass
 
     def inference(
@@ -236,7 +240,69 @@ class NOCSWrapper:
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
         category_id: int,
+        category_str: str,
     ) -> PredictionDict:
+        """See MethodWrapper.inference."""
+        return {
+            "position": torch.tensor([0, 0, 0]),
+            "orientation": torch.tensor([0, 0, 0, 1]),
+            "extents": torch.tensor([1, 1, 1]),
+            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+        }
+
+
+class SDFEstWrapper:
+    """Wrapper class for SDFEst."""
+
+    def __init__(self, config: dict, camera: Camera) -> None:
+        """Initialize and load SDFEst models."""
+        self._pipeline_dict = {}  # maps category to category-specific pipeline
+        self._device = config["device"]
+        self._visualize_optimization = config["visualize_optimization"]
+
+        # create per-categry models
+        for category_str in config["category_configs"].keys():
+            if category_str.startswith("__"):
+                continue
+            category_config = yoco.load_config(
+                config["category_configs"][category_str], copy.deepcopy(config)
+            )
+            self._pipeline_dict[category_str] = SDFPipeline(category_config)
+            self._pipeline_dict[category_str].cam = camera
+
+    def inference(
+        self,
+        color_image: torch.Tensor,
+        depth_image: torch.Tensor,
+        instance_mask: torch.Tensor,
+        category_id: int,
+        category_str: str,
+    ) -> PredictionDict:
+        """See MethodWrapper.inference."""
+        # skip unsupported category
+        if category_str not in self._pipeline_dict:
+            return {
+                "position": torch.tensor([0, 0, 0]),
+                "orientation": torch.tensor([0, 0, 0, 1]),
+                "extents": torch.tensor([1, 1, 1]),
+                "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+            }
+
+        pipeline = self._pipeline_dict[category_str]
+
+        # move inputs to device
+        color_image = color_image.to(self._device)
+        depth_image = depth_image.to(self._device, copy=True)
+        instance_mask = instance_mask.to(self._device)
+
+        position, orientation, scale, shape = pipeline(
+            depth_image,
+            instance_mask,
+            color_image,
+            # visualize=self._visualize_optimization,
+            visualize=True,
+        )
+
         return {
             "position": torch.tensor([0, 0, 0]),
             "orientation": torch.tensor([0, 0, 0, 1]),

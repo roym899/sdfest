@@ -1,9 +1,4 @@
-"""Script to run evaluation on REAL275 dataset.
-
-Based on the following repos to follow the same evaluation
-https://github.com/hughw19/NOCS_CVPR2019
-https://github.com/xuchen-ethz/neural_object_fitting
-"""
+"""Script to run evaluation on REAL275 dataset."""
 import argparse
 import os
 from datetime import datetime
@@ -181,8 +176,6 @@ class REAL275Evaluator:
         count = 0
         for sample in tqdm(self._dataset):
             count += 1
-            if count > 1000:
-                break
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
                 ax1.imshow(sample["color"].numpy())
@@ -195,6 +188,7 @@ class REAL275Evaluator:
                 depth_image=sample["depth"],
                 instance_mask=sample["mask"],
                 category_id=sample["category_id"],
+                category_str=sample["category_str"],
             )
 
             if self._visualize_gt:
@@ -254,8 +248,8 @@ class REAL275Evaluator:
         metric_dict = self._metrics[metric_name]
         correct_counter = self._correct_counters[metric_name]
         total_counter = self._total_counters[metric_name]
-        cat = sample["category_id"]
-        total_counter[cat - 1] += 1
+        category_id = sample["category_id"]
+        total_counter[category_id - 1] += 1
         total_counter[6] += 1
         for pi, p in enumerate(metric_dict["position_thresholds"]):
             for di, d in enumerate(metric_dict["deg_thresholds"]):
@@ -274,7 +268,7 @@ class REAL275Evaluator:
                         iou_3d_threshold=i,
                         rotational_symmetry_axis=None,  # TODO where to get this from hardcode?
                     )
-                    correct_counter[pi, di, ii, cat - 1] += correct
+                    correct_counter[pi, di, ii, category_id - 1] += correct
                     correct_counter[pi, di, ii, 6] += correct  # all
 
         # TODO posed / or canonical reconstruction metric (chamfer ?)
@@ -350,7 +344,7 @@ class REAL275Evaluator:
 
         figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}.png")
         plt.xlabel(threshold_key)
-        plt.ylabel("Correct / %%")
+        plt.ylabel("Correct")
         plt.legend()
         plt.grid()
         plt.savefig(figure_path)
