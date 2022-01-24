@@ -201,9 +201,15 @@ class CASSWrapper(MethodWrapper):
         position[1] *= -1
         cam_fix = torch.tensor([0.0, 0.0, 1.0, 0.0])
         # NOCS Object -> ShapeNet Object convention
-        obj_fix = torch.tensor([0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)])
+        obj_fix = torch.tensor(
+            [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
+        )  # CASS object to ShapeNet object
         orientation_q = quaternion_utils.quaternion_multiply(cam_fix, orientation_q)
         orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
+        reconstructed_points = quaternion_utils.quaternion_apply(
+            quaternion_utils.quaternion_invert(obj_fix),
+            reconstructed_points,
+        )
 
         # TODO refinement code from cass.tools.eval? (not mentioned in paper??)
 

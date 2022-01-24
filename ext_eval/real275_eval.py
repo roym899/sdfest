@@ -34,19 +34,21 @@ def visualize_estimation(
     camera: Camera,
     instance_mask: Optional[torch.Tensor] = None,
     extents: Optional[torch.Tensor] = None,
+    reconstructed_points: Optional[torch.Tensor] = None,
 ) -> None:
     """Visualize prediction and ask for confirmation.
 
     Args:
         color_image: The unmasked color image. Shape (H,W,3), RGB, 0-1, float.
         depth_image: The unmasked depth image. Shape (H,W), float (meters along z).
-        instance_mask: The instance mask. No masking if None. Shape (H,W).
-        category: Category string.
         local_cv_position: The position in the OpenCV camera frame. Shape (3,).
         local_cv_orientation_q:
             The orientation in the OpenCV camera frame.  Scalar last, shape (4,).
-        extents:
-            Extents of the bounding box. Not visualized if None. Shape (3,).
+        extents: Extents of the bounding box. Not visualized if None. Shape (3,).
+        instance_mask: The instance mask. No masking if None. Shape (H,W).
+        reconstructed_points:
+            Reconstructed points. In object coordinate frame. Not visualized if None.
+            Shape (M,3).
     Returns:
         True if confirmation was positive. False if negative.
     """
@@ -94,6 +96,17 @@ def visualize_estimation(
             extent=extents[:, None],
         )
         o3d_geometries.append(o3d_obb)
+
+    if reconstructed_points is not None:
+        o3d_rec_points = o3d.geometry.PointCloud(
+            points=o3d.utility.Vector3dVector(reconstructed_points.cpu().numpy())
+        )
+        o3d_rec_points.rotate(
+            local_cv_orientation_m,
+            center=np.array([0.0, 0.0, 0.0])[:, None],
+        )
+        o3d_rec_points.translate(local_cv_position[:, None])
+        o3d_geometries.append(o3d_rec_points)
 
     o3d.visualization.draw_geometries(o3d_geometries)
 
@@ -200,6 +213,7 @@ class REAL275Evaluator:
                     local_cv_position=prediction["position"],
                     local_cv_orientation_q=prediction["orientation"],
                     extents=prediction["extents"],
+                    reconstructed_points=prediction["reconstructed_pointcloud"],
                     camera=self._cam,
                 )
             if self._store_visualization:
