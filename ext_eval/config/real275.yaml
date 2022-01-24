@@ -1,17 +1,17 @@
 # Standalone config to use with real275_evaluation.py
 config:
   - methods:
-      sdfest:
-        config_dict: ./sdfest.yaml
       cass: 
         config_dict: ./cass.yaml
+      sdfest:
+        config_dict: ./sdfest.yaml
       nocs:
         config_dict: ./nocs.yaml
 methods:
-  sdfest:
-    type: method_wrappers.SDFEstWrapper
   cass:
     type: method_wrappers.CASSWrapper
+  sdfest:
+    type: method_wrappers.SDFEstWrapper
   nocs:
     type: method_wrappers.NOCSWrapper
 
@@ -49,3 +49,12 @@ metrics:
     position_thresholds: [10.0]
     deg_thresholds: [180]
     iou_thresholds: [null]
+  # mean_accuracy: 
+  #   pointwise_f: sdf_estimation.metrics.mean_accuracy
+  #   kwargs: {}
+  # mean_completeness: 
+  #   pointwise_f: sdf_estimation.metrics.mean_completeness
+  #   kwargs: {}
+  # chamfer: 
+  #   f: sdf_estimation.metrics.symmetric_chamfer
+  #   kwargs: {}

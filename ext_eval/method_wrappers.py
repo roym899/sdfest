@@ -308,8 +308,7 @@ class SDFEstWrapper:
             depth_image,
             instance_mask,
             color_image,
-            # visualize=self._visualize_optimization,
-            visualize=True,
+            visualize=self._visualize_optimization,
         )
 
         # outputs of SDFEst are OpenGL camera, ShapeNet object convention

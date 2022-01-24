@@ -185,6 +185,8 @@ class REAL275Evaluator:
         count = 0
         for sample in tqdm(self._dataset):
             count += 1
+            if count >= 100:
+                break
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
                 ax1.imshow(sample["color"].numpy())
@@ -234,16 +236,27 @@ class REAL275Evaluator:
 
     def _init_metrics(self) -> None:
         """Initialize metrics."""
-        self._correct_counters = {}
-        self._total_counters = {}
-        for metric_name, metric_dict in self._metrics.items():
-            pts = metric_dict["position_thresholds"]
-            dts = metric_dict["deg_thresholds"]
-            its = metric_dict["iou_thresholds"]
-            self._correct_counters[metric_name] = np.zeros(
+        self._metric_data = {}
+        for metric_name, metric_config_dict in self._metrics.items():
+            self._metric_data[metric_name] = self._init_metric_data(metric_config_dict)
+
+    def _init_metric_data(self, metric_config_dict: dict) -> dict:
+        """Create data structure necessary to compute a metric."""
+        metric_data = {}
+        if "position_thresholds" in metric_config_dict:
+            pts = metric_config_dict["position_thresholds"]
+            dts = metric_config_dict["deg_thresholds"]
+            its = metric_config_dict["iou_thresholds"]
+            metric_data["correct_counters"] = np.zeros(
                 (len(pts), len(dts), len(its), self.NUM_CATEGORIES + 1)
             )
-            self._total_counters[metric_name] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["total_counters"] = np.zeros(self.NUM_CATEGORIES + 1)
+        elif "pointwise_f" in metric_config_dict:
+            metric_data["sum"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["total_counters"] = np.zeros(self.NUM_CATEGORIES + 1)
+        else:
+            raise NotImplementedError(f"Unsupported metric configuration.")
+        return metric_data
 
     def _eval_metric(
         self, metric_name: str, prediction: PredictionDict, sample: dict
@@ -255,12 +268,32 @@ class REAL275Evaluator:
             prediction: Dictionary containing prediction data.
             sample: Sample containing ground truth information.
         """
+        metric_config_dict = self._metrics[metric_name]
+        if "position_thresholds" in metric_config_dict:  # correctness metrics
+            self._eval_correctness_metric(metric_name, prediction, sample)
+        elif "pointwise_f" in metric_config_dict:  # pointwise reconstruction metrics
+            self._eval_pointwise_metric(metric_name, prediction, sample)
+        else:
+            raise NotImplementedError(
+                f"Unsupported metric configuration with name {metric_name}."
+            )
+
+    def _eval_correctness_metric(
+        self, metric_name: str, prediction: PredictionDict, sample: dict
+    ) -> None:
+        """Evaluate and update single correctness metric for a single prediction.
+
+        Args:
+            metric_name: Name of metric to evaluate.
+            prediction: Dictionary containing prediction data.
+            sample: Sample containing ground truth information.
+        """
         metric_dict = self._metrics[metric_name]
-        correct_counter = self._correct_counters[metric_name]
-        total_counter = self._total_counters[metric_name]
+        correct_counters = self._metric_data[metric_name]["correct_counters"]
+        total_counters = self._metric_data[metric_name]["total_counters"]
         category_id = sample["category_id"]
-        total_counter[category_id - 1] += 1
-        total_counter[6] += 1
+        total_counters[category_id - 1] += 1
+        total_counters[6] += 1
         for pi, p in enumerate(metric_dict["position_thresholds"]):
             for di, d in enumerate(metric_dict["deg_thresholds"]):
                 for ii, i in enumerate(metric_dict["iou_thresholds"]):
@@ -278,9 +311,20 @@ class REAL275Evaluator:
                         iou_3d_threshold=i,
                         rotational_symmetry_axis=None,  # TODO where to get this from hardcode?
                     )
-                    correct_counter[pi, di, ii, category_id - 1] += correct
-                    correct_counter[pi, di, ii, 6] += correct  # all
+                    correct_counters[pi, di, ii, category_id - 1] += correct
+                    correct_counters[pi, di, ii, 6] += correct  # all
 
+    def _eval_pointwise_metric(
+        self, metric_name: str, prediction: PredictionDict, sample: dict
+    ) -> None:
+        """Evaluate and update single pointwise metric for a single prediction.
+
+        Args:
+            metric_name: Name of metric to evaluate.
+            prediction: Dictionary containing prediction data.
+            sample: Sample containing ground truth information.
+        """
+        pass
         # TODO posed / or canonical reconstruction metric (chamfer ?)
 
     def _finalize_metrics(self, method_name: str) -> None:
@@ -294,8 +338,8 @@ class REAL275Evaluator:
 
         self._results_dict[method_name] = {}
         for metric_name, metric_dict in self._metrics.items():
-            correct_counter = self._correct_counters[metric_name]
-            total_counter = self._total_counters[metric_name]
+            correct_counter = self._metric_data[metric_name]["correct_counters"]
+            total_counter = self._metric_data[metric_name]["total_counters"]
             correct_percentage = correct_counter / total_counter
             self._results_dict[method_name][metric_name] = correct_percentage.tolist()
             self._create_metric_plot(
@@ -334,7 +378,7 @@ class REAL275Evaluator:
         axis_to_threshold_key = {
             0: "position_thresholds",
             1: "deg_thresholds",
-            2: "iou_thresholds"
+            2: "iou_thresholds",
         }
         threshold_key = axis_to_threshold_key[axis]
         x_values = metric_dict[threshold_key]

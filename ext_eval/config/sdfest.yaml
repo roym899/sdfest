@@ -14,7 +14,7 @@ device: cuda
 num_points: 1000  # samples from mesh to generate pointcloud
 
 max_iterations: 30
-visualize_optimization: True
+visualize_optimization: False
 
 camera:  # Placeholder, will be overwritten with dataset specific camera in wrapper
   width: 640
