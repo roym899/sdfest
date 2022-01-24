@@ -5,31 +5,24 @@ https://github.com/hughw19/NOCS_CVPR2019
 https://github.com/xuchen-ethz/neural_object_fitting
 """
 import argparse
-import copy
-import glob
 import os
 from datetime import datetime
-import pickle
-import random
 from typing import Optional
 
-from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
 from tqdm import tqdm
-import yoco
 import open3d as o3d
+from sdf_estimation import metrics
 from sdf_single_shot import pointset_utils
 from sdf_differentiable_renderer import Camera
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.utils import str_to_object
-from method_wrappers import MethodWrapper, PredictionDict
+import yoco
 
-from sdf_estimation.simple_setup import SDFPipeline
-from sdf_estimation.scripts.real_data import load_real275_rgbd
-from sdf_estimation import metrics
+from method_wrappers import MethodWrapper, PredictionDict
 
 
 # TODO visualize bounding box
@@ -37,9 +30,10 @@ def visualize_estimation(
     color_image: torch.Tensor,
     depth_image: torch.Tensor,
     local_cv_position: torch.Tensor,
-    local_cv_orientation: torch.Tensor,
+    local_cv_orientation_q: torch.Tensor,
     camera: Camera,
     instance_mask: Optional[torch.Tensor] = None,
+    extents: Optional[torch.Tensor] = None,
 ) -> None:
     """Visualize prediction and ask for confirmation.
 
@@ -49,15 +43,17 @@ def visualize_estimation(
         instance_mask: The instance mask. No masking if None. Shape (H,W).
         category: Category string.
         local_cv_position: The position in the OpenCV camera frame. Shape (3,).
-        local_cv_orientation:
+        local_cv_orientation_q:
             The orientation in the OpenCV camera frame.  Scalar last, shape (4,).
+        extents:
+            Extents of the bounding box. Not visualized if None. Shape (3,).
     Returns:
         True if confirmation was positive. False if negative.
     """
     o3d_geometries = []
 
     local_cv_position = local_cv_position.cpu().double().numpy()  # shape (3,)
-    local_cv_orientation = local_cv_orientation.cpu().double().numpy()  # shape (4,)
+    local_cv_orientation_q = local_cv_orientation_q.cpu().double().numpy()  # shape (4,)
 
     if instance_mask is not None:
         valid_depth_mask = (depth_image != 0) * instance_mask
@@ -78,9 +74,10 @@ def visualize_estimation(
     o3d_geometries.append(o3d_points)
 
     # coordinate frame
+    local_cv_orientation_m = Rotation.from_quat(local_cv_orientation_q).as_matrix()
     o3d_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
     o3d_frame.rotate(
-        Rotation.from_quat(local_cv_orientation).as_matrix(),
+        local_cv_orientation_m,
         center=np.array([0.0, 0.0, 0.0])[:, None],
     )
     o3d_frame.translate(local_cv_position[:, None])
@@ -88,6 +85,15 @@ def visualize_estimation(
 
     o3d_cam_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3)
     o3d_geometries.append(o3d_cam_frame)
+
+    if extents is not None:
+        extents = extents.cpu().double().numpy()
+        o3d_obb = o3d.geometry.OrientedBoundingBox(
+            center=local_cv_position[:, None],
+            R=local_cv_orientation_m,
+            extent=extents[:, None],
+        )
+        o3d_geometries.append(o3d_obb)
 
     o3d.visualization.draw_geometries(o3d_geometries)
 
@@ -184,7 +190,7 @@ class REAL275Evaluator:
                     color_image=sample["color"],
                     depth_image=sample["depth"],
                     local_cv_position=sample["position"],
-                    local_cv_orientation=sample["quaternion"],
+                    local_cv_orientation_q=sample["quaternion"],
                     camera=self._cam,
                 )
             if self._visualize_prediction:
@@ -192,7 +198,8 @@ class REAL275Evaluator:
                     color_image=sample["color"],
                     depth_image=sample["depth"],
                     local_cv_position=prediction["position"],
-                    local_cv_orientation=prediction["orientation"],
+                    local_cv_orientation_q=prediction["orientation"],
+                    extents=prediction["extents"],
                     camera=self._cam,
                 )
             if self._store_visualization:

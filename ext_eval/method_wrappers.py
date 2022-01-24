@@ -207,13 +207,14 @@ class CASSWrapper(MethodWrapper):
 
         # TODO refinement code from cass.tools.eval? (not mentioned in paper??)
 
-        # TODO compute extents from reconstructed_points
+        extents, _ = reconstructed_points.abs().max(dim=0)
+        extents *= 2.0
 
         # pointset_utils.visualize_pointset(reconstructed_points)
         return {
             "position": position.detach(),
             "orientation": orientation_q.detach(),
-            "extents": torch.tensor([1, 1, 1]),
+            "extents": extents.detach(),
             "reconstructed_pointcloud": reconstructed_points.detach(),
         }
 
