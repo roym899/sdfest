@@ -118,6 +118,23 @@ class REAL275Evaluator:
     """Class to evaluate various pose and shape estimation algorithms on REAL275."""
 
     NUM_CATEGORIES = 6  # (excluding all)
+    SYMMETRY_AXIS_DICT = {
+        "mug": None,
+        "laptop": None,
+        "camera": None,
+        "can": 1,
+        "bowl": 1,
+        "bottle": 1,
+    }
+    CATEGORY_ID_TO_STR = {
+        0: "bottle",
+        1: "bowl",
+        2: "camera",
+        3: "can",
+        4: "laptop",
+        5: "mug",
+        6: "all",
+    }
 
     def __init__(self, config: dict) -> None:
         """Initialize model wrappers and evaluator."""
@@ -309,7 +326,9 @@ class REAL275Evaluator:
                         position_threshold=p,
                         degree_threshold=d,
                         iou_3d_threshold=i,
-                        rotational_symmetry_axis=None,  # TODO where to get this from hardcode?
+                        rotational_symmetry_axis=self.SYMMETRY_AXIS_DICT[
+                            sample["category_str"]
+                        ],
                     )
                     correct_counters[pi, di, ii, category_id - 1] += correct
                     correct_counters[pi, di, ii, 6] += correct  # all
@@ -383,18 +402,9 @@ class REAL275Evaluator:
         threshold_key = axis_to_threshold_key[axis]
         x_values = metric_dict[threshold_key]
 
-        category_id_to_str = {
-            0: "bottle",
-            1: "bowl",
-            2: "camera",
-            3: "can",
-            4: "laptop",
-            5: "mug",
-            6: "all",
-        }
         for category_id in range(7):
             y_values = correct_percentage[..., category_id].flatten()
-            plt.plot(x_values, y_values, label=category_id_to_str[category_id])
+            plt.plot(x_values, y_values, label=self.CATEGORY_ID_TO_STR[category_id])
 
         figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}.png")
         plt.xlabel(threshold_key)
