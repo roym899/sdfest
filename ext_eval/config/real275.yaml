@@ -1,17 +1,17 @@
 # Standalone config to use with real275_evaluation.py
 config:
   - methods:
-      cass: 
-        config_dict: ./cass.yaml
       sdfest:
         config_dict: ./sdfest.yaml
+      cass: 
+        config_dict: ./cass.yaml
       nocs:
         config_dict: ./nocs.yaml
 methods:
-  cass:
-    type: method_wrappers.CASSWrapper
   sdfest:
     type: method_wrappers.SDFEstWrapper
+  cass:
+    type: method_wrappers.CASSWrapper
   nocs:
     type: method_wrappers.NOCSWrapper
 
@@ -32,6 +32,7 @@ store_visualization: False
 dataset: "nocs"
 detection: "gt"
 run_name: ""
+num_gt_points: 10000
 metrics:
   correct_position:
     position_thresholds: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, null]
@@ -49,12 +50,15 @@ metrics:
     position_thresholds: [10.0]
     deg_thresholds: [180]
     iou_thresholds: [null]
-  # mean_accuracy: 
-  #   pointwise_f: sdf_estimation.metrics.mean_accuracy
-  #   kwargs: {}
-  # mean_completeness: 
-  #   pointwise_f: sdf_estimation.metrics.mean_completeness
-  #   kwargs: {}
-  # chamfer: 
-  #   f: sdf_estimation.metrics.symmetric_chamfer
-  #   kwargs: {}
+  mean_accuracy: 
+    pointwise_f: sdf_estimation.metrics.mean_accuracy
+    posed: True
+    kwargs: {}
+  mean_completeness: 
+    pointwise_f: sdf_estimation.metrics.mean_completeness
+    posed: True
+    kwargs: {}
+  chamfer: 
+    pointwise_f: sdf_estimation.metrics.symmetric_chamfer
+    posed: True
+    kwargs: {}

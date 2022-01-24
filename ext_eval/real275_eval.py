@@ -11,10 +11,11 @@ import torch
 from tqdm import tqdm
 import open3d as o3d
 from sdf_estimation import metrics
-from sdf_single_shot import pointset_utils
+from sdf_single_shot import pointset_utils, quaternion_utils
 from sdf_differentiable_renderer import Camera
 from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.utils import str_to_object
+
 import yoco
 
 from method_wrappers import MethodWrapper, PredictionDict
@@ -153,6 +154,7 @@ class REAL275Evaluator:
         )
         self._out_folder = config["out_folder"]
         self._metrics = config["metrics"]
+        self._num_gt_points = config["num_gt_points"]
 
         self._cam = Camera(**config["camera"])
         self._init_wrappers(config["methods"])
@@ -269,8 +271,9 @@ class REAL275Evaluator:
             )
             metric_data["total_counters"] = np.zeros(self.NUM_CATEGORIES + 1)
         elif "pointwise_f" in metric_config_dict:
-            metric_data["sum"] = np.zeros(self.NUM_CATEGORIES + 1)
-            metric_data["total_counters"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["means"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["m2s"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["counts"] = np.zeros(self.NUM_CATEGORIES + 1)
         else:
             raise NotImplementedError(f"Unsupported metric configuration.")
         return metric_data
@@ -343,8 +346,49 @@ class REAL275Evaluator:
             prediction: Dictionary containing prediction data.
             sample: Sample containing ground truth information.
         """
-        pass
-        # TODO posed / or canonical reconstruction metric (chamfer ?)
+        metric_config_dict = self._metrics[metric_name]
+        means = self._metric_data[metric_name]["means"]
+        m2s = self._metric_data[metric_name]["m2s"]
+        counts = self._metric_data[metric_name]["counts"]
+        category_id = sample["category_id"] - 1
+        point_metric = str_to_object(metric_config_dict["pointwise_f"])
+
+        # load ground truth mesh
+        gt_mesh = self._dataset.load_mesh(sample["obj_path"])
+        gt_points = torch.from_numpy(
+            np.asarray(gt_mesh.sample_points_uniformly(self._num_gt_points).points)
+        )
+        pred_points = prediction["reconstructed_pointcloud"]
+
+        # transform points if posed
+        if metric_config_dict["posed"]:
+            gt_points = quaternion_utils.quaternion_apply(
+                sample["quaternion"], gt_points
+            )
+            gt_points += sample["position"]
+            pred_points = quaternion_utils.quaternion_apply(
+                prediction["orientation"], pred_points
+            )
+            pred_points += prediction["position"]
+
+        result = point_metric(
+            gt_points.numpy(), pred_points.numpy(), **metric_config_dict["kwargs"]
+        )
+
+        # Use Welfords algorithm to update mean and variance
+        # for category
+        counts[category_id] += 1
+        delta = result - means[category_id]
+        means[category_id] += delta / counts[category_id]
+        delta2 = result - means[category_id]
+        m2s[category_id] += delta * delta2
+
+        # for all
+        counts[6] += 1
+        delta = result - means[6]
+        means[6] += delta / counts[6]
+        delta2 = result - means[6]
+        m2s[6] += delta * delta2
 
     def _finalize_metrics(self, method_name: str) -> None:
         """Finalize metrics after all samples have been evaluated.
@@ -357,13 +401,35 @@ class REAL275Evaluator:
 
         self._results_dict[method_name] = {}
         for metric_name, metric_dict in self._metrics.items():
-            correct_counter = self._metric_data[metric_name]["correct_counters"]
-            total_counter = self._metric_data[metric_name]["total_counters"]
-            correct_percentage = correct_counter / total_counter
-            self._results_dict[method_name][metric_name] = correct_percentage.tolist()
-            self._create_metric_plot(
-                method_name, metric_name, metric_dict, correct_percentage, out_folder
-            )
+            if "position_thresholds" in metric_dict:  # correctness metrics
+                correct_counter = self._metric_data[metric_name]["correct_counters"]
+                total_counter = self._metric_data[metric_name]["total_counters"]
+                correct_percentage = correct_counter / total_counter
+                self._results_dict[method_name][
+                    metric_name
+                ] = correct_percentage.tolist()
+                self._create_metric_plot(
+                    method_name,
+                    metric_name,
+                    metric_dict,
+                    correct_percentage,
+                    out_folder,
+                )
+            elif "pointwise_f" in metric_dict:  # pointwise reconstruction metrics
+                counts = self._metric_data[metric_name]["counts"]
+                m2s = self._metric_data[metric_name]["m2s"]
+                means = self._metric_data[metric_name]["means"]
+                variances = m2s / counts
+                stds = np.sqrt(variances)
+                self._results_dict[method_name][metric_name] = {
+                    "means": means.tolist(),
+                    "variances": variances.tolist(),
+                    "std": stds.tolist(),
+                }
+            else:
+                raise NotImplementedError(
+                    f"Unsupported metric configuration with name {metric_name}."
+                )
 
         results_dict = {**self._config, "results": self._results_dict}
         yoco.save_config_to_file(yaml_path, results_dict)
