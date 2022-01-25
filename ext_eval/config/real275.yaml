@@ -3,17 +3,17 @@ config:
   - methods:
       sdfest:
         config_dict: ./sdfest.yaml
-      cass: 
-        config_dict: ./cass.yaml
-      nocs:
-        config_dict: ./nocs.yaml
+      # cass: 
+      #   config_dict: ./cass.yaml
+      # nocs:
+      #   config_dict: ./nocs.yaml
 methods:
   sdfest:
     type: method_wrappers.SDFEstWrapper
-  cass:
-    type: method_wrappers.CASSWrapper
-  nocs:
-    type: method_wrappers.NOCSWrapper
+  # cass:
+  #   type: method_wrappers.CASSWrapper
+  # nocs:
+  #   type: method_wrappers.NOCSWrapper
 
 # See https://github.com/hughw19/NOCS_CVPR2019/blob/master/detect_eval.py for camera
 # intrinsics (seems to be different from info.txt in the dataset folder).
@@ -33,6 +33,8 @@ dataset: "nocs"
 detection: "gt"
 run_name: ""
 num_gt_points: 10000
+vis_camera_json: ./real275_camera.json
+render_options_json: ./real275_renderoptions.json
 metrics:
   correct_position:
     position_thresholds: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, null]
