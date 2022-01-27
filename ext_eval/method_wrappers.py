@@ -13,8 +13,8 @@ from sdf_single_shot import pointset_utils, quaternion_utils
 from sdf_estimation.simple_setup import SDFPipeline
 
 import yoco
-# from cass.cass.lib.models import CASS
-# from cass.cass.datasets.dataset import get_bbox
+from cass.cass.lib.models import CASS
+from cass.cass.datasets.dataset import get_bbox
 
 
 class PredictionDict(TypedDict):

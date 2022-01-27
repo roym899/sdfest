@@ -190,6 +190,7 @@ class REAL275Evaluator:
         self._visualize_input = config["visualize_input"]
         self._visualize_prediction = config["visualize_prediction"]
         self._visualize_gt = config["visualize_gt"]
+        self._fast_eval = config["fast_eval"]
         self._store_visualization = config["store_visualization"]
         self._detection = config["detection"]
         self._run_name = (
@@ -248,8 +249,8 @@ class REAL275Evaluator:
         print(f"Run {method_name}...")
         self._init_metrics()
         for i, sample in enumerate(tqdm(self._dataset)):
-            if i >= 100:
-                break
+            if self._fast_eval and i % 10 != 0:
+                continue
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
                 ax1.imshow(sample["color"].numpy())

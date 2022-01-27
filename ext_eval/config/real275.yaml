@@ -3,15 +3,15 @@ config:
   - methods:
       sdfest:
         config_dict: ./sdfest.yaml
-      # cass: 
-      #   config_dict: ./cass.yaml
+      cass: 
+        config_dict: ./cass.yaml
       # nocs:
       #   config_dict: ./nocs.yaml
 methods:
   sdfest:
     type: method_wrappers.SDFEstWrapper
-  # cass:
-  #   type: method_wrappers.CASSWrapper
+  cass:
+    type: method_wrappers.CASSWrapper
   # nocs:
   #   type: method_wrappers.NOCSWrapper
 
@@ -28,6 +28,7 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
+fast_eval: False  # only evaluate every 10th sample
 store_visualization: False
 dataset: "nocs"
 detection: "gt"
@@ -37,16 +38,28 @@ vis_camera_json: ./real275_camera.json
 render_options_json: ./real275_renderoptions.json
 metrics:
   correct_position:
-    position_thresholds: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, null]
+    position_thresholds: [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]
     deg_thresholds: [null]
     iou_thresholds: [null]
   correct_degree:
     position_thresholds: [null]
-    deg_thresholds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40]
+    deg_thresholds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    iou_thresholds: [null]
+  correct_5deg2cm:
+    position_thresholds: [0.02]
+    deg_thresholds: [5]
     iou_thresholds: [null]
   correct_5deg5cm:
     position_thresholds: [0.05]
     deg_thresholds: [5]
+    iou_thresholds: [null]
+  correct_10deg2cm:
+    position_thresholds: [0.02]
+    deg_thresholds: [10]
+    iou_thresholds: [null]
+  correct_10deg5cm:
+    position_thresholds: [0.05]
+    deg_thresholds: [10]
     iou_thresholds: [null]
   correct_180deg1000cm:
     position_thresholds: [10.0]
