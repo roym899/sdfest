@@ -10,7 +10,7 @@ from ruamel.yaml import YAML as _YAML
 _yaml = _YAML()
 
 
-def load_config_from_file(path, current_dict=None, parent=None, ns=None):
+def load_config_from_file(path, current_dict=None, parent=None):
     """Load configuration from a file."""
     if current_dict is None:
         current_dict = {}
@@ -21,12 +21,7 @@ def load_config_from_file(path, current_dict=None, parent=None, ns=None):
 
     with open(full_path) as f:
         config_dict = _yaml.load(f)
-        if ns is not None:
-            if ns not in current_dict:
-                current_dict[ns] = {}
-            load_config(config_dict, current_dict[ns], parent)
-        else:
-            load_config(config_dict, current_dict, parent)
+        load_config(config_dict, current_dict, parent)
 
     return current_dict
 
@@ -165,21 +160,21 @@ def _resolve_config_key(config_dict, current_dict, parent):
     # config can be string, list of strings, dict, or list of string / dict
     if isinstance(config_dict["config"], str):
         load_config_from_file(config_dict["config"], current_dict, parent)
-    elif isinstance(config_dict["config"], dict):
-        _resolve_config_dict(config_dict["config"], current_dict, parent)
     elif isinstance(config_dict["config"], list):
         _resolve_config_list(config_dict["config"], current_dict, parent)
+    elif isinstance(config_dict["config"], dict):
+        _resolve_config_dict(config_dict["config"], current_dict, parent)
 
 
 def _resolve_config_dict(config_dict, current_dict, parent):
     for ns, element in config_dict.items():
+        if ns not in current_dict:
+            current_dict[ns] = {}
         if isinstance(element, str):
-            load_config_from_file(element, current_dict, parent, ns)
+            load_config_from_file(element, current_dict[ns], parent)
         elif isinstance(element, list):
-            _resolve_config_list(element, current_dict, parent)
+            _resolve_config_list(element, current_dict[ns], parent)
         elif isinstance(element, dict):
-            if ns not in current_dict:
-                current_dict[ns] = {}
             _resolve_config_dict(element, current_dict[ns], parent)
 
 
