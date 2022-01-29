@@ -1,19 +1,20 @@
-# Standalone config to use with real275_evaluation.py
+# Standalone config to use with evaluate.py
 config:
-  - methods:
-      sdfest:
-        config_dict: ./sdfest.yaml
-      cass: 
-        config_dict: ./cass.yaml
-      # nocs:
-      #   config_dict: ./nocs.yaml
-methods:
-  sdfest:
-    type: method_wrappers.SDFEstWrapper
-  cass:
-    type: method_wrappers.CASSWrapper
-  # nocs:
-  #   type: method_wrappers.NOCSWrapper
+  methods:
+    cass: ./cass.yaml
+    sdfest: ./sdfest.yaml
+
+
+dataset_config:
+  name: REAL275
+  type: sdf_single_shot.datasets.nocs_dataset.NOCSDataset
+  config_dict: 
+    root_dir: ../../data/nocs/
+    split: real_test
+    camera_convention: opencv
+    scale_convention: full
+    remap_y_axis: y
+    remap_x_axis: -z
 
 # See https://github.com/hughw19/NOCS_CVPR2019/blob/master/detect_eval.py for camera
 # intrinsics (seems to be different from info.txt in the dataset folder).
@@ -28,7 +29,7 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
-fast_eval: False  # only evaluate every 10th sample
+fast_eval: True  # only evaluate every 10th sample
 store_visualization: False
 dataset: "nocs"
 detection: "gt"

@@ -1,4 +1,4 @@
-"""Script to run evaluation on REAL275 dataset."""
+"""Script to run pose and shape evaluation for different datasets and methods."""
 import argparse
 import os
 from datetime import datetime
@@ -13,7 +13,6 @@ import open3d as o3d
 from sdf_estimation import metrics
 from sdf_single_shot import pointset_utils, quaternion_utils
 from sdf_differentiable_renderer import Camera
-from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
 from sdf_single_shot.utils import str_to_object
 
 import yoco
@@ -33,7 +32,7 @@ def visualize_estimation(
     reconstructed_mesh: Optional[o3d.geometry.TriangleMesh] = None,
     vis_camera_json: Optional[str] = None,
     render_options_json: Optional[str] = None,
-    vis_path: Optional[str] = None
+    vis_path: Optional[str] = None,
 ) -> None:
     """Visualize prediction and ask for confirmation.
 
@@ -159,8 +158,8 @@ def visualize_estimation(
     # o3d.visualization.draw_geometries(o3d_geometries)
 
 
-class REAL275Evaluator:
-    """Class to evaluate various pose and shape estimation algorithms on REAL275."""
+class Evaluator:
+    """Class to evaluate various pose and shape estimation algorithms."""
 
     NUM_CATEGORIES = 6  # (excluding all)
     SYMMETRY_AXIS_DICT = {
@@ -205,39 +204,36 @@ class REAL275Evaluator:
 
         self._cam = Camera(**config["camera"])
         self._init_wrappers(config["methods"])
-        self._init_dataset(config)
+        self._init_dataset(config["dataset_config"])
 
         self._config = config
 
-    def _init_dataset(self, config: dict) -> None:
+    def _init_dataset(self, dataset_config: dict) -> None:
         """Initialize reading of dataset.
 
         This includes sanity checks whether the provided path is correct.
         """
-        print("Initializing NOCS dataset...")
-        self._dataset = NOCSDataset(
-            config={
-                "root_dir": config["data_path"],
-                "split": "real_test",
-                "camera_convention": "opencv",
-                "scale_convention": "full",
-                "remap_y_axis": "y",  # ShapeNet convention
-                "remap_x_axis": "-z",  # ShapeNet convention
-            }
-        )
+        self._dataset_name = dataset_config["name"]
+        print("Initializing {self._dataset_name} dataset...")
+        dataset_type = str_to_object(dataset_config["type"])
+        self._dataset = dataset_type(config=dataset_config["config_dict"])
         # Faster but probably only worth it if whole evaluation supports batches
         # self._dataloader = DataLoader(self._dataset, 1, num_workers=8)
         if len(self._dataset) == 0:
-            print(f"No images found for data path {config['data_path']}")
+            print(f"No images found for dataset {self._dataset_name}")
             exit()
-        print(f"{len(self._dataset)} detections found.")
+        print(f"{len(self._dataset)} samples found for dataset {self._dataset_name}.")
 
     def _init_wrappers(self, method_configs: dict) -> None:
         """Initialize method wrappers."""
         self._wrappers = {}
-        for method_name, method_dict in method_configs.items():
+        print(method_configs)
+        for method_dict in method_configs.values():
+            print(method_dict.keys())
+            method_name = method_dict["name"]
             print(f"Initializing {method_name}...")
-            wrapper_type = str_to_object(method_dict["type"])
+            wrapper_type = str_to_object(method_dict["wrapper_type"])
+            print(method_dict["config_dict"])
             self._wrappers[method_name] = wrapper_type(
                 config=method_dict["config_dict"], camera=self._cam
             )
@@ -338,7 +334,7 @@ class REAL275Evaluator:
             metric_data["m2s"] = np.zeros(self.NUM_CATEGORIES + 1)
             metric_data["counts"] = np.zeros(self.NUM_CATEGORIES + 1)
         else:
-            raise NotImplementedError(f"Unsupported metric configuration.")
+            raise NotImplementedError("Unsupported metric configuration.")
         return metric_data
 
     def _eval_metric(
@@ -556,11 +552,10 @@ def main() -> None:
         description="Pose and shape estimation evaluation on REAL275 data"
     )
     parser.add_argument("--config", required=True)
-    parser.add_argument("--data_path", required=True)
     parser.add_argument("--out_folder", required=True)
     config = yoco.load_config_from_args(parser)
 
-    evaluator = REAL275Evaluator(config)
+    evaluator = Evaluator(config)
     evaluator.run()
 
 
