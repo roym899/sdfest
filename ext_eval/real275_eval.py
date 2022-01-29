@@ -236,8 +236,6 @@ class REAL275Evaluator:
         """Initialize method wrappers."""
         self._wrappers = {}
         for method_name, method_dict in method_configs.items():
-            if method_name.startswith("__"):
-                continue
             print(f"Initializing {method_name}...")
             wrapper_type = str_to_object(method_dict["type"])
             self._wrappers[method_name] = wrapper_type(

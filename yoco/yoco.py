@@ -25,7 +25,6 @@ def load_config_from_file(path, current_dict=None, parent=None, ns=None):
             if ns not in current_dict:
                 current_dict[ns] = {}
             load_config(config_dict, current_dict[ns], parent)
-            current_dict[f"__path_{ns}__"] = parent
         else:
             load_config(config_dict, current_dict, parent)
 

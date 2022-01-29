@@ -270,8 +270,6 @@ class SDFEstWrapper:
 
         # create per-categry models
         for category_str in config["category_configs"].keys():
-            if category_str.startswith("__"):
-                continue
             category_config = yoco.load_config(
                 config["category_configs"][category_str], copy.deepcopy(config)
             )
