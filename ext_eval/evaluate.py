@@ -118,12 +118,14 @@ def visualize_estimation(
         o3d_geometries.append(o3d_rec_points)
 
     if reconstructed_mesh is not None:
-        reconstructed_mesh.rotate(
+        # copy the mesh to keep original unmoved
+        posed_mesh = o3d.geometry.TriangleMesh(reconstructed_mesh)
+        posed_mesh.rotate(
             local_cv_orientation_m,
             center=np.array([0.0, 0.0, 0.0])[:, None],
         )
-        reconstructed_mesh.translate(local_cv_position[:, None])
-        o3d_geometries.append(reconstructed_mesh)
+        posed_mesh.translate(local_cv_position[:, None])
+        o3d_geometries.append(posed_mesh)
 
     vis = o3d.visualization.Visualizer()
     if vis_camera_json is not None:
