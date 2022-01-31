@@ -147,3 +147,4 @@ init:
   normalize_pose: true
   model: ./laptop_init.pt
 category: laptop
+far_field: 2.0  # from mask_noise_max

@@ -150,3 +150,4 @@ init:
   normalize_pose: True
   model: ./bottle_init.pt
 category: bottle
+far_field: 2.0  # from mask_noise_max

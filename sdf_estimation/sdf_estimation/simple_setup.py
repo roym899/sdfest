@@ -85,6 +85,8 @@ class SDFPipeline:
         self._relative_inlier_threshold = config.get(
             "relative_inlier_threshold", 0.03
         )  # relative depth error threshold for pixel to be considered inlier
+        if "far_field" in config:
+            self._far_field = config["far_field"] if "far_field" in config else None
 
         self.config = config
 
@@ -648,8 +650,7 @@ class SDFPipeline:
                 return None
             return synthetic.Mesh(mesh=mesh, scale=scale.item(), rel_scale=True)
 
-    @staticmethod
-    def _preprocess_depth(depth_images: torch.Tensor, masks: torch.Tensor) -> None:
+    def _preprocess_depth(self, depth_images: torch.Tensor, masks: torch.Tensor) -> None:
         """Preprocesses depth image based on segmentation mask.
 
         Args:
@@ -666,6 +667,10 @@ class SDFPipeline:
         # ).bool()
 
         depth_images[~masks] = 0  # set outside of depth to 0
+
+        # remove data far away (should be based on what distances ocurred in training)
+        if self._far_field is not None:
+            depth_images[depth_images > self._far_field] = 0
 
         # only consider available depth values for outlier detection
         # masks = torch.logical_and(masks, depth_images != 0)
