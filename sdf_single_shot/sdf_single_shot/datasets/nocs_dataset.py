@@ -50,6 +50,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         {root_dir}/sdfest_pre/...
     """
 
+    num_categories = 7
     category_id_to_str = {
         0: "unknown",
         1: "bottle",

@@ -161,7 +161,8 @@ def visualize_estimation(
 class Evaluator:
     """Class to evaluate various pose and shape estimation algorithms."""
 
-    NUM_CATEGORIES = 6  # (excluding all)
+    # ShapeNetV2 convention for all objects and datasets assumed
+    # for simplicity assume all cans, bowls and bottles to be rotation symmetric
     SYMMETRY_AXIS_DICT = {
         "mug": None,
         "laptop": None,
@@ -169,15 +170,6 @@ class Evaluator:
         "can": 1,
         "bowl": 1,
         "bottle": 1,
-    }
-    CATEGORY_ID_TO_STR = {
-        0: "bottle",
-        1: "bowl",
-        2: "camera",
-        3: "can",
-        4: "laptop",
-        5: "mug",
-        6: "all",
     }
 
     def __init__(self, config: dict) -> None:
@@ -191,7 +183,6 @@ class Evaluator:
         self._visualize_gt = config["visualize_gt"]
         self._fast_eval = config["fast_eval"]
         self._store_visualization = config["store_visualization"]
-        self._detection = config["detection"]
         self._run_name = (
             f"real275_eval_{config['run_name']}_"
             f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -214,7 +205,7 @@ class Evaluator:
         This includes sanity checks whether the provided path is correct.
         """
         self._dataset_name = dataset_config["name"]
-        print("Initializing {self._dataset_name} dataset...")
+        print(f"Initializing {self._dataset_name} dataset...")
         dataset_type = str_to_object(dataset_config["type"])
         self._dataset = dataset_type(config=dataset_config["config_dict"])
         # Faster but probably only worth it if whole evaluation supports batches
@@ -227,13 +218,10 @@ class Evaluator:
     def _init_wrappers(self, method_configs: dict) -> None:
         """Initialize method wrappers."""
         self._wrappers = {}
-        print(method_configs)
         for method_dict in method_configs.values():
-            print(method_dict.keys())
             method_name = method_dict["name"]
             print(f"Initializing {method_name}...")
             wrapper_type = str_to_object(method_dict["wrapper_type"])
-            print(method_dict["config_dict"])
             self._wrappers[method_name] = wrapper_type(
                 config=method_dict["config_dict"], camera=self._cam
             )
@@ -256,7 +244,6 @@ class Evaluator:
                 color_image=sample["color"],
                 depth_image=sample["depth"],
                 instance_mask=sample["mask"],
-                category_id=sample["category_id"],
                 category_str=sample["category_str"],
             )
 
@@ -326,13 +313,13 @@ class Evaluator:
             dts = metric_config_dict["deg_thresholds"]
             its = metric_config_dict["iou_thresholds"]
             metric_data["correct_counters"] = np.zeros(
-                (len(pts), len(dts), len(its), self.NUM_CATEGORIES + 1)
+                (len(pts), len(dts), len(its), self._dataset.num_categories + 1)
             )
-            metric_data["total_counters"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["total_counters"] = np.zeros(self._dataset.num_categories + 1)
         elif "pointwise_f" in metric_config_dict:
-            metric_data["means"] = np.zeros(self.NUM_CATEGORIES + 1)
-            metric_data["m2s"] = np.zeros(self.NUM_CATEGORIES + 1)
-            metric_data["counts"] = np.zeros(self.NUM_CATEGORIES + 1)
+            metric_data["means"] = np.zeros(self._dataset.num_categories + 1)
+            metric_data["m2s"] = np.zeros(self._dataset.num_categories + 1)
+            metric_data["counts"] = np.zeros(self._dataset.num_categories + 1)
         else:
             raise NotImplementedError("Unsupported metric configuration.")
         return metric_data
@@ -371,8 +358,8 @@ class Evaluator:
         correct_counters = self._metric_data[metric_name]["correct_counters"]
         total_counters = self._metric_data[metric_name]["total_counters"]
         category_id = sample["category_id"]
-        total_counters[category_id - 1] += 1
-        total_counters[6] += 1
+        total_counters[category_id] += 1
+        total_counters[-1] += 1
         for pi, p in enumerate(metric_dict["position_thresholds"]):
             for di, d in enumerate(metric_dict["deg_thresholds"]):
                 for ii, i in enumerate(metric_dict["iou_thresholds"]):
@@ -392,8 +379,8 @@ class Evaluator:
                             sample["category_str"]
                         ],
                     )
-                    correct_counters[pi, di, ii, category_id - 1] += correct
-                    correct_counters[pi, di, ii, 6] += correct  # all
+                    correct_counters[pi, di, ii, category_id] += correct
+                    correct_counters[pi, di, ii, -1] += correct  # all
 
     def _eval_pointwise_metric(
         self, metric_name: str, prediction: PredictionDict, sample: dict
@@ -409,7 +396,7 @@ class Evaluator:
         means = self._metric_data[metric_name]["means"]
         m2s = self._metric_data[metric_name]["m2s"]
         counts = self._metric_data[metric_name]["counts"]
-        category_id = sample["category_id"] - 1
+        category_id = sample["category_id"]
         point_metric = str_to_object(metric_config_dict["pointwise_f"])
 
         # load ground truth mesh
@@ -443,11 +430,11 @@ class Evaluator:
         m2s[category_id] += delta * delta2
 
         # for all
-        counts[6] += 1
-        delta = result - means[6]
-        means[6] += delta / counts[6]
-        delta2 = result - means[6]
-        m2s[6] += delta * delta2
+        counts[-1] += 1
+        delta = result - means[-1]
+        means[-1] += delta / counts[-1]
+        delta2 = result - means[-1]
+        m2s[-1] += delta * delta2
 
     def _finalize_metrics(self, method_name: str) -> None:
         """Finalize metrics after all samples have been evaluated.

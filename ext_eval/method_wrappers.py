@@ -51,7 +51,6 @@ class MethodWrapper(ABC):
         color_image: torch.Tensor,
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
-        category_id: int,
         category_str: str,
     ) -> PredictionDict:
         """Run a method to predict pose and shape of an object.
@@ -60,7 +59,7 @@ class MethodWrapper(ABC):
             color_image: The color image, shape (H, W, 3), RGB, 0-1, float.
             depth_image: The depth image, shape (H, W), meters, float.
             instance_mask: Mask of object of interest. (H, W), bool.
-            category_id: Category of object, represented as an integer.
+            category_str: The category of the object.
         """
         pass
 
@@ -106,7 +105,6 @@ class CASSWrapper(MethodWrapper):
         color_image: torch.Tensor,
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
-        category_id: int,
         category_str: str,
     ) -> PredictionDict:
         """See MethodWrapper.inference.
@@ -176,8 +174,18 @@ class CASSWrapper(MethodWrapper):
         # pointset_utils.visualize_pointset(points[0])
         # print(point_indices_input)
 
+        category_str_to_id = {
+            "bottle": 0,
+            "bowl": 1,
+            "camera": 2,
+            "can": 3,
+            "laptop": 4,
+            "mug": 5,
+        }
+        category_id = category_str_to_id[category_str]
+
         # CASS model uses 0-indexed categories, same order as NOCSDataset
-        category_index = torch.tensor([category_id - 1], device=self._device)
+        category_index = torch.tensor([category_id], device=self._device)
 
         # Call CASS network
         folding_encode = self._cass.foldingnet.encode(
@@ -245,7 +253,6 @@ class NOCSWrapper:
         color_image: torch.Tensor,
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
-        category_id: int,
         category_str: str,
     ) -> PredictionDict:
         """See MethodWrapper.inference."""
@@ -281,7 +288,6 @@ class SDFEstWrapper:
         color_image: torch.Tensor,
         depth_image: torch.Tensor,
         instance_mask: torch.Tensor,
-        category_id: int,
         category_str: str,
     ) -> PredictionDict:
         """See MethodWrapper.inference."""
