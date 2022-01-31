@@ -180,13 +180,15 @@ class Evaluator:
 
     def _parse_config(self, config: dict) -> None:
         """Read config and initialize method wrappers."""
+        self._init_dataset(config["dataset_config"])
+
         self._visualize_input = config["visualize_input"]
         self._visualize_prediction = config["visualize_prediction"]
         self._visualize_gt = config["visualize_gt"]
         self._fast_eval = config["fast_eval"]
         self._store_visualization = config["store_visualization"]
         self._run_name = (
-            f"real275_eval_{config['run_name']}_"
+            f"{self._dataset_name}_eval_{config['run_name']}_"
             f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
         self._out_folder = config["out_folder"]
@@ -197,7 +199,6 @@ class Evaluator:
 
         self._cam = Camera(**config["camera"])
         self._init_wrappers(config["methods"])
-        self._init_dataset(config["dataset_config"])
 
         self._config = config
 
@@ -516,9 +517,13 @@ class Evaluator:
         threshold_key = axis_to_threshold_key[axis]
         x_values = metric_dict[threshold_key]
 
-        for category_id in range(7):
+        for category_id in range(self._dataset.num_categories + 1):
             y_values = correct_percentage[..., category_id].flatten()
-            plt.plot(x_values, y_values, label=self.CATEGORY_ID_TO_STR[category_id])
+            if category_id in self._dataset.category_id_to_str:
+                label = self._dataset.category_id_to_str[category_id]
+            else:
+                label = "all"
+            plt.plot(x_values, y_values, label=label)
 
         figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}.png")
         plt.xlabel(threshold_key)
