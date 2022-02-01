@@ -1,7 +1,8 @@
 config:
   methods:
-    cass: ./cass.yaml
+    spd: ./spd.yaml
     sdfest: ./sdfest.yaml
+    cass: ./cass.yaml
 
 dataset_config:
   name: Redwood

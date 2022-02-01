@@ -1,0 +1,7 @@
+name: SPD
+wrapper_type: method_wrappers.SPDWrapper
+config_dict:
+  num_categories: 6
+  num_shape_points: 1024 
+  model: ../spd/results/real/model_50.pth
+  device: cuda
