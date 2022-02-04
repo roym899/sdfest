@@ -3,10 +3,12 @@ from abc import ABC
 import copy
 from typing import Optional, TypedDict
 
+import cv2
 import numpy as np
 import open3d as o3d
 import torch
 import torchvision.transforms.functional as TF
+from scipy.spatial.transform import Rotation
 
 from sdf_differentiable_renderer import Camera
 from sdf_single_shot import pointset_utils, quaternion_utils
@@ -14,8 +16,10 @@ from sdf_estimation.simple_setup import SDFPipeline
 
 import yoco
 from cass.cass.lib.models import CASS
-from cass.cass.datasets.dataset import get_bbox
+from cass.cass.datasets.dataset import get_bbox as cass_get_bbox
 from spd.lib.network import DeformNet
+import spd.lib.utils
+import spd.lib.align
 
 
 class PredictionDict(TypedDict):
@@ -103,6 +107,9 @@ class SPDWrapper(MethodWrapper):
         self._spd_net.to(self._device)
         self._spd_net.load_state_dict(torch.load(config["model"]))
         self._spd_net.eval()
+        self._mean_shape_pointsets = np.load(config["mean_shape_pointsets"])
+        self._num_input_points = config["num_input_points"]
+        self._image_size = config["image_size"]
 
     def inference(
         self,
@@ -115,136 +122,127 @@ class SPDWrapper(MethodWrapper):
 
         Based on spd.evalute.
         """
-        pass
-        # # get bounding box
-        # valid_mask = (depth_image != 0) * instance_mask
-        # rmin, rmax, cmin, cmax = get_bbox(valid_mask.numpy())
-        # bb_mask = torch.zeros_like(depth_image)
-        # bb_mask[rmin:rmax, cmin:cmax] = 1.0
+        category_str_to_id = {
+            "bottle": 0,
+            "bowl": 1,
+            "camera": 2,
+            "can": 3,
+            "laptop": 4,
+            "mug": 5,
+        }
+        category_id = category_str_to_id[category_str]
+        mean_shape_pointset = self._mean_shape_pointsets[category_id]
 
-        # # prepare image crop
-        # color_input = torch.flip(color_image, (2,)).permute([2, 0, 1])  # RGB -> BGR
-        # color_input = color_input[:, rmin:rmax, cmin:cmax]  # bb crop
-        # color_input = color_input.unsqueeze(0)  # add batch dim
-        # color_input = TF.normalize(
-        #     color_input, mean=[0.51, 0.47, 0.44], std=[0.29, 0.27, 0.28]
-        # )
+        # get bounding box
+        x1 = min(instance_mask.nonzero()[:, 1]).item()
+        y1 = min(instance_mask.nonzero()[:, 0]).item()
+        x2 = max(instance_mask.nonzero()[:, 1]).item()
+        y2 = max(instance_mask.nonzero()[:, 0]).item()
+        rmin, rmax, cmin, cmax = spd.lib.utils.get_bbox([y1, x1, y2, x2])
+        bb_mask = torch.zeros_like(depth_image)
+        bb_mask[rmin:rmax, cmin:cmax] = 1.0
 
-        # # prepare points (fixed number of points, randomly picked)
-        # point_indices = valid_mask.nonzero()
-        # if len(point_indices) > self._num_points:
-        #     subset = np.random.choice(
-        #         len(point_indices), replace=False, size=self._num_points
-        #     )
-        #     point_indices = point_indices[subset]
-        # depth_mask = torch.zeros_like(depth_image)
-        # depth_mask[point_indices[:, 0], point_indices[:, 1]] = 1.0
-        # cropped_depth_mask = depth_mask[rmin:rmax, cmin:cmax]
-        # point_indices_input = cropped_depth_mask.flatten().nonzero()[:, 0]
+        valid_mask = (depth_image != 0) * instance_mask
 
-        # # prepare pointcloud
-        # points = pointset_utils.depth_to_pointcloud(
-        #     depth_image,
-        #     self._camera,
-        #     normalize=False,
-        #     mask=depth_mask,
-        #     convention="opencv",
-        # )
-        # if len(points) < self._num_points:
-        #     wrap_indices = np.pad(
-        #         np.arange(len(points)), (0, self._num_points - len(points)), mode="wrap"
-        #     )
-        #     points = points[wrap_indices]
-        #     point_indices_input = point_indices_input[wrap_indices]
+        # prepare image crop
+        color_input = color_image[rmin:rmax, cmin:cmax, :].numpy()  # bb crop
+        color_input = cv2.resize(
+            color_input,
+            (self._image_size, self._image_size),
+            interpolation=cv2.INTER_LINEAR,
+        )
+        color_input = TF.normalize(
+            TF.to_tensor(color_input),  # (H, W, C) -> (C, H, W), RGB
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        )
+        color_input = color_input.unsqueeze(0)  # add batch dim
 
-        # # x, y inverted for some reason...
-        # points[:, 0] *= -1
-        # points[:, 1] *= -1
-        # points = points.unsqueeze(0)
-        # point_indices_input = point_indices_input.unsqueeze(0)
+        # convert depth to pointcloud
+        fx, fy, cx, cy, _ = self._camera.get_pinhole_camera_parameters(pixel_center=0.0)
+        width = self._camera.width
+        height = self._camera.height
+        point_indices = valid_mask[rmin:rmax, cmin:cmax].numpy().flatten().nonzero()[0]
+        xmap = np.array([[i for i in range(width)] for _ in range(height)])
+        ymap = np.array([[j for _ in range(width)] for j in range(height)])
+        if len(point_indices) > self._num_input_points:
+            # take subset of points if two many depth points
+            point_indices_mask = np.zeros(len(point_indices), dtype=int)
+            point_indices_mask[: self._num_input_points] = 1
+            np.random.shuffle(point_indices_mask)
+            point_indices = point_indices[point_indices_mask.nonzero()]
+        else:
+            point_indices = np.pad(
+                point_indices, (0, self._num_input_points - len(point_indices)), "wrap"
+            )  # repeat points if not enough depth observation
+        depth_masked = depth_image[rmin:rmax, cmin:cmax].flatten()[point_indices][
+            :, None
+        ]
+        xmap_masked = xmap[rmin:rmax, cmin:cmax].flatten()[point_indices][:, None]
+        ymap_masked = ymap[rmin:rmax, cmin:cmax].flatten()[point_indices][:, None]
+        pt2 = depth_masked.numpy()
+        pt0 = (xmap_masked - cx) * pt2 / fx
+        pt1 = (ymap_masked - cy) * pt2 / fy
+        points = np.concatenate((pt0, pt1, pt2), axis=1)
+        # adjust indices for resizing of color image
+        crop_w = rmax - rmin
+        ratio = self._image_size / crop_w
+        col_idx = point_indices % crop_w
+        row_idx = point_indices // crop_w
+        point_indices = (
+            np.floor(row_idx * ratio) * self._image_size + np.floor(col_idx * ratio)
+        ).astype(np.int64)
 
-        # # move inputs to device
-        # color_input = color_input.to(self._device)
-        # points = points.to(self._device)
-        # point_indices_input = point_indices_input.to(self._device)
+        # move inputs to device
+        color_input = color_input.to(self._device)
+        points = torch.Tensor(points).unsqueeze(0).to(self._device)
+        point_indices = torch.LongTensor(point_indices).unsqueeze(0).to(self._device)
+        category_id = torch.LongTensor([category_id]).to(self._device)
+        mean_shape_pointset = (
+            torch.Tensor(mean_shape_pointset).unsqueeze(0).to(self._device)
+        )
 
-        # # DEBUG
-        # # import matplotlib.pyplot as plt
-        # # print(color_input.shape, color_input.dtype)
-        # # print(points.shape, points.dtype)
-        # # print(point_indices_input.shape, point_indices_input.dtype)
+        # Call SPD network
+        assign_matrix, deltas = self._spd_net(
+            points, color_input, point_indices, category_id, mean_shape_pointset
+        )
 
-        # # plt.imshow(color_input.cpu()[0].permute([1, 2, 0]).numpy())
-        # # plt.show()
-        # # pointset_utils.visualize_pointset(points[0])
-        # # print(point_indices_input)
+        # Postprocess outputs
+        inst_shape = mean_shape_pointset + deltas
+        assign_matrix = torch.softmax(assign_matrix, dim=2)
+        coords = torch.bmm(assign_matrix, inst_shape)  # (1, n_pts, 3)
 
-        # category_str_to_id = {
-        #     "bottle": 0,
-        #     "bowl": 1,
-        #     "camera": 2,
-        #     "can": 3,
-        #     "laptop": 4,
-        #     "mug": 5,
-        # }
-        # category_id = category_str_to_id[category_str]
+        point_indices = point_indices[0].cpu().numpy()
+        _, point_indices = np.unique(point_indices, return_index=True)
+        nocs_coords = coords[0, point_indices, :].detach().cpu().numpy()
+        extents = 2 * np.amax(np.abs(inst_shape[0].detach().cpu().numpy()), axis=0)
+        points = points[0, point_indices, :].cpu().numpy()
+        scale, orientation_m, position, _ = spd.lib.align.estimateSimilarityTransform(
+            nocs_coords, points
+        )
+        orientation_q = torch.Tensor(Rotation.from_matrix(orientation_m).as_quat())
 
-        # # CASS model uses 0-indexed categories, same order as NOCSDataset
-        # category_index = torch.tensor([category_id], device=self._device)
+        reconstructed_points = inst_shape[0].detach().cpu() * scale
 
-        # # Call CASS network
-        # folding_encode = self._cass.foldingnet.encode(
-        #     color_input, points, point_indices_input
-        # )
-        # posenet_encode = self._cass.estimator.encode(
-        #     color_input, points, point_indices_input
-        # )
-        # pred_r, pred_t, pred_c = self._cass.estimator.pose(
-        #     torch.cat([posenet_encode, folding_encode], dim=1), category_index
-        # )
-        # reconstructed_points = self._cass.foldingnet.recon(folding_encode)[0]
+        # NOCS Object -> ShapeNet Object convention
+        obj_fix = torch.tensor(
+            [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
+        )  # CASS object to ShapeNet object
+        orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
+        reconstructed_points = quaternion_utils.quaternion_apply(
+            quaternion_utils.quaternion_invert(obj_fix),
+            reconstructed_points,
+        )
+        extents, _ = reconstructed_points.abs().max(dim=0)
+        extents *= 2.0
 
-        # # Postprocess outputs
-        # reconstructed_points = reconstructed_points.view(-1, 3).cpu()
-        # pred_c = pred_c.view(1, self._num_points)
-        # _, max_index = torch.max(pred_c, 1)
-        # pred_t = pred_t.view(self._num_points, 1, 3)
-        # orientation_q = pred_r[0][max_index[0]].view(-1).cpu()
-        # points = points.view(self._num_points, 1, 3)
-        # position = (points + pred_t)[max_index[0]].view(-1).cpu()
-        # # output is scalar-first -> scalar-last
-        # orientation_q = torch.tensor([*orientation_q[1:], orientation_q[0]])
-
-        # # Flip x and y axis of position and orientation (undo flipping of points)
-        # # (x-left, y-up, z-forward) convention -> OpenCV convention
-        # position[0] *= -1
-        # position[1] *= -1
-        # cam_fix = torch.tensor([0.0, 0.0, 1.0, 0.0])
-        # # NOCS Object -> ShapeNet Object convention
-        # obj_fix = torch.tensor(
-        #     [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
-        # )  # CASS object to ShapeNet object
-        # orientation_q = quaternion_utils.quaternion_multiply(cam_fix, orientation_q)
-        # orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
-        # reconstructed_points = quaternion_utils.quaternion_apply(
-        #     quaternion_utils.quaternion_invert(obj_fix),
-        #     reconstructed_points,
-        # )
-
-        # # TODO refinement code from cass.tools.eval? (not mentioned in paper??)
-
-        # extents, _ = reconstructed_points.abs().max(dim=0)
-        # extents *= 2.0
-
-        # # pointset_utils.visualize_pointset(reconstructed_points)
-        # return {
-        #     "position": position.detach(),
-        #     "orientation": orientation_q.detach(),
-        #     "extents": extents.detach(),
-        #     "reconstructed_pointcloud": reconstructed_points.detach(),
-        #     "reconstructed_mesh": None,
-        # }
-
+        return {
+            "position": torch.Tensor(position),
+            "orientation": orientation_q,
+            "extents": torch.Tensor(extents),
+            "reconstructed_pointcloud": reconstructed_points,
+            "reconstructed_mesh": None,
+        }
 
 
 class CASSWrapper(MethodWrapper):
@@ -297,7 +295,7 @@ class CASSWrapper(MethodWrapper):
         """
         # get bounding box
         valid_mask = (depth_image != 0) * instance_mask
-        rmin, rmax, cmin, cmax = get_bbox(valid_mask.numpy())
+        rmin, rmax, cmin, cmax = cass_get_bbox(valid_mask.numpy())
         bb_mask = torch.zeros_like(depth_image)
         bb_mask[rmin:rmax, cmin:cmax] = 1.0
 
@@ -346,17 +344,6 @@ class CASSWrapper(MethodWrapper):
         color_input = color_input.to(self._device)
         points = points.to(self._device)
         point_indices_input = point_indices_input.to(self._device)
-
-        # DEBUG
-        # import matplotlib.pyplot as plt
-        # print(color_input.shape, color_input.dtype)
-        # print(points.shape, points.dtype)
-        # print(point_indices_input.shape, point_indices_input.dtype)
-
-        # plt.imshow(color_input.cpu()[0].permute([1, 2, 0]).numpy())
-        # plt.show()
-        # pointset_utils.visualize_pointset(points[0])
-        # print(point_indices_input)
 
         category_str_to_id = {
             "bottle": 0,
