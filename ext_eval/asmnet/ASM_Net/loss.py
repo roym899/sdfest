@@ -10,7 +10,7 @@ def quaternion2rotationPT( q ):
     """ Convert unit quaternion to rotation matrix
     
     Args:
-        q(torch.tensor): unit quaternion (N,4)
+        q(torch.tensor): unit quaternion (N,4), scalar first
     Returns:
         torch.tensor: rotation matrix (N,3,3)
     """

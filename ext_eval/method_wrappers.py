@@ -18,6 +18,7 @@ import yoco
 from cass.cass.lib.models import CASS
 from cass.cass.datasets.dataset import get_bbox as cass_get_bbox
 import asmnet.cr6d_utils
+import asmnet.common3Dfunc
 
 # from spd.lib.network import DeformNet
 # import spd.lib.utils
@@ -445,18 +446,30 @@ class ASMNetWrapper:
                 model.pth and info.npz. See models_folder and asm_params_folder.
             num_points: Number of input poins.
             deformation_dimension: Number of deformation parameters.
+            use_mean_shape:
+                Whether the mean shape (0) or the predicted shape deformation should
+                be used.
+            use_icp: Whether to use ICP to refine the pose.
         """
 
         models_folder: str
         asm_params_folder: str
         device: str
         categories: List[str]
+        num_points: int
+        deformation_dimension: int
+        use_mean_shape: bool
+        use_icp: bool
 
     default_config: Config = {
         "model_params_folder": None,
         "asm_params_folder": None,
         "device": "cuda",
         "categories": [],
+        "num_points": 800,
+        "deformation_dimension": 3,
+        "use_mean_shape": False,
+        "use_icp": True,
     }
 
     def __init__(self, config: Config, camera: Camera) -> None:
@@ -483,6 +496,9 @@ class ASMNetWrapper:
             config["num_points"],
             self._device,
         )
+        self._num_points = config["num_points"]
+        self._use_mean_shape = config["use_mean_shape"]
+        self._use_icp = config["use_icp"]
 
     def inference(
         self,
@@ -491,12 +507,110 @@ class ASMNetWrapper:
         instance_mask: torch.Tensor,
         category_str: str,
     ) -> PredictionDict:
-        """See MethodWrapper.inference."""
+        """See MethodWrapper.inference.
+
+        Based on asmnet.ASM_Net.test_net_nocs2019_release
+        """
+        # torch -> numpy
+        color_image = np.uint8(
+            (color_image * 255).numpy()
+        )  # (H, W, 3), uint8, 0-255, RGB
+        depth_image = np.uint16((depth_image * 1000).numpy())  # (H, W), uint16, mm
+        instance_mask = instance_mask.numpy()
+
+        # Noise reduction + pointcloud generation
+        masked_depth = depth_image * instance_mask
+        masked_depth = asmnet.common3Dfunc.image_statistical_outlier_removal(
+            masked_depth, factor=2.0
+        )
+        pcd_obj = asmnet.cr6d_utils.get_pcd_from_rgbd(
+            color_image.copy(),
+            masked_depth.copy(),
+            self._camera.get_o3d_pinhole_camera_parameters().intrinsic,
+        )
+        [pcd_obj, _] = pcd_obj.remove_statistical_outlier(100, 2.0)
+        pcd_in = copy.deepcopy(pcd_obj)
+        pcd_c, offset = asmnet.common3Dfunc.centering(pcd_in)
+        pcd_n, scale = asmnet.common3Dfunc.size_normalization(pcd_c)
+
+        # o3d -> torch
+        np_pcd = np.array(pcd_n.points)
+        np_input = asmnet.cr6d_utils.random_sample(np_pcd, self._num_points)
+        np_input = np_input.astype(np.float32)
+        input_points = torch.from_numpy(np_input)
+
+        # prepare input shape
+        input_points = input_points.unsqueeze(0).transpose(2, 1).to(self._device)
+
+        # evaluate model
+        with torch.no_grad():
+            dparam_pred, q_pred = self._models[category_str](input_points)
+            dparam_pred = dparam_pred.cpu().numpy().squeeze()
+            pred_rot = asmnet.cr6d_utils.quaternion2rotationPT(q_pred)
+            pred_rot = pred_rot.cpu().numpy().squeeze()
+            pred_dp_param = dparam_pred[:-1]  # deformation params
+            pred_scaling_param = dparam_pred[-1]  # scale
+
+            # get shape prediction
+            pcd_pred = None
+            if self._use_mean_shape:
+                pcd_pred = self._asmds[category_str].deformation([0])
+            else:
+                pcd_pred = self._asmds[category_str].deformation(pred_dp_param)
+                pcd_pred = pcd_pred.remove_statistical_outlier(20, 1.0)[0]
+                pcd_pred.scale(pred_scaling_param, (0.0, 0.0, 0.0))
+
+            metric_pcd = copy.deepcopy(pcd_pred)
+            metric_pcd.scale(scale, (0.0, 0.0, 0.0))  # undo scale normalization
+
+            # ICP
+            pcd_pred_posed = copy.deepcopy(metric_pcd)
+            pcd_pred_posed.rotate(pred_rot)  # rotate metric reconstruction
+            pcd_pred_posed.translate(offset)  # move to center of cropped pcd
+            pred_rt = np.identity(4)
+            pred_rt[:3, :3] = pred_rot
+            if self._use_icp:
+                pcd_pred_posed_ds = pcd_pred_posed.voxel_down_sample(0.005)
+                # remove hidden points
+                pcd_pred_posed_visible = asmnet.common3Dfunc.applyHPR(pcd_pred_posed_ds)
+                pcd_in = pcd_in.voxel_down_sample(0.005)
+                reg_result = o3d.pipelines.registration.registration_icp(
+                    pcd_pred_posed_visible, pcd_in, max_correspondence_distance=0.02
+                )
+                pcd_pred_posed = copy.deepcopy(pcd_pred_posed_ds).transform(
+                    reg_result.transformation
+                )
+                pred_rt = np.dot(reg_result.transformation, pred_rt)
+
+            # center position
+            maxb = pcd_pred_posed.get_max_bound()  # bbox max
+            minb = pcd_pred_posed.get_min_bound()  # bbox min
+            center = (maxb - minb) / 2 + minb  # bbox center
+            pred_rt[:3, 3] = center.copy()
+
+            position = torch.Tensor(pred_rt[:3, 3])
+            orientation_q = torch.Tensor(
+                Rotation.from_matrix(pred_rt[:3, :3]).as_quat()
+            )
+            reconstructed_points = torch.from_numpy(np.asarray(metric_pcd.points))
+
+            # NOCS Object -> ShapeNet Object convention
+            obj_fix = torch.tensor(
+                [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
+            )  # CASS object to ShapeNet object
+            orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
+            reconstructed_points = quaternion_utils.quaternion_apply(
+                quaternion_utils.quaternion_invert(obj_fix),
+                reconstructed_points,
+            )
+            extents, _ = reconstructed_points.abs().max(dim=0)
+            extents *= 2.0
+
         return {
-            "position": torch.tensor([0, 0, 0]),
-            "orientation": torch.tensor([0, 0, 0, 1]),
-            "extents": torch.tensor([1, 1, 1]),
-            "reconstructed_pointcloud": torch.tensor([[0, 0, 0]]),
+            "position": position,
+            "orientation": orientation_q,
+            "extents": extents,
+            "reconstructed_pointcloud": reconstructed_points,
             "reconstructed_mesh": None,
         }
 

@@ -6,4 +6,6 @@ config_dict:
   categories: ["bottle", "bowl", "camera", "can", "laptop", "mug"]
   deformation_dimension: 3
   num_points: 800
+  use_mean_shape: False
+  use_icp: True
   device: cuda

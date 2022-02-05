@@ -165,7 +165,7 @@ for i, image_id in enumerate(image_ids):
     # record results
     result = {}
     # loading ground truth
-    im_c = dataset.load_image(image_id)
+    im_c = dataset.load_image(image_id)  # H, W, 3
     im_d = dataset.load_depth(image_id)
     mask_info = np.load(mask_path)
     scale_coeffs, model_cids, gt_pcds = cr6d_utils.get_model_scale(
@@ -267,6 +267,7 @@ for i, image_id in enumerate(image_ids):
             else:
                 pcd_pred = asmds[class_name].deformation(pred_dp_param)
                 pcd_pred = pcd_pred.remove_statistical_outlier(20, 1.0)[0]
+                print(pred_scaling_param)
                 pcd_pred.scale(pred_scaling_param, (0.0, 0.0, 0.0))
 
             # convert real scale
@@ -314,6 +315,8 @@ for i, image_id in enumerate(image_ids):
             s = np.identity(4)
             s[0, 0] = s[1, 1] = s[2, 2] = 1 / scale_coeffs[instance_id]
             nocs_rt = np.dot(pred_rt, np.linalg.inv(s))
+
+            o3.visualization.draw_geometries([pcd_pred_vis, pcd_in])
 
             # Set result
             pred_rts.append(nocs_rt.copy())

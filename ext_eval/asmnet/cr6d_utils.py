@@ -1,6 +1,7 @@
 import os.path as osp
 import numpy as np
 import numpy.linalg as LA
+import copy
 import random
 
 import open3d as o3
@@ -145,6 +146,17 @@ def get_pcd_from_rgbd(im_c, im_d, intrinsic):
     return pcd
 
 
+def random_sample(data, n_sample):
+
+    if n_sample < data.shape[0]:
+        choice = random.sample(list(np.arange(0, data.shape[0], 1)), k=n_sample)
+    else:
+        choice = random.choices(list(np.arange(0, data.shape[0], 1)), k=n_sample)
+
+    sampled = np.array(data[choice])
+    return copy.deepcopy(sampled)
+
+
 def generate_pose():
     """generate pose from hemisphere-distributed viewpoints"""
 
@@ -210,3 +222,31 @@ def get_model_scale(image_path, model_root):
         pcds.append(pcd)
 
     return np.asarray(sizes), np.asarray(class_ids), pcds
+
+
+def quaternion2rotationPT( q ):
+    """ Convert unit quaternion to rotation matrix
+    
+    Args:
+        q(torch.tensor): unit quaternion (N,4), scalar first
+    Returns:
+        torch.tensor: rotation matrix (N,3,3)
+    """
+    r11 = (q[:,0]**2+q[:,1]**2-q[:,2]**2-q[:,3]**2).unsqueeze(0).T
+    r12 = (2.0*(q[:,1]*q[:,2]-q[:,0]*q[:,3])).unsqueeze(0).T
+    r13 = (2.0*(q[:,1]*q[:,3]+q[:,0]*q[:,2])).unsqueeze(0).T
+
+    r21 = (2.0*(q[:,1]*q[:,2]+q[:,0]*q[:,3])).unsqueeze(0).T
+    r22 = (q[:,0]**2+q[:,2]**2-q[:,1]**2-q[:,3]**2).unsqueeze(0).T
+    r23 = (2.0*(q[:,2]*q[:,3]-q[:,0]*q[:,1])).unsqueeze(0).T
+
+    r31 = (2.0*(q[:,1]*q[:,3]-q[:,0]*q[:,2])).unsqueeze(0).T
+    r32 = (2.0*(q[:,2]*q[:,3]+q[:,0]*q[:,1])).unsqueeze(0).T
+    r33 = (q[:,0]**2+q[:,3]**2-q[:,1]**2-q[:,2]**2).unsqueeze(0).T
+    
+    r = torch.cat( (r11,r12,r13,
+                r21,r22,r23,
+                r31,r32,r33), 1 )
+    r = torch.reshape( r, (q.shape[0],3,3))
+    
+    return r
