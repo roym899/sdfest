@@ -1,7 +1,7 @@
 """Wrapper for pose and shape estimation methods."""
 from abc import ABC
 import copy
-from typing import Optional, TypedDict
+from typing import List, Optional, TypedDict
 
 import cv2
 import numpy as np
@@ -17,9 +17,16 @@ from sdf_estimation.simple_setup import SDFPipeline
 import yoco
 from cass.cass.lib.models import CASS
 from cass.cass.datasets.dataset import get_bbox as cass_get_bbox
-from spd.lib.network import DeformNet
-import spd.lib.utils
-import spd.lib.align
+import asmnet.cr6d_utils
+
+# from spd.lib.network import DeformNet
+# import spd.lib.utils
+# import spd.lib.align
+
+
+# TODO add new SGPA and CR-Net
+
+# TODO fix documentation for SPD, CASS, SDFEst, ASMNet
 
 
 class PredictionDict(TypedDict):
@@ -79,6 +86,7 @@ class SPDWrapper(MethodWrapper):
             model: Path to model.
             num_categories: Number of categories used by model.
             num_shape_points: Number of points in shape prior.
+            device: Device string for the model.
         """
 
         model: str
@@ -253,6 +261,7 @@ class CASSWrapper(MethodWrapper):
 
         Attributes:
             model: Path to model.
+            device: Device string for the model.
         """
 
         model: str
@@ -412,12 +421,68 @@ class CASSWrapper(MethodWrapper):
         }
 
 
-class NOCSWrapper:
-    """Wrapper class for NOCS."""
+class ASMNetWrapper:
+    """Wrapper class for ASMNet."""
 
-    def __init__(self, config: dict, camera: Camera) -> None:
-        """Initialize and load NOCS models."""
-        pass
+    class Config(TypedDict):
+        """Configuration dictionary for ASMNet.
+
+        Attributes:
+            model: Path to model.
+            device: Device string for the model.
+            models_folder:
+                Path to folder containing model parameters.
+                Must contain the following folder structure:
+                    {models_folder}/{category_0}/model.pth
+                    ...
+            asm_params_folder:
+                Path to folder containing ASM parameters.
+                Must contain the following folder structure:
+                    {asm_params_folder}/{category_0}/train/info.npz
+                    ...
+            categories:
+                List of categories. Each category requires corresponding folder with
+                model.pth and info.npz. See models_folder and asm_params_folder.
+            num_points: Number of input poins.
+            deformation_dimension: Number of deformation parameters.
+        """
+
+        models_folder: str
+        asm_params_folder: str
+        device: str
+        categories: List[str]
+
+    default_config: Config = {
+        "model_params_folder": None,
+        "asm_params_folder": None,
+        "device": "cuda",
+        "categories": [],
+    }
+
+    def __init__(self, config: Config, camera: Camera) -> None:
+        """Initialize and load ASMNet model.
+
+        Args:
+            config: ASMNet configuration. See ASMNetWrapper.Config for more information.
+            camera: Camera used for the input image.
+        """
+        config = yoco.load_config(config, default_dict=ASMNetWrapper.default_config)
+        self._parse_config(config)
+        self._camera = camera
+
+    def _parse_config(self, config: Config) -> None:
+        self._device = config["device"]
+        synset_names = ["placeholder"] + config["categories"]  # first will be ignored
+        self._asmds = asmnet.cr6d_utils.load_asmds(
+            config["asm_params_folder"], synset_names
+        )
+        self._models = asmnet.cr6d_utils.load_models_release(
+            config["models_folder"],
+            synset_names,
+            config["deformation_dimension"],
+            config["num_points"],
+            self._device,
+        )
 
     def inference(
         self,
