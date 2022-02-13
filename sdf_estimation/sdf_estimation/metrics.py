@@ -13,9 +13,12 @@ def correct_thresh(
     orientation_prediction: Rotation,
     extent_gt: Optional[np.ndarray] = None,
     extent_prediction: Optional[np.ndarray] = None,
+    points_gt: Optional[np.ndarray] = None,
+    points_prediction: Optional[np.ndarray] = None,
     position_threshold: Optional[float] = None,
     degree_threshold: Optional[float] = None,
     iou_3d_threshold: Optional[float] = None,
+    fscore_threshold: Optional[float] = None,
     rotational_symmetry_axis: Optional[int] = None,
 ) -> int:
     """Classify a pose prediction as correct or incorrect.
@@ -33,6 +36,8 @@ def correct_thresh(
         extent_prediction:
             bounding box extents, shape (3,)
             only used if IoU threshold specified
+        point_gt: set of true points, expected shape (N,3)
+        points_rec: set of reconstructed points, expected shape (M,3)
         degree_threshold: orientation threshold in degrees, no threshold if None
         iou_3d_threshold: 3D IoU threshold, no threshold if None
         rotational_symmetry_axis:
@@ -63,6 +68,10 @@ def correct_thresh(
         # TODO implement 3D IoU
         # starting point for proper implementation: https://github.com/google-research-datasets/Objectron/blob/c06a65165a18396e1e00091981fd1652875c97b5/objectron/dataset/iou.py#L6
         pass
+    if fscore_threshold is not None:
+        fscore = reconstruction_fscore(points_gt, points_prediction, 0.01)
+        if fscore < fscore_threshold:
+            return 0
     return 1
 
 
@@ -243,6 +252,8 @@ def reconstruction_fscore(
     precision = accuracy_thresh(
         points_gt, points_rec, threshold, p_norm=p_norm, normalize=normalize
     )
+    if recall < 1e-7 or precision < 1e-7:
+        return 0
     return 2 / (1 / recall + 1 / precision)
 
 

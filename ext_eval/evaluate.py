@@ -2,7 +2,7 @@
 import argparse
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Tuple, Optional
 import random
 
 import matplotlib.pyplot as plt
@@ -238,9 +238,9 @@ class Evaluator:
         indices = list(range(len(self._dataset)))
         random.shuffle(indices)
         for i in tqdm(indices):
-            sample = self._dataset[i]
             if self._fast_eval and i % 10 != 0:
                 continue
+            sample = self._dataset[i]
             if self._visualize_input:
                 _, ((ax1, ax2), (ax3, _)) = plt.subplots(2, 2)
                 ax1.imshow(sample["color"].numpy())
@@ -322,8 +322,15 @@ class Evaluator:
             pts = metric_config_dict["position_thresholds"]
             dts = metric_config_dict["deg_thresholds"]
             its = metric_config_dict["iou_thresholds"]
+            fts = metric_config_dict["f_thresholds"]
             metric_data["correct_counters"] = np.zeros(
-                (len(pts), len(dts), len(its), self._dataset.num_categories + 1)
+                (
+                    len(pts),
+                    len(dts),
+                    len(its),
+                    len(fts),
+                    self._dataset.num_categories + 1,
+                )
             )
             metric_data["total_counters"] = np.zeros(self._dataset.num_categories + 1)
         elif "pointwise_f" in metric_config_dict:
@@ -370,27 +377,32 @@ class Evaluator:
         category_id = sample["category_id"]
         total_counters[category_id] += 1
         total_counters[-1] += 1
+        gt_points, pred_points = self._get_points(sample, prediction, True)
         for pi, p in enumerate(metric_dict["position_thresholds"]):
             for di, d in enumerate(metric_dict["deg_thresholds"]):
                 for ii, i in enumerate(metric_dict["iou_thresholds"]):
-                    correct = metrics.correct_thresh(
-                        position_gt=sample["position"].cpu().numpy(),
-                        position_prediction=prediction["position"].cpu().numpy(),
-                        orientation_gt=Rotation.from_quat(sample["quaternion"]),
-                        orientation_prediction=Rotation.from_quat(
-                            prediction["orientation"]
-                        ),
-                        extent_gt=sample["scale"].cpu().numpy(),
-                        extent_prediction=prediction["extents"].cpu().numpy(),
-                        position_threshold=p,
-                        degree_threshold=d,
-                        iou_3d_threshold=i,
-                        rotational_symmetry_axis=self.SYMMETRY_AXIS_DICT[
-                            sample["category_str"]
-                        ],
-                    )
-                    correct_counters[pi, di, ii, category_id] += correct
-                    correct_counters[pi, di, ii, -1] += correct  # all
+                    for fi, f in enumerate(metric_dict["f_thresholds"]):
+                        correct = metrics.correct_thresh(
+                            position_gt=sample["position"].cpu().numpy(),
+                            position_prediction=prediction["position"].cpu().numpy(),
+                            orientation_gt=Rotation.from_quat(sample["quaternion"]),
+                            orientation_prediction=Rotation.from_quat(
+                                prediction["orientation"]
+                            ),
+                            extent_gt=sample["scale"].cpu().numpy(),
+                            extent_prediction=prediction["extents"].cpu().numpy(),
+                            points_gt=gt_points,
+                            points_prediction=pred_points,
+                            position_threshold=p,
+                            degree_threshold=d,
+                            iou_3d_threshold=i,
+                            fscore_threshold=f,
+                            rotational_symmetry_axis=self.SYMMETRY_AXIS_DICT[
+                                sample["category_str"]
+                            ],
+                        )
+                        correct_counters[pi, di, ii, fi, category_id] += correct
+                        correct_counters[pi, di, ii, fi, -1] += correct  # all
 
     def _eval_pointwise_metric(
         self, metric_name: str, prediction: PredictionDict, sample: dict
@@ -409,23 +421,9 @@ class Evaluator:
         category_id = sample["category_id"]
         point_metric = str_to_object(metric_config_dict["pointwise_f"])
 
-        # load ground truth mesh
-        gt_mesh = self._dataset.load_mesh(sample["obj_path"])
-        gt_points = torch.from_numpy(
-            np.asarray(gt_mesh.sample_points_uniformly(self._num_gt_points).points)
+        gt_points, pred_points = self._get_points(
+            sample, prediction, metric_config_dict["posed"]
         )
-        pred_points = prediction["reconstructed_pointcloud"]
-
-        # transform points if posed
-        if metric_config_dict["posed"]:
-            gt_points = quaternion_utils.quaternion_apply(
-                sample["quaternion"], gt_points
-            )
-            gt_points += sample["position"]
-            pred_points = quaternion_utils.quaternion_apply(
-                prediction["orientation"], pred_points
-            )
-            pred_points += prediction["position"]
 
         result = point_metric(
             gt_points.numpy(), pred_points.numpy(), **metric_config_dict["kwargs"]
@@ -445,6 +443,28 @@ class Evaluator:
         means[-1] += delta / counts[-1]
         delta2 = result - means[-1]
         m2s[-1] += delta * delta2
+
+    def _get_points(
+        self, sample: dict, prediction: PredictionDict, posed: bool
+    ) -> Tuple[np.ndarray]:
+        # load ground truth mesh
+        gt_mesh = self._dataset.load_mesh(sample["obj_path"])
+        gt_points = torch.from_numpy(
+            np.asarray(gt_mesh.sample_points_uniformly(self._num_gt_points).points)
+        )
+        pred_points = prediction["reconstructed_pointcloud"]
+
+        # transform points if posed
+        if posed:
+            gt_points = quaternion_utils.quaternion_apply(
+                sample["quaternion"], gt_points
+            )
+            gt_points += sample["position"]
+            pred_points = quaternion_utils.quaternion_apply(
+                prediction["orientation"], pred_points
+            )
+            pred_points += prediction["position"]
+        return gt_points, pred_points
 
     def _finalize_metrics(self, method_name: str) -> None:
         """Finalize metrics after all samples have been evaluated.
@@ -509,7 +529,7 @@ class Evaluator:
                 Shape (NUM_POS_THRESH,NUM_DEG_THRESH,NUM_IOU_THRESH,NUM_CATEGORIES + 1).
         """
         axis = None
-        for i, s in enumerate(correct_percentage.shape[:3]):
+        for i, s in enumerate(correct_percentage.shape[:4]):
             if s != 1 and axis is None:
                 axis = i
             elif s != 1:  # multiple axis with != 1 size
@@ -520,6 +540,7 @@ class Evaluator:
             0: "position_thresholds",
             1: "deg_thresholds",
             2: "iou_thresholds",
+            3: "f_thresholds",
         }
         threshold_key = axis_to_threshold_key[axis]
         x_values = metric_dict[threshold_key]
