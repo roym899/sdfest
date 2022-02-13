@@ -20,9 +20,9 @@ from cass.cass.datasets.dataset import get_bbox as cass_get_bbox
 import asmnet.cr6d_utils
 import asmnet.common3Dfunc
 
-# from spd.lib.network import DeformNet
-# import spd.lib.utils
-# import spd.lib.align
+from spd.lib.network import DeformNet
+import spd.lib.utils
+import spd.lib.align
 
 
 # TODO add new SGPA and CR-Net

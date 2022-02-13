@@ -3,6 +3,7 @@ import argparse
 import os
 from datetime import datetime
 from typing import Optional
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -125,6 +126,7 @@ def visualize_estimation(
             center=np.array([0.0, 0.0, 0.0])[:, None],
         )
         posed_mesh.translate(local_cv_position[:, None])
+        posed_mesh.compute_vertex_normals()
         o3d_geometries.append(posed_mesh)
 
     vis = o3d.visualization.Visualizer()
@@ -233,7 +235,10 @@ class Evaluator:
         """Run and evaluate method on all samples."""
         print(f"Run {method_name}...")
         self._init_metrics()
-        for i, sample in enumerate(tqdm(self._dataset)):
+        indices = list(range(len(self._dataset)))
+        random.shuffle(indices)
+        for i in tqdm(indices):
+            sample = self._dataset[i]
             if self._fast_eval and i % 10 != 0:
                 continue
             if self._visualize_input:
@@ -256,6 +261,8 @@ class Evaluator:
                     depth_image=sample["depth"],
                     local_cv_position=sample["position"],
                     local_cv_orientation_q=sample["quaternion"],
+                    reconstructed_mesh=self._dataset.load_mesh(sample["obj_path"]),
+                    extents=sample["scale"],
                     camera=self._cam,
                     vis_camera_json=self._vis_camera_json,
                     render_options_json=self._render_options_json,
