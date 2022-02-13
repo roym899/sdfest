@@ -216,6 +216,36 @@ def accuracy_thresh(
         return np.sum(d < threshold) / points_rec.shape[0]
 
 
+def reconstruction_fscore(
+    points_gt: np.ndarray,
+    points_rec: np.ndarray,
+    threshold: float,
+    p_norm: int = 2,
+    normalize: bool = False,
+) -> float:
+    """Compute reconstruction fscore.
+
+    See What Do Single-View 3D Reconstruction Networks Learn, Tatarchenko, 2019
+
+    Args:
+        points_gt: set of true points, expected shape (N,3)
+        points_rec: set of reconstructed points, expected shape (M,3)
+        threshold: distance threshold to count a point as correct
+        p_norm: which Minkowski p-norm is used for distance and nearest neighbor query
+        normalize: whether to divide distances by Euclidean extent of points_gt
+    Returns:
+        Harmonic mean of precision (thresholded accuracy) and recall (thresholded
+        completeness).
+    """
+    recall = completeness_thresh(
+        points_gt, points_rec, threshold, p_norm=p_norm, normalize=normalize
+    )
+    precision = accuracy_thresh(
+        points_gt, points_rec, threshold, p_norm=p_norm, normalize=normalize
+    )
+    return 2 / (1 / recall + 1 / precision)
+
+
 def extent(points: np.ndarray) -> float:
     """Compute largest Euclidean distance between any two points.
 
