@@ -6,6 +6,8 @@ from typing import Tuple, Optional
 import random
 
 import matplotlib.pyplot as plt
+
+import tikzplotlib
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
@@ -236,7 +238,7 @@ class Evaluator:
         print(f"Run {method_name}...")
         self._init_metrics()
         indices = list(range(len(self._dataset)))
-        random.shuffle(indices)
+        # random.shuffle(indices)
         for i in tqdm(indices):
             if self._fast_eval and i % 10 != 0:
                 continue
@@ -553,12 +555,14 @@ class Evaluator:
                 label = "all"
             plt.plot(x_values, y_values, label=label)
 
-        figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}.png")
+        figure_path = os.path.join(out_folder, f"{method_name}_{metric_name}")
         plt.xlabel(threshold_key)
         plt.ylabel("Correct")
         plt.legend()
         plt.grid()
-        plt.savefig(figure_path)
+
+        tikzplotlib.save(figure_path + ".tex")
+        plt.savefig(figure_path + ".png")
         plt.close()
 
     def run(self) -> None:

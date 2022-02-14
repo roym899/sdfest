@@ -1,9 +1,9 @@
 # Standalone config to use with evaluate.py
 config:
   methods:
-    asmnet: ./asmnet.yaml
     cass: ./cass.yaml
     spd: ./spd.yaml
+    asmnet: ./asmnet.yaml
 
 dataset_config:
   name: REAL275
@@ -29,7 +29,7 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
-fast_eval: True  # only evaluate every 10th sample
+fast_eval: False  # only evaluate every 10th sample
 store_visualization: False
 run_name: ""
 num_gt_points: 10000
@@ -51,13 +51,8 @@ metrics:
     deg_thresholds: [null]
     iou_thresholds: [null]
     f_thresholds: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
-  correct_5deg2cm:
-    position_thresholds: [0.02]
-    deg_thresholds: [5]
-    iou_thresholds: [null]
-    f_thresholds: [null]
-  correct_5deg5cm:
-    position_thresholds: [0.05]
+  correct_5deg1cm:
+    position_thresholds: [0.01]
     deg_thresholds: [5]
     iou_thresholds: [null]
     f_thresholds: [null]
@@ -66,30 +61,13 @@ metrics:
     deg_thresholds: [10]
     iou_thresholds: [null]
     f_thresholds: [null]
-  correct_10deg5cm:
-    position_thresholds: [0.05]
-    deg_thresholds: [10]
+  correct_5deg1cm08:
+    position_thresholds: [0.02]
+    deg_thresholds: [5]
     iou_thresholds: [null]
-    f_thresholds: [null]
-  correct_180deg1000cm:
-    position_thresholds: [10.0]
-    deg_thresholds: [180]
+    f_thresholds: [0.8]
+  correct_10deg2cm06:
+    position_thresholds: [0.02]
+    deg_thresholds: [5]
     iou_thresholds: [null]
-    f_thresholds: [null]
-  mean_accuracy: 
-    pointwise_f: sdf_estimation.metrics.mean_accuracy
-    posed: True
-    kwargs: {}
-  mean_completeness: 
-    pointwise_f: sdf_estimation.metrics.mean_completeness
-    posed: True
-    kwargs: {}
-  chamfer: 
-    pointwise_f: sdf_estimation.metrics.symmetric_chamfer
-    posed: True
-    kwargs: {}
-  fscore_1cm: 
-    pointwise_f: sdf_estimation.metrics.reconstruction_fscore
-    posed: True
-    kwargs:
-      threshold: 0.01
+    f_thresholds: [0.6]
