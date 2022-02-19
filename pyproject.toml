@@ -7,7 +7,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "~3.8"
-yoco = {path = "yoco", develop = true}
 sdf-differentiable-renderer = {path = "sdf_differentiable_renderer", develop = true}
 sdf-vae = {path = "sdf_vae", develop = true}
 sdf-single-shot = {path = "sdf_single_shot", develop = true}
@@ -23,3 +22,6 @@ h5py = "^3.6.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+exclude = ["**/data"]

@@ -155,7 +155,7 @@ class NOCSDataset(torch.utils.data.Dataset):
                 Configuration dictionary of dataset. Provided dictionary will be merged
                 with default_dict. See NOCSDataset.Config for supported keys.
         """
-        config = yoco.load_config(config, default_dict=NOCSDataset.default_config)
+        config = yoco.load_config(config, current_dict=NOCSDataset.default_config)
         self._root_dir = config["root_dir"]
         self._split = config["split"]
         self._camera_convention = config["camera_convention"]

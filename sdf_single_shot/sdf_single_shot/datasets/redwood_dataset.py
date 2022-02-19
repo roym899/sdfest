@@ -125,7 +125,7 @@ class AnnotatedRedwoodDataset(torch.utils.data.Dataset):
                 with default_dict. See AnnotatedRedwoodDataset.Config for keys.
         """
         config = yoco.load_config(
-            config, default_dict=AnnotatedRedwoodDataset.default_config
+            config, current_dict=AnnotatedRedwoodDataset.default_config
         )
         self._root_dir = config["root_dir"]
         self._ann_dir = config["ann_dir"]

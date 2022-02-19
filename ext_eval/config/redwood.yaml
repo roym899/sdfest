@@ -3,7 +3,6 @@ config:
     cass: ./cass.yaml
     spd: ./spd.yaml
     asmnet: ./asmnet.yaml
-    sdfest: ./sdfest.yaml
 
 dataset_config:
   name: Redwood

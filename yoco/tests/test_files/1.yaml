@@ -1,4 +1,0 @@
-config: [2.yaml, 3.yaml, subdir/subdir.yaml]
-1_only: 1
-all: 1
-test_path: ./1.yaml

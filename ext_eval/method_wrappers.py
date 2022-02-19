@@ -106,7 +106,7 @@ class SPDWrapper(MethodWrapper):
             config: SPD configuration. See SPDWrapper.Config for more information.
             camera: Camera used for the input image.
         """
-        config = yoco.load_config(config, default_dict=SPDWrapper.default_config)
+        config = yoco.load_config(config, current_dict=SPDWrapper.default_config)
         self._parse_config(config)
         self._camera = camera
 
@@ -278,7 +278,7 @@ class CASSWrapper(MethodWrapper):
             config: CASS configuration. See CASSWrapper.Config for more information.
             camera: Camera used for the input image.
         """
-        config = yoco.load_config(config, default_dict=CASSWrapper.default_config)
+        config = yoco.load_config(config, current_dict=CASSWrapper.default_config)
         self._parse_config(config)
         self._camera = camera
 
@@ -479,7 +479,7 @@ class ASMNetWrapper:
             config: ASMNet configuration. See ASMNetWrapper.Config for more information.
             camera: Camera used for the input image.
         """
-        config = yoco.load_config(config, default_dict=ASMNetWrapper.default_config)
+        config = yoco.load_config(config, current_dict=ASMNetWrapper.default_config)
         self._parse_config(config)
         self._camera = camera
 
