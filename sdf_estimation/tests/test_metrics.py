@@ -1,8 +1,65 @@
 """Tests for metrics module."""
 import numpy as np
 import pytest
+from scipy.spatial.transform import Rotation
 
 from sdf_estimation import metrics
+
+
+def test_correct_thresh() -> None:
+    """Test correct threshold metric."""
+    position_gt = np.array([0.0, 0.0, 0.0])
+    position_prediction = np.array([0.0, 0.2, 0.0])
+    # -> error 0.2
+    orientation_gt = Rotation.from_euler("xyz", angles=[0.3, 0.3, 0.5])
+    orientation_prediction = orientation_gt * Rotation.from_euler(
+        "X", angles=10, degrees=True
+    )
+    # -> error 10deg, 0 deg if x is symmetry axis
+    extent_gt = np.array([1.0, 1.0, 1.0])
+    extent_prediction = np.array([1.1, 1.0, 1.0])
+
+    kwargs = {
+        "position_gt": position_gt,
+        "position_prediction": position_prediction,
+        "orientation_gt": orientation_gt,
+        "orientation_prediction": orientation_prediction,
+    }
+
+    assert metrics.correct_thresh(**kwargs) == 1
+
+    result = metrics.correct_thresh(
+        **kwargs,
+        degree_threshold=9,
+    )
+    assert result == 0
+
+    result = metrics.correct_thresh(
+        **kwargs,
+        degree_threshold=0.001,
+        rotational_symmetry_axis=0,
+    )
+    assert result == 1
+
+    result = metrics.correct_thresh(
+        **kwargs,
+        degree_threshold=0.001,
+        rotational_symmetry_axis=1,
+    )
+    assert result == 0
+
+    result = metrics.correct_thresh(
+        **kwargs,
+        position_threshold=0.15,
+    )
+    assert result == 0
+
+    result = metrics.correct_thresh(
+        **kwargs,
+        position_threshold=0.25,
+        degree_threshold=15,
+    )
+    assert result == 1
 
 
 def test_mean_accuracy() -> None:

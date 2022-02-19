@@ -150,3 +150,4 @@ init:
   model: ./camera_init.pt
   normalize_pose: true
 category: camera
+far_field: 2.0  # from mask_noise_max

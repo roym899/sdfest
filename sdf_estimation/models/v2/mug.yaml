@@ -112,5 +112,6 @@ init:
   device: cuda:1
   init_weights: ./sdf_estimation/models/new_mug_init_2.pt
   normalize_pose: true
-  model: ./robust_mug_init.pt
+  model: ./mug_init.pt
 category: cup
+far_field: 2.0  # from mask_noise_max

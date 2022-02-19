@@ -1,6 +1,6 @@
 config:
   - ../rendering_evaluation.yaml
-  - ../mug.yaml
+  - ../../models/v2/mug.yaml
 
 mesh_scale: 0.055
 rel_scale: False

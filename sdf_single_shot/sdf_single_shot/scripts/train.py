@@ -104,9 +104,7 @@ class Trainer:
 
         # load weights if provided
         if self._init_weights_path is not None:
-            state_dict = torch.load(
-                self._init_weights_path, map_location=self._device
-            )
+            state_dict = torch.load(self._init_weights_path, map_location=self._device)
             self._sdf_pose_net.load_state_dict(state_dict)
 
         self._current_iteration = 0
@@ -474,6 +472,14 @@ class Trainer:
                     * batch_size
                 )
                 sample_count += batch_size
+                if self._config["head"]["orientation_repr"] == "discretized":
+                    metrics_dict[
+                        f"{name} validation orientation mean NLL"
+                    ] += torch.nn.functional.cross_entropy(
+                        predictions["orientation"],
+                        samples["orientation"],
+                        reduction="sum",
+                    )
             for metric_name in metrics_dict:
                 metrics_dict[metric_name] /= sample_count
             wandb.log(metrics_dict, step=self._current_iteration)

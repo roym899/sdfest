@@ -128,10 +128,8 @@ def test_namespaces():
                 "test_param_2": "Test string",
                 "test_list": [1, 2, 3],
             },
-            "__path_ns_nested__": os.path.join("tests", "test_files"),
         },
         "test_param_1": 5,
-        "__path_ns_1__": os.path.join("tests", "test_files"),
     }
     assert config_dict == expected_dict
 
@@ -148,8 +146,6 @@ def test_namespaces():
                 "test_param_2": "Test string",
                 "test_list": [1, 2, 3],
             },
-            "__path_b__": os.path.join("tests", "test_files"),
-            "__path_b2__": os.path.join("tests", "test_files"),
         },
     }
     assert config_dict == expected_dict

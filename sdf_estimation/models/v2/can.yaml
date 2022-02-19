@@ -148,3 +148,4 @@ init:
   normalize_pose: True
   model: ./can_init.pt
 category: can
+far_field: 2.0  # from mask_noise_max

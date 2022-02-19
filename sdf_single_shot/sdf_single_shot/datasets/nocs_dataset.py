@@ -40,16 +40,17 @@ class NOCSDataset(torch.utils.data.Dataset):
         {root_dir}/gts/...
         {root_dir}/obj_models/...
         {root_dir}/camera_composed_depth/...
-        {root_dir}/camera_val25k/...
-        {root_dir}/camera_train/...
+        {root_dir}/val/...
+        {root_dir}/train/...
     Which is easily obtained by downloading all the provided files and extracting them
     into the same directory.
 
     Necessary preprocessing of this data is performed during first initialization per
     and is saved to
-        {root}/sdfest_pre/...
+        {root_dir}/sdfest_pre/...
     """
 
+    num_categories = 7
     category_id_to_str = {
         0: "unknown",
         1: "bottle",
@@ -65,7 +66,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         """Configuration dictionary for NOCSDataset.
 
         Attributes:
-            root_dir:
+            root_dir: See NOCSDataset docstring.
             split:
                 The dataset split. The following strings are supported:
                     "camera_train": 275000 images, synthetic objects + real background
@@ -141,7 +142,6 @@ class NOCSDataset(torch.utils.data.Dataset):
         "category_str": None,
         "remap_y_axis": None,
         "remap_x_axis": None,
-        "category_str": None,
     }
 
     def __init__(
@@ -367,20 +367,20 @@ class NOCSDataset(torch.utils.data.Dataset):
         """Return list of paths of color images of the selected split."""
         if self._split == "camera_train":
             glob_pattern = os.path.join(self._root_dir, "train", "**", "*_color.png")
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "camera_val":
             glob_pattern = os.path.join(self._root_dir, "val", "**", "*_color.png")
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "real_train":
             glob_pattern = os.path.join(
                 self._root_dir, "real_train", "**", "*_color.png"
             )
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         elif self._split == "real_test":
             glob_pattern = os.path.join(
                 self._root_dir, "real_test", "**", "*_color.png"
             )
-            return glob(glob_pattern, recursive=True)
+            return sorted(glob(glob_pattern, recursive=True))
         else:
             raise ValueError(f"Specified split {self._split} is not supported.")
 
@@ -485,6 +485,9 @@ class NOCSDataset(torch.utils.data.Dataset):
             "quaternion": orientation_q,
             "scale": scale,
             "color_path": sample_data["color_path"],
+            "obj_path": sample_data["obj_path"],
+            "category_id": sample_data["category_id"],
+            "category_str": NOCSDataset.category_id_to_str[sample_data["category_id"]],
         }
         return sample
 
@@ -736,6 +739,23 @@ class NOCSDataset(torch.utils.data.Dataset):
         elif self._remap_y_axis is None or self._remap_x_axis is None:
             raise ValueError("Either both or none of remap_{y,x}_axis have to be None.")
 
+        rotation_o2n = self._get_o2n_object_rotation_matrix()
+        remapped_extents = torch.abs(torch.Tensor(rotation_o2n) @ extents)
+
+        # quaternion so far: original -> camera
+        # we want a quaternion: new -> camera
+        rotation_n2o = rotation_o2n.T
+
+        quaternion_n2o = torch.from_numpy(Rotation.from_matrix(rotation_n2o).as_quat())
+
+        remapped_orientation_q = quaternion_utils.quaternion_multiply(
+            orientation_q, quaternion_n2o
+        )  # new -> original -> camera
+
+        return remapped_orientation_q, remapped_extents
+
+    def _get_o2n_object_rotation_matrix(self) -> np.ndarray:
+        """Compute rotation matrix which rotates original to new object coordinates."""
         rotation_o2n = np.zeros((3, 3))  # original to new object convention
         if self._remap_y_axis == "x":
             rotation_o2n[0, 1] = 1
@@ -772,19 +792,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         rotation_o2n[:, 2] *= np.linalg.det(rotation_o2n)  # make special orthogonal
         if np.linalg.det(rotation_o2n) != 1.0:  # check if special orthogonal
             raise ValueError("Unsupported combination of remap_{y,x}_axis. det != 1")
-        remapped_extents = torch.abs(torch.Tensor(rotation_o2n) @ extents)
-
-        # quaternion so far: original -> camera
-        # we want a quaternion: new -> camera
-        rotation_n2o = rotation_o2n.T
-
-        quaternion_n2o = torch.from_numpy(Rotation.from_matrix(rotation_n2o).as_quat())
-
-        remapped_orientation_q = quaternion_utils.quaternion_multiply(
-            orientation_q, quaternion_n2o
-        )  # new -> original -> camera
-
-        return remapped_orientation_q, remapped_extents
+        return rotation_o2n
 
     def _quat_to_orientation_repr(self, quaternion: torch.Tensor) -> torch.Tensor:
         """Convert quaternion to selected orientation representation.
@@ -808,6 +816,21 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise NotImplementedError(
                 f"Orientation representation {self._orientation_repr} is not supported."
             )
+
+    def load_mesh(self, object_path: str) -> o3d.geometry.TriangleMesh:
+        """Load an object mesh and adjust its object frame convention."""
+        mesh = o3d.io.read_triangle_mesh(object_path)
+        if self._remap_y_axis is None and self._remap_x_axis is None:
+            return mesh
+        elif self._remap_y_axis is None or self._remap_x_axis is None:
+            raise ValueError("Either both or none of remap_{y,x}_axis have to be None.")
+
+        rotation_o2n = self._get_o2n_object_rotation_matrix()
+        mesh.rotate(
+            rotation_o2n,
+            center=np.array([0.0, 0.0, 0.0])[:, None],
+        )
+        return mesh
 
 
 class ObjectError(Exception):

@@ -149,3 +149,4 @@ init:
   model: ./bowl_init.pt
   normalize_pose: True
 category: bowl
+far_field: 2.0  # from mask_noise_max

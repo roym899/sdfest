@@ -16,6 +16,7 @@ flake8 = "^3.9.2"
 flake8-docstrings = "^1.6.0"
 opencv-python-headless = "^4.5.3"
 py = "^1.10.0"
+h5py = "^3.6.0"
 
 [tool.poetry.dev-dependencies]
 
