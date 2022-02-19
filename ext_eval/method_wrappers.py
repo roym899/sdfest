@@ -571,16 +571,24 @@ class ASMNetWrapper:
             pred_rt[:3, :3] = pred_rot
             if self._use_icp:
                 pcd_pred_posed_ds = pcd_pred_posed.voxel_down_sample(0.005)
-                # remove hidden points
-                pcd_pred_posed_visible = asmnet.common3Dfunc.applyHPR(pcd_pred_posed_ds)
-                pcd_in = pcd_in.voxel_down_sample(0.005)
-                reg_result = o3d.pipelines.registration.registration_icp(
-                    pcd_pred_posed_visible, pcd_in, max_correspondence_distance=0.02
-                )
-                pcd_pred_posed = copy.deepcopy(pcd_pred_posed_ds).transform(
-                    reg_result.transformation
-                )
-                pred_rt = np.dot(reg_result.transformation, pred_rt)
+                if len(pcd_pred_posed_ds.points) > 3:
+                    # remove hidden points
+                    pcd_pred_posed_visible = asmnet.common3Dfunc.applyHPR(
+                        pcd_pred_posed_ds
+                    )
+                    pcd_in = pcd_in.voxel_down_sample(0.005)
+                    reg_result = o3d.pipelines.registration.registration_icp(
+                        pcd_pred_posed_visible, pcd_in, max_correspondence_distance=0.02
+                    )
+                    pcd_pred_posed = copy.deepcopy(pcd_pred_posed_ds).transform(
+                        reg_result.transformation
+                    )
+                    pred_rt = np.dot(reg_result.transformation, pred_rt)
+                else:
+                    print(
+                        "ASM-Net Warning: Couldn't perform ICP, too few points after"
+                        "voxel down sampling"
+                    )
 
             # center position
             maxb = pcd_pred_posed.get_max_bound()  # bbox max
