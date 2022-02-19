@@ -238,7 +238,8 @@ class Evaluator:
         print(f"Run {method_name}...")
         self._init_metrics()
         indices = list(range(len(self._dataset)))
-        # random.shuffle(indices)
+        random.seed(0)
+        random.shuffle(indices)
         for i in tqdm(indices):
             if self._fast_eval and i % 10 != 0:
                 continue
