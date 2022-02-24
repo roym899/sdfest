@@ -230,8 +230,8 @@ def add_timing_decorators(pipeline: SDFPipeline) -> defaultdict:
     pipeline._compute_gradients = _timing_decorator(
         timing_dict, "backward", pipeline._compute_gradients
     )
-    pipeline._compute_losses = _timing_decorator(
-        timing_dict, "losses", pipeline._compute_losses
+    pipeline._compute_view_losses = _timing_decorator(
+        timing_dict, "losses", pipeline._compute_view_losses
     )
     return timing_dict
 

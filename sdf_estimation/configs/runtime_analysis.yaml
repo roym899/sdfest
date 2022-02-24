@@ -6,7 +6,7 @@ config:
 
 input:
   data/redwood/bottle/rgbd/01259/rgb/0000300-000010021284.jpg
-max_iterations: 30
+max_iterations: 50
 measure_runtime: True
 runs: 11
 skip_first_run: True

@@ -632,6 +632,7 @@ class SDFEstWrapper:
         self._device = config["device"]
         self._visualize_optimization = config["visualize_optimization"]
         self._num_points = config["num_points"]
+        self._prior = config["prior"] if "prior" in config else None
 
         # create per-categry models
         for category_str in config["category_configs"].keys():
@@ -666,11 +667,18 @@ class SDFEstWrapper:
         depth_image = depth_image.to(self._device, copy=True)
         instance_mask = instance_mask.to(self._device)
 
+        if self._prior is not None:
+            prior = torch.tensor(self._prior[category_str], device=self._device)
+            prior /= torch.sum(prior)
+        else:
+            prior = None
+
         position, orientation, scale, shape = pipeline(
             depth_image,
             instance_mask,
             color_image,
             visualize=self._visualize_optimization,
+            prior_orientation_distribution=prior,
         )
 
         # outputs of SDFEst are OpenGL camera, ShapeNet object convention
