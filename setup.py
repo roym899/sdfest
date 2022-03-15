@@ -14,9 +14,9 @@ setuptools.setup(
     url="https://github.com/roym899/sdfest",
     packages=setuptools.find_packages(),
     package_data={
-        'sdf_differentiable_renderer': [
-            'differentiable_renderer/csrc/sdf_renderer.cpp',
-            'differentiable_renderer/csrc/sdf_renderer_cuda.cu'
+        "sdfest": [
+            "differentiable_renderer/csrc/sdf_renderer.cpp",
+            "differentiable_renderer/csrc/sdf_renderer_cuda.cu",
         ]
     },
     install_requires=[
@@ -24,9 +24,16 @@ setuptools.setup(
         "healpy",
         "joblib",
         "matplotlib",
+        "mesh-to-sdf",
+        "ninja",
         "numpy",
         "open3d",
         "pandas",
+        "pynput",
+        "pyrender",
+        "PySide2",
+        "tensorboard",
+        "trimesh",
         "scipy",
         "scikit-image",
         "tabulate",
@@ -46,15 +53,14 @@ setuptools.setup(
     ],
     python_requires=">=3.7",
 )
-    # include_package_data=True,
-    # ext_modules=[
-    #     CUDAExtension(
-    #         "sdf_renderer_cuda",
-    #         [
-    #             "sdf_differentiable_renderer/src/sdf_renderer.cpp",
-    #             "sdf_differentiable_renderer/src/sdf_renderer_cuda.cu",
-    #         ],
-    #     )
-    # ],
-    # cmdclass={"build_ext": BuildExtension},
-)
+# include_package_data=True,
+# ext_modules=[
+#     CUDAExtension(
+#         "sdf_renderer_cuda",
+#         [
+#             "sdf_differentiable_renderer/src/sdf_renderer.cpp",
+#             "sdf_differentiable_renderer/src/sdf_renderer_cuda.cu",
+#         ],
+#     )
+# ],
+# cmdclass={"build_ext": BuildExtension},
