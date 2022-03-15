@@ -2,9 +2,11 @@ data/
 results/
 runs/
 wandb/
-models/
-
+good_meshes.json
 .vscode/
+
+# System-specific compile commands
+compile_commands.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,0 +1,50 @@
+config:
+  - ./default.yaml
+  - ../models/v2/mug.yaml
+
+camera:
+  width: 640
+  height: 480
+  fx: 320
+  fy: 320
+  cx: 320
+  cy: 240
+  pixel_center: 0.5
+threshold: 0.003
+device: cuda:2
+
+init_view: first
+num_views: [1, 2, 3]
+mesh_scale: 0.1
+rel_scale: True
+camera_distance: 0.3
+max_iterations: 30
+samples: 20000
+visualize_optimization: False
+visualize_meshes: False
+visualize_points: False
+iso_threshold: 0.01
+log_folder: null
+ablation_configs: null
+shape_optimization: True
+seed: 0
+run_name: ''
+
+metrics:
+  mean_accuracy: 
+    f: sdf_estimation.metrics.mean_accuracy
+    kwargs: {}
+  mean_completeness: 
+    f: sdf_estimation.metrics.mean_completeness
+    kwargs: {}
+  chamfer: 
+    f: sdf_estimation.metrics.symmetric_chamfer
+    kwargs: {}
+  completeness_0_01: 
+    f: sdf_estimation.metrics.completeness_thresh
+    kwargs: 
+      threshold: 0.01
+  accuracy_0_01:
+    f: sdf_estimation.metrics.accuracy_thresh
+    kwargs: 
+      threshold: 0.01

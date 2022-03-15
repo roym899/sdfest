@@ -1,0 +1,14 @@
+config:
+  - ./default.yaml
+
+camera:
+  width: 640
+  height: 480
+  fx: 525
+  fy: 525
+  cx: 319.5
+  cy: 239.5
+  pixel_center: 0
+threshold: 0.003
+device: cuda
+dataset: "redwood"

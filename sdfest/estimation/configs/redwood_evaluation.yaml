@@ -1,0 +1,74 @@
+# Standalone config to use with redwood_evaluation.py
+config:
+  - redwood.yaml
+  - category_configs:
+      mug: ../models/v2/mug.yaml
+      bottle: ../models/v2/bottle.yaml
+      bowl: ../models/v2/bowl.yaml
+
+
+threshold: 0.005
+device: cuda
+
+max_iterations: 30
+samples: 20000
+visualize_optimization: False
+visualize_meshes: False
+visualize_points: False
+visualize_input: False
+visualize_results: False
+iso_threshold: 0.02
+log_folder: null
+mode: seg
+run_name: ''
+
+metrics:
+  mean_accuracy: 
+    f: sdf_estimation.metrics.mean_accuracy
+    kwargs: {}
+  mean_completeness: 
+    f: sdf_estimation.metrics.mean_completeness
+    kwargs: {}
+  chamfer: 
+    f: sdf_estimation.metrics.symmetric_chamfer
+    kwargs: {}
+  completeness_0_01: 
+    f: sdf_estimation.metrics.completeness_thresh
+    kwargs: 
+      threshold: 0.01
+  accuracy_0_01:
+    f: sdf_estimation.metrics.accuracy_thresh
+    kwargs: 
+      threshold: 0.01
+  norm_mean_accuracy: 
+    f: sdf_estimation.metrics.mean_accuracy
+    kwargs: 
+      normalize: True
+  norm_mean_completeness: 
+    f: sdf_estimation.metrics.mean_completeness
+    kwargs:
+      normalize: True
+  norm_chamfer: 
+    f: sdf_estimation.metrics.symmetric_chamfer
+    kwargs:
+      normalize: True
+  norm_completeness_0_1: 
+    f: sdf_estimation.metrics.completeness_thresh
+    kwargs: 
+      threshold: 0.1
+      normalize: True
+  norm_accuracy_0_1:
+    f: sdf_estimation.metrics.accuracy_thresh
+    kwargs: 
+      threshold: 0.1
+      normalize: True
+  norm_completeness_0_05: 
+    f: sdf_estimation.metrics.completeness_thresh
+    kwargs: 
+      threshold: 0.05
+      normalize: True
+  norm_accuracy_0_05:
+    f: sdf_estimation.metrics.accuracy_thresh
+    kwargs: 
+      threshold: 0.05
+      normalize: True

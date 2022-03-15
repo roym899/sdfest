@@ -1,0 +1,18 @@
+# Standalone config to use with real275_evaluation.py
+config:
+  - real275.yaml
+  - category_configs:
+      mug: ../models/v2/mug.yaml
+      bottle: ../models/v2/bottle.yaml
+      bowl: ../models/v2/bowl.yaml
+      laptop: ../models/v2/laptop.yaml
+      can: ../models/v2/can.yaml
+      camera: ../models/v2/camera.yaml
+
+threshold: 0.005
+device: cuda
+
+max_iterations: 30
+visualize_optimization: False
+log_folder: null
+run_name: ''

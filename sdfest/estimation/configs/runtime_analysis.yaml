@@ -1,0 +1,12 @@
+# Standalone config to use with real_data.py
+# Used to generate runtime breakdown
+config:
+  - redwood.yaml
+  - ../models/v2/bottle.yaml
+
+input:
+  data/redwood/bottle/rgbd/01259/rgb/0000300-000010021284.jpg
+max_iterations: 50
+measure_runtime: True
+runs: 11
+skip_first_run: True

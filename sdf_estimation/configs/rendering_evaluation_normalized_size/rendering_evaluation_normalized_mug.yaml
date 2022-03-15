@@ -1,7 +1,0 @@
-config:
-  - ../rendering_evaluation.yaml
-  - ../../models/v2/mug.yaml
-
-mesh_scale: 0.055
-rel_scale: False
-camera_distance: 0.3

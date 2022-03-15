@@ -1,9 +1,0 @@
-split: camera_train
-root_dir: ../nocs_data/
-mask_pointcloud: True
-normalize_pointcloud: True
-scale_convention: half_max
-camera_convention: opengl
-# ShapeNetV2 object conventions
-remap_y_axis: "y"
-remap_x_axis: "-z"

@@ -1,0 +1,3 @@
+config:
+  - default_network.yaml
+  - default_training.yaml

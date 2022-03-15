@@ -7,10 +7,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "~3.8"
-sdf-differentiable-renderer = {path = "sdf_differentiable_renderer", develop = true}
-sdf-vae = {path = "sdf_vae", develop = true}
-sdf-single-shot = {path = "sdf_single_shot", develop = true}
-sdf-estimation = {path = "sdf_estimation", develop = true}
 flake8 = "^3.9.2"
 flake8-docstrings = "^1.6.0"
 opencv-python-headless = "^4.5.3"

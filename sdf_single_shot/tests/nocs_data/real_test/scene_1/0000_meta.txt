@@ -1,5 +1,0 @@
-1 2 bowl_white_small_norm
-2 4 can_arizona_tea_norm
-3 3 camera_canon_len_norm
-4 6 mug_daniel_norm
-5 5 laptop_air_xin_norm
