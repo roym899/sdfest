@@ -4,7 +4,7 @@ config:
   - ./rendering_evaluation.yaml
   - ../models/v2/mug.yaml
 
-num_views: [1,3,]
+num_views: [3,]
 run_name: ablation_study
 
 ablation_configs:

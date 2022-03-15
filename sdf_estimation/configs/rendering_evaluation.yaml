@@ -11,7 +11,7 @@ camera:
   cy: 240
   pixel_center: 0.5
 threshold: 0.003
-device: cuda
+device: cuda:2
 
 init_view: first
 num_views: [1, 2, 3]
