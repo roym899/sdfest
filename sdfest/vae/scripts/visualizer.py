@@ -34,7 +34,6 @@ from matplotlib.ticker import NullLocator
 import numpy as np
 from PySide2 import QtCore
 import torch
-from tqdm import tqdm
 
 from sdfest.vae.sdf_vae import SDFVAE
 from sdfest.vae import sdf_utils, utils
@@ -254,6 +253,18 @@ class VAEVisualizer(QDialog):
         self.parse_config()
         self.update_model()
 
+        # TODO make these adjustable from GUI
+        self.transform = np.array(
+            [
+                [0, -1, 0, 0],
+                [0, 0, 1, 0],
+                [-1, 0, 0, 0],
+                [0, 0, 0, 1],
+            ]
+        )
+        self.azimuth = 0
+        self.polar_angle = -np.pi / 4 
+
     def reset_output(self) -> None:
         self._single_sdf_latent = None
         self._single_sdf_output = None
@@ -321,7 +332,13 @@ class VAEVisualizer(QDialog):
                         print("No surface boundaries in SDF.")
                     else:
                         ax = fig.subplots(1, 1)
-                        sdf_utils.plot_mesh(mesh, plot_object=ax)
+                        sdf_utils.plot_mesh(
+                            mesh,
+                            plot_object=ax,
+                            transform=self.transform,
+                            azimuth=self.azimuth,
+                            polar_angle=self.polar_angle,
+                        )
                         ax.xaxis.set_major_locator(NullLocator())
                         ax.yaxis.set_major_locator(NullLocator())
                         fig.savefig(
@@ -640,7 +657,13 @@ class VAEVisualizer(QDialog):
         if mesh is None:
             print("No surface boundaries in SDF.")
         else:
-            sdf_utils.plot_mesh(mesh, plot_object=ax)
+            sdf_utils.plot_mesh(
+                mesh,
+                plot_object=ax,
+                transform=self.transform,
+                azimuth=self.azimuth,
+                polar_angle=self.polar_angle,
+            )
 
     def update_isosurface_level(self, d):
         self._isosurface_level = d
