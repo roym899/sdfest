@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 import torch
-from sdf_single_shot import pointset_utils
+from sdfest.initialization import pointset_utils
 
 
 def test_normalize_points() -> None:

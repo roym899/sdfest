@@ -11,14 +11,14 @@ import yoco
 
 from torchinfo import summary
 
-from sdf_vae import utils
-from sdf_vae import sdf_utils
-from sdf_vae.sdf_vae import SDFVAE
-from sdf_vae.sdf_dataset import SDFDataset
+from sdfest.vae import utils
+from sdfest.vae import sdf_utils
+from sdfest.vae.sdf_vae import SDFVAE
+from sdfest.vae.sdf_dataset import SDFDataset
 
-from sdf_differentiable_renderer import Camera, render_depth_gpu
+from sdfest.differentiable_renderer import Camera, render_depth_gpu
 
-from sdf_single_shot import pointset_utils
+from sdfest.initialization import pointset_utils
 
 if "DISPLAY" not in os.environ or "localhost" in os.environ["DISPLAY"]:
     print("Using EGL instead of pyglet for OffscreenRendering")

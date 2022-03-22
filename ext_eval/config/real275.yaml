@@ -9,7 +9,7 @@ config:
 
 dataset_config:
   name: REAL275
-  type: sdf_single_shot.datasets.nocs_dataset.NOCSDataset
+  type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
   config_dict: 
     root_dir: ../../data/nocs/
     split: real_test

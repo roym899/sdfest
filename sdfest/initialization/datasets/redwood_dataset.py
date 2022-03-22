@@ -8,11 +8,11 @@ import numpy as np
 import open3d as o3d
 import torch
 from PIL import Image
-from sdf_differentiable_renderer import Camera
+from sdfest.differentiable_renderer import Camera
 import yoco
 
 from sdf_estimation import synthetic
-from sdf_single_shot import pointset_utils, quaternion_utils, so3grid
+from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
 
 
 class AnnotatedRedwoodDataset(torch.utils.data.Dataset):

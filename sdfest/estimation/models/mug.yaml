@@ -36,7 +36,7 @@ vae:
   pc_weight: 1.0
   kld_weight: 3.0
   learning_rate: 0.001
-  dataset_path: sdf_single_shot/configs/../vae_models/./data/shapenet_processed/mug_filtered/
+  dataset_path: sdfest.initialization/configs/../vae_models/./data/shapenet_processed/mug_filtered/
   model: ./mug_vae.pt
   device: cuda:1
 init:
@@ -70,7 +70,7 @@ init:
     camera_val:
       config_dict:
         split: camera_val
-        root_dir: sdf_single_shot/configs/././../data/nocs/
+        root_dir: sdfest.initialization/configs/././../data/nocs/
         mask_pointcloud: true
         normalize_pointcloud: true
         scale_convention: half_max

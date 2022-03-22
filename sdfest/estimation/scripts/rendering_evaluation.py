@@ -54,9 +54,9 @@ import torch
 from tqdm import tqdm
 import yoco
 
-from sdf_single_shot import quaternion_utils
+from sdfest.initialization import quaternion_utils
 from sdf_estimation import synthetic
-from sdf_differentiable_renderer import Camera
+from sdfest.differentiable_renderer import Camera
 from sdf_estimation.simple_setup import SDFPipeline
 
 

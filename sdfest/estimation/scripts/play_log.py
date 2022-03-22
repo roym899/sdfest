@@ -21,7 +21,7 @@ import torch
 
 from sdf_estimation.simple_setup import SDFPipeline
 from sdf_estimation import synthetic
-from sdf_single_shot import pointset_utils, quaternion_utils
+from sdfest.initialization import pointset_utils, quaternion_utils
 
 reconstruction_types = ["mesh", "pointcloud", "none"]
 reset = False

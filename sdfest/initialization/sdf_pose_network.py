@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from typing import List, Callable, Optional
 
-from sdf_single_shot.so3grid import SO3Grid
+from sdfest.initialization.so3grid import SO3Grid
 
 
 class SDFPoseHead(nn.Module):

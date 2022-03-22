@@ -5,8 +5,8 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sdf_differentiable_renderer import Camera
-from sdf_single_shot import quaternion_utils, utils
+from sdfest.differentiable_renderer import Camera
+from sdfest.initialization import quaternion_utils, utils
 
 
 def normalize_points(points: torch.Tensor) -> torch.Tensor:

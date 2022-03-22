@@ -36,8 +36,8 @@ from PySide2 import QtCore
 import torch
 from tqdm import tqdm
 
-from sdf_vae.sdf_vae import SDFVAE
-from sdf_vae import sdf_utils, utils
+from sdfest.vae.sdf_vae import SDFVAE
+from sdfest.vae import sdf_utils, utils
 
 import yoco
 

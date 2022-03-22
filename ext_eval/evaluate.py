@@ -14,9 +14,9 @@ import torch
 from tqdm import tqdm
 import open3d as o3d
 from sdf_estimation import metrics
-from sdf_single_shot import pointset_utils, quaternion_utils
-from sdf_differentiable_renderer import Camera
-from sdf_single_shot.utils import str_to_object
+from sdfest.initialization import pointset_utils, quaternion_utils
+from sdfest.differentiable_renderer import Camera
+from sdfest.initialization.utils import str_to_object
 
 import yoco
 

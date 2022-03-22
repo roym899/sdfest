@@ -2,7 +2,7 @@
 
 import torch
 
-from sdf_single_shot import quaternion_utils
+from sdfest.initialization import quaternion_utils
 
 
 def test_quaternion_invert() -> None:

@@ -10,8 +10,8 @@ import torch
 import torchvision.transforms.functional as TF
 from scipy.spatial.transform import Rotation
 
-from sdf_differentiable_renderer import Camera
-from sdf_single_shot import pointset_utils, quaternion_utils
+from sdfest.differentiable_renderer import Camera
+from sdfest.initialization import pointset_utils, quaternion_utils
 from sdf_estimation.simple_setup import SDFPipeline
 
 import yoco

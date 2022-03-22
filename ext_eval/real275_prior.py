@@ -1,9 +1,9 @@
-from sdf_single_shot import so3grid
+from sdfest.initialization import so3grid
 import yoco
-# from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
+# from sdfest.initialization.datasets.nocs_dataset import NOCSDataset
 import numpy as np
 from tqdm import tqdm
-from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
+from sdfest.initialization.datasets.nocs_dataset import NOCSDataset
 
 grid = so3grid.SO3Grid(1)
 a = grid.num_cells()

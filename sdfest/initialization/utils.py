@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from sdf_single_shot import quaternion_utils
+from sdfest.initialization import quaternion_utils
 
 
 def str_to_object(name: str) -> Any:

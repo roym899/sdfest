@@ -22,8 +22,8 @@ directory = os.path.dirname(__file__)
 sdf_renderer_cpp = load(
     name="sdf_renderer_cpp",
     sources=[
-        os.path.join(directory, "./src/sdf_renderer.cpp"),
-        os.path.join(directory, "./src/sdf_renderer_cuda.cu"),
+        os.path.join(directory, "./csrc/sdf_renderer.cpp"),
+        os.path.join(directory, "./csrc/sdf_renderer_cuda.cu"),
     ],
 )
 

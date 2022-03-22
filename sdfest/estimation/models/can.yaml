@@ -36,7 +36,7 @@ vae:
   pc_weight: 1.0
   kld_weight: 3.0
   learning_rate: 0.001
-  dataset_path: sdf_single_shot/configs/../vae_models/./data/shapenet_processed/can_filtered/
+  dataset_path: sdfest.initialization/configs/../vae_models/./data/shapenet_processed/can_filtered/
   model: ./can_vae.pt
 init:
   datasets:
@@ -63,13 +63,13 @@ init:
         orientation_repr: discretized
         orientation_grid_resolution: 1
         category_str: can
-      __path_config_dict__: sdf_single_shot/configs/./.
+      __path_config_dict__: sdfest.initialization/configs/./.
       type: SDFVAEViewDataset
       probability: 1.0
     camera_train:
       config_dict:
         split: camera_train
-        root_dir: sdf_single_shot/configs/././../data/nocs/
+        root_dir: sdfest.initialization/configs/././../data/nocs/
         mask_pointcloud: true
         normalize_pointcloud: true
         scale_convention: half_max
@@ -79,13 +79,13 @@ init:
         orientation_repr: discretized
         orientation_grid_resolution: 1
         category_str: can
-      __path_config_dict__: sdf_single_shot/configs/./.
+      __path_config_dict__: sdfest.initialization/configs/./.
       type: NOCSDataset
       probability: 0.0
     real_train:
       config_dict:
         split: real_train
-        root_dir: sdf_single_shot/configs/././../data/nocs/
+        root_dir: sdfest.initialization/configs/././../data/nocs/
         mask_pointcloud: true
         normalize_pointcloud: true
         scale_convention: half_max
@@ -95,14 +95,14 @@ init:
         orientation_repr: discretized
         orientation_grid_resolution: 1
         category_str: can
-      __path_config_dict__: sdf_single_shot/configs/./.
+      __path_config_dict__: sdfest.initialization/configs/./.
       type: NOCSDataset
       probability: 0.0
   validation_datasets:
     camera_val:
       config_dict:
         split: camera_val
-        root_dir: sdf_single_shot/configs/././../data/nocs/
+        root_dir: sdfest.initialization/configs/././../data/nocs/
         mask_pointcloud: true
         normalize_pointcloud: true
         scale_convention: half_max
@@ -112,7 +112,7 @@ init:
         orientation_repr: discretized
         orientation_grid_resolution: 1
         category_str: can
-      __path_config_dict__: sdf_single_shot/configs/./.
+      __path_config_dict__: sdfest.initialization/configs/./.
       type: NOCSDataset
   batch_size: 32
   iterations: 500000

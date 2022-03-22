@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from sdf_single_shot.datasets import nocs_utils
+from sdfest.initialization.datasets import nocs_utils
 
 
 def test_estimate_similarity_transform() -> None:

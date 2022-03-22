@@ -1,7 +1,7 @@
 import torch
 
 
-from sdf_single_shot.pointnet import VanillaPointNet, IterativePointNet
+from sdfest.initialization.pointnet import VanillaPointNet, IterativePointNet
 
 
 def test_shape_equality_iteratative() -> None:

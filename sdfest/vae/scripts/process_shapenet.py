@@ -9,7 +9,7 @@ from multiprocessing import Pool, Process, Manager
 import os
 import shutil
 
-from sdf_vae import sdf_utils  # needs to be imported before pyrender
+from sdfest.vae import sdf_utils  # needs to be imported before pyrender
 
 from typing import List
 import numpy as np

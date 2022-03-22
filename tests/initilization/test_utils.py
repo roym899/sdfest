@@ -1,7 +1,7 @@
 """Test for utils module."""
 import inspect
 
-from sdf_single_shot import utils
+from sdfest.initialization import utils
 
 
 def test_str_to_object() -> None:

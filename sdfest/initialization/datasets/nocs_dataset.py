@@ -16,12 +16,12 @@ import open3d as o3d
 import pandas as pd
 import torch
 from PIL import Image
-from sdf_differentiable_renderer import Camera
+from sdfest.differentiable_renderer import Camera
 import yoco
 from tqdm import tqdm
 
-from sdf_single_shot import pointset_utils, quaternion_utils, so3grid
-from sdf_single_shot.datasets import nocs_utils
+from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
+from sdfest.initialization.datasets import nocs_utils
 
 
 class NOCSDataset(torch.utils.data.Dataset):

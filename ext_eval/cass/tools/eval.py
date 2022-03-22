@@ -225,7 +225,7 @@ def eval_nocs(model: Model, img: np.ndarray, depth, masks: np.ndarray, cls_ids, 
             # print(choose.shape, choose.dtype)
             # plt.imshow(img_masked.cpu()[0].permute([1,2,0]).numpy())
             # plt.show()
-            # from sdf_single_shot import pointset_utils
+            # from sdfest.initialization import pointset_utils
             # pointset_utils.visualize_pointset(cloud[0])
             # print(choose)
             # print(index)

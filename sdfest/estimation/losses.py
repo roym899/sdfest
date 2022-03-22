@@ -2,7 +2,7 @@
 
 import torch
 
-from sdf_single_shot import quaternion_utils
+from sdfest.initialization import quaternion_utils
 
 
 def nn_loss(points_from: torch.Tensor, points_to: torch.Tensor) -> torch.Tensor:

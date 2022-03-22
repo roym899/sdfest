@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sdf_differentiable_renderer import Camera
+from sdfest.differentiable_renderer import Camera
 
 
 class Object(ABC):

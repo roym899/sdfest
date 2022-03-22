@@ -2,7 +2,7 @@
 from typing import Iterator
 
 from test_nocs_dataset import create_datasets
-from sdf_single_shot.datasets import dataset_utils
+from sdfest.initialization.datasets import dataset_utils
 
 from pytest import FixtureRequest
 import torch

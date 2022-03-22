@@ -7,8 +7,8 @@ import pandas as pd
 from pytest import FixtureRequest
 import torch
 
-from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
-from sdf_single_shot import quaternion_utils, so3grid, utils
+from sdfest.initialization.datasets.nocs_dataset import NOCSDataset
+from sdfest.initialization import quaternion_utils, so3grid, utils
 
 
 def create_datasets(

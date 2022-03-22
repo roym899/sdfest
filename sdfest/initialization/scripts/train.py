@@ -8,19 +8,19 @@ import time
 from typing import List
 
 import numpy as np
-from sdf_vae.sdf_vae import SDFVAE
+from sdfest.vae.sdf_vae import SDFVAE
 import torch
 import torchinfo
 from tqdm import tqdm
 import wandb
 import yoco
 
-from sdf_single_shot.datasets import dataset_utils
-from sdf_single_shot.datasets.nocs_dataset import NOCSDataset
-from sdf_single_shot.datasets.generated_dataset import SDFVAEViewDataset
-from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
-from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import quaternion_utils, sdf_utils, utils
+from sdfest.initialization.datasets import dataset_utils
+from sdfest.initialization.datasets.nocs_dataset import NOCSDataset
+from sdfest.initialization.datasets.generated_dataset import SDFVAEViewDataset
+from sdfest.initialization.sdf_pose_network import SDFPoseNet, SDFPoseHead
+from sdfest.initialization.pointnet import VanillaPointNet
+from sdfest.initialization import quaternion_utils, sdf_utils, utils
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 
@@ -70,7 +70,7 @@ class Trainer:
 
     def run(self) -> None:
         """Train the model."""
-        wandb.init(project="sdf_single_shot", config=self._config)
+        wandb.init(project="sdfest.initialization", config=self._config)
 
         self._device = self.get_device()
 
@@ -109,7 +109,7 @@ class Trainer:
 
         self._current_iteration = 0
         self._run_name = (
-            f"sdf_single_shot_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
+            f"sdfest.initialization_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')}"
         )
 
         wandb.config.run_name = (

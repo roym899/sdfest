@@ -58,8 +58,8 @@ setuptools.setup(
 #     CUDAExtension(
 #         "sdf_renderer_cuda",
 #         [
-#             "sdf_differentiable_renderer/src/sdf_renderer.cpp",
-#             "sdf_differentiable_renderer/src/sdf_renderer_cuda.cu",
+#             "sdfest/differentiable_renderer/csrc/sdf_renderer.cpp",
+#             "sdfest/differentiable_renderer/csrc/sdf_renderer_cuda.cu",
 #         ],
 #     )
 # ],

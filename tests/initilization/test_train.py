@@ -5,7 +5,7 @@ import os
 
 from pytest import FixtureRequest
 
-from sdf_single_shot.scripts import train
+from sdfest.initialization.scripts import train
 
 
 def test_single_iteration_train_sdfvae(request: FixtureRequest, tmp_path: str) -> None:

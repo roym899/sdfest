@@ -6,10 +6,10 @@ from pytest import FixtureRequest
 import torch
 import yoco
 
-from sdf_single_shot.datasets.generated_dataset import (
+from sdfest.initialization.datasets.generated_dataset import (
     SDFVAEViewDataset,
 )
-from sdf_vae.sdf_vae import SDFVAE
+from sdfest.vae.sdf_vae import SDFVAE
 
 
 def _create_sdf_vae(config_path: str) -> SDFVAE:
@@ -33,8 +33,8 @@ def test_sdf_vae_view_dataset(request: FixtureRequest) -> None:
         warnings.warn("CUDA not available. Skipping SDFVAEViewDataset tests.")
         return
 
-    sdf_vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
-    sdf_vae = _create_sdf_vae(sdf_vae_config_path)
+    sdfest.vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
+    sdfest.vae = _create_sdf_vae(sdf_vae_config_path)
     SDFVAEViewDataset(
         config={
             "extent_mean": 0.1,
@@ -54,8 +54,8 @@ def test_data_generation(request: FixtureRequest) -> None:
         warnings.warn("CUDA not available. Skipping SDFVAEViewDataset tests.")
         return
 
-    sdf_vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
-    sdf_vae = _create_sdf_vae(sdf_vae_config_path)
+    sdfest.vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
+    sdfest.vae = _create_sdf_vae(sdf_vae_config_path)
     dataset = SDFVAEViewDataset(
         config={
             "extent_mean": 0.1,

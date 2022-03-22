@@ -90,7 +90,7 @@ To train the initialization network we used in our paper, run
 source train_init_networks.sh
 ```
 If you want to train the initialization network based on a previously trained object model, you need to create a new config linking to the newly trained VAE. 
-See, for example, `sdf_single_shot/configs/discretized_mug.yaml`, which links to `sdf_single_shot/vae_models/mug.yaml`).
+See, for example, `sdfest.initialization/configs/discretized_mug.yaml`, which links to `sdfest.initialization/vae_models/mug.yaml`).
 
 ## Code Structure
 Code is structured into 4 sub-packages:
@@ -127,11 +127,11 @@ inside the root directory.
 
 You need to preprocess the mesh data prior to running the script, like this:
 ```bash
-python -m sdf_vae.scripts.process_shapenet --inpath shapenet_subfolder --outpath output_path --resolution 64 --padding 2
+python -m sdfest.vae.scripts.process_shapenet --inpath shapenet_subfolder --outpath output_path --resolution 64 --padding 2
 ```
 You can control the resolution and added padding so that there is some empty space left in the signed distance field on all borders. If you are running this script via ssh you need to run `export PYOPENGL_PLATFORM=egl` prior to running the script and use the `--all` option which will disable any filtering. Otherwise mesh selection will proceed in two steps: first you see one mesh after another and need to decide which to keep. Pressing left will remove a mesh, pressing right will keep it. After a decision has been made, the conversion will run. Finally another manual selection process is started, where you can remove SDFs in which the mesh to SDF conversion has failed. 
 
-To train the network you can now use either `python -m sdf_vae.scripts.train` or `python sdf_vae/scripts/train.py`.
+To train the network you can now use either `python -m sdfest.vae.scripts.train` or `python sdfest.vae/scripts/train.py`.
 
 ### config
 Configuration can be provided through command-line arguments and hierarchical yaml files. The config files are read in depth first order and later specifications will overwrite previous specifications. 
@@ -143,19 +143,6 @@ To summarize:
 ## `sdfest.estimation`
 Modular architecture and experiments for SDF shape and pose estimation
 
-### Usage
-You need to manually install the dependencies, which are not on PyPI (see their respective READMEs):
-- [YOCO](https://github.com/roym899/yoco)
-- [sdf_single_shot](https://github.com/roym899/sdf_single_shot)
-- [sdf_differentiable_renderer](https://github.com/roym899/sdf_differentiable_renderer)
-- [sdf_vae](https://github.com/roym899/sdf_vae)
-- [detectron2](https://github.com/facebookresearch/detectron2)
-
-Then you should be able to run
-```bash
-pip install git+ssh://git@github.com/roym899/sdf_estimation.git
-```
-
 ### Development
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
@@ -164,20 +151,14 @@ pip install git+ssh://git@github.com/roym899/sdf_estimation.git
 ## `sdfest.initialization`
 Architectures for single-shot SDF shape and pose estimation from a single (in the future possibly also multiple) depth views.
 
-### Usage
-You need to manually install the dependencies, which are not on PyPI (see their respective READMEs):
-- [YOCO](https://github.com/roym899/yoco)
-- [sdf_differentiable_renderer](https://github.com/roym899/sdf_differentiable_renderer)
-- [sdf_vae](https://github.com/roym899/sdf_vae)
-
 Then you should be able to run
 ```bash
-pip install git+ssh://git@github.com/roym899/sdf_single_shot.git
+pip install git+ssh://git@github.com/roym899/sdfest.initialization.git
 ```
 
 To train a new model run
 ```
-python -m sdf_single_shot.scripts.train --config CONFIG_FILE
+python -m sdfest.initialization.scripts.train --config CONFIG_FILE
 ```
 See the `./configs` folder for examples.
 
@@ -185,4 +166,4 @@ See the `./configs` folder for examples.
 ### Development
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
-- Use `pytest --cov=sdf_single_shot --cov-report term-missing tests/` to run tests and check code coverage
+- Use `pytest --cov=sdfest.initialization --cov-report term-missing tests/` to run tests and check code coverage

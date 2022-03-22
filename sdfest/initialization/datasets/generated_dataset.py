@@ -9,9 +9,9 @@ import torch
 import torchvision.transforms as T
 import yoco
 
-from sdf_differentiable_renderer.sdf_renderer import render_depth_gpu, Camera
-from sdf_vae.sdf_vae import SDFVAE
-from sdf_single_shot import pointset_utils, so3grid
+from sdfest.differentiable_renderer.sdf_renderer import render_depth_gpu, Camera
+from sdfest.vae.sdf_vae import SDFVAE
+from sdfest.initialization import pointset_utils, so3grid
 
 # TODO support opencv / opengl conventions
 # TODO support different scale conventions

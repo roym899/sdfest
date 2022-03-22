@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 from skimage.measure import marching_cubes
-from sdf_vae import sdf_utils
-from sdf_vae.sdf_vae import SDFVAE
-from sdf_single_shot.sdf_pose_network import SDFPoseNet, SDFPoseHead
-from sdf_single_shot.pointnet import VanillaPointNet
-from sdf_single_shot import pointset_utils, quaternion_utils
-from sdf_differentiable_renderer import Camera, render_depth_gpu
+from sdfest.vae import sdf_utils
+from sdfest.vae.sdf_vae import SDFVAE
+from sdfest.initialization.sdf_pose_network import SDFPoseNet, SDFPoseHead
+from sdfest.initialization.pointnet import VanillaPointNet
+from sdfest.initialization import pointset_utils, quaternion_utils
+from sdfest.differentiable_renderer import Camera, render_depth_gpu
 import torch
 
 from sdf_estimation import synthetic, losses
