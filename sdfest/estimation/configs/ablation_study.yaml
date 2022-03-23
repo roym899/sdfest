@@ -2,7 +2,7 @@
 # Ablation study on synthetic mug data
 config:
   - ./rendering_evaluation.yaml
-  - ../models/v2/mug.yaml
+  - ../models/mug.yaml
 
 num_views: [3,]
 run_name: ablation_study

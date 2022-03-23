@@ -20,7 +20,7 @@ from sdfest.initialization import pointset_utils, quaternion_utils
 from sdfest.differentiable_renderer import Camera, render_depth_gpu
 import torch
 
-from sdf_estimation import synthetic, losses
+from sdfest.estimation import synthetic, losses
 
 
 INIT_MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}

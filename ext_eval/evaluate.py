@@ -13,7 +13,7 @@ from scipy.spatial.transform import Rotation
 import torch
 from tqdm import tqdm
 import open3d as o3d
-from sdf_estimation import metrics
+from sdfest.estimation import metrics
 from sdfest.initialization import pointset_utils, quaternion_utils
 from sdfest.differentiable_renderer import Camera
 from sdfest.initialization.utils import str_to_object

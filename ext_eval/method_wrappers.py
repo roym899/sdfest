@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation
 
 from sdfest.differentiable_renderer import Camera
 from sdfest.initialization import pointset_utils, quaternion_utils
-from sdf_estimation.simple_setup import SDFPipeline
+from sdfest.estimation.simple_setup import SDFPipeline
 
 import yoco
 from cass.cass.lib.models import CASS

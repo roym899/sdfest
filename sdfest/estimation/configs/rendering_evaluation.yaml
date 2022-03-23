@@ -1,6 +1,6 @@
 config:
   - ./default.yaml
-  - ../models/v2/mug.yaml
+  - ../models/mug.yaml
 
 camera:
   width: 640
@@ -32,19 +32,19 @@ run_name: ''
 
 metrics:
   mean_accuracy: 
-    f: sdf_estimation.metrics.mean_accuracy
+    f: sdfest.estimation.metrics.mean_accuracy
     kwargs: {}
   mean_completeness: 
-    f: sdf_estimation.metrics.mean_completeness
+    f: sdfest.estimation.metrics.mean_completeness
     kwargs: {}
   chamfer: 
-    f: sdf_estimation.metrics.symmetric_chamfer
+    f: sdfest.estimation.metrics.symmetric_chamfer
     kwargs: {}
   completeness_0_01: 
-    f: sdf_estimation.metrics.completeness_thresh
+    f: sdfest.estimation.metrics.completeness_thresh
     kwargs: 
       threshold: 0.01
   accuracy_0_01:
-    f: sdf_estimation.metrics.accuracy_thresh
+    f: sdfest.estimation.metrics.accuracy_thresh
     kwargs: 
       threshold: 0.01

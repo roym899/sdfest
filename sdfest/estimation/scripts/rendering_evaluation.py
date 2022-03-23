@@ -55,9 +55,9 @@ from tqdm import tqdm
 import yoco
 
 from sdfest.initialization import quaternion_utils
-from sdf_estimation import synthetic
+from sdfest.estimation import synthetic
 from sdfest.differentiable_renderer import Camera
-from sdf_estimation.simple_setup import SDFPipeline
+from sdfest.estimation.simple_setup import SDFPipeline
 
 
 def glob_exts(path: str, exts: List[str]) -> List[str]:

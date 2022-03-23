@@ -1,5 +1,5 @@
 """Test simple_setup module."""
-from sdf_estimation import simple_setup
+from sdfest.estimation import simple_setup
 import torch
 
 

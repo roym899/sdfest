@@ -64,9 +64,9 @@ import torch
 import yoco
 
 from sdfest.initialization import quaternion_utils
-from sdf_estimation import synthetic
+from sdfest.estimation import synthetic
 from sdfest.differentiable_renderer import Camera
-from sdf_estimation.simple_setup import SDFPipeline
+from sdfest.estimation.simple_setup import SDFPipeline
 
 stop_vis = False
 reconstruction_vis = 1

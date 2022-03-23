@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from sdf_estimation import metrics
+from sdfest.estimation import metrics
 
 
 def test_correct_thresh() -> None:

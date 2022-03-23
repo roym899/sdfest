@@ -19,8 +19,8 @@ import open3d as o3d
 from tqdm import tqdm
 import torch
 
-from sdf_estimation.simple_setup import SDFPipeline
-from sdf_estimation import synthetic
+from sdfest.estimation.simple_setup import SDFPipeline
+from sdfest.estimation import synthetic
 from sdfest.initialization import pointset_utils, quaternion_utils
 
 reconstruction_types = ["mesh", "pointcloud", "none"]

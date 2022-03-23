@@ -11,7 +11,7 @@ from PIL import Image
 from sdfest.differentiable_renderer import Camera
 import yoco
 
-from sdf_estimation import synthetic
+from sdfest.estimation import synthetic
 from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
 
 

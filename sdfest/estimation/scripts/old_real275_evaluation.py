@@ -16,11 +16,11 @@ import torch
 from tqdm import tqdm
 import yoco
 import open3d as o3d
-from sdf_single_shot import pointset_utils
-from sdf_differentiable_renderer import Camera
+from sdfest.initialization import pointset_utils
+from sdfest.differentiable_renderer import Camera
 
-from sdf_estimation.simple_setup import SDFPipeline
-from sdf_estimation.scripts.real_data import load_real275_rgbd
+from sdfest.estimation.simple_setup import SDFPipeline
+from sdfest.estimation.scripts.real_data import load_real275_rgbd
 
 
 def visualize_estimation(

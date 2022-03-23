@@ -1,12 +1,14 @@
 """Simple script to run inference on real data.
 
 Usage (evaluation on random RGB-D images from folder):
-    python real_data.py --config configs/rgbd_objects_uw.yaml configs/mug.yaml
-    --folder rgbd_objects_uw/coffee_mug/
+    python -m sdfest.estimation.scripts.real_data \
+        --config estimation/configs/rgbd_objects_uw.yaml estimation/configs/mug.yaml \
+        --folder data/rgbd_objects_uw/coffee_mug/
 
 Usage (evaluation on single RGB image from Redwood or RGB-D objects dataset):
-    python real_data.py --config configs/rgbd_objects_uw.yaml configs/mug.yaml
-    --input rgbd_objects_uw/coffee_mug/coffee_mug_1/coffee_mug_1_1_103.png
+    python -m sdfest.estimation.scripts.real_data \
+        --config configs/rgbd_objects_uw.yaml configs/mug.yaml \
+        --input rgbd_objects_uw/coffee_mug/coffee_mug_1/coffee_mug_1_1_103.png
 
 Specific parameters:
     measure_runtime:
@@ -16,7 +18,9 @@ Specific parameters:
         if provided and measure_runtime is true, the runtime results are written to file
     visualize_optimization: whether to visualize optimization while at it
     visualize_input: whether to visualize the input
-    create_animation: pass
+    create_animation:
+        If true, three animations will be created. One for depth optimization, depth
+        error, and mesh.
 """
 import argparse
 from collections import defaultdict
@@ -41,7 +45,7 @@ import torch
 import matplotlib.pyplot as plt
 import yoco
 
-from sdf_estimation.simple_setup import SDFPipeline
+from sdfest.estimation.simple_setup import SDFPipeline
 
 
 def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
