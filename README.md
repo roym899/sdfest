@@ -90,7 +90,7 @@ To train the initialization network we used in our paper, run
 source train_init_networks.sh
 ```
 If you want to train the initialization network based on a previously trained object model, you need to create a new config linking to the newly trained VAE. 
-See, for example, `sdfest.initialization/configs/discretized_mug.yaml`, which links to `sdfest.initialization/vae_models/mug.yaml`).
+See, for example, `sdfest/initialization/configs/discretized_mug.yaml`, which links to `sdfest/initialization/vae_models/mug.yaml`).
 
 ## Code Structure
 Code is structured into 4 sub-packages:
@@ -100,12 +100,15 @@ Code is structured into 4 sub-packages:
 - *estimation*: integration of VAE, differentiable renderer and single shot network into initialization + render and compare pipeline
 
 
-## `sdfest.differentiable_renderer`
+### `sdfest.differentiable_renderer`
+
+![Animation of differentiable renderer.](resources/dr_test_script.gif)
+
 Differentiable rendering of depth image for signed distance fields.
 
 The signed distance field is assumed to be voxelized and it's pose is given by a x, y, z in the camera frame, a quaternion describing its orientation and a scale parameter describing its size. This module provides the derivative with respect to the signed distance values, and the full pose description (position, orientation, scale).
 
-### Generating compile_commands.json
+#### Generating compile_commands.json
 <sup>General workflow for PyTorch extensions (only tested for JIT, probably similar otherwise)</sup>
 
 If you develop PyTorch extensions and want to get correct code checking with ccls / etc. you can do so by going to the ninja build directory (normally `home_directory/.cache/torch_extensions/sdf_renderer_cpp`, or set `load(..., verbose=True)` in `sdf_renderer.py` and check the output), running
@@ -115,55 +118,45 @@ ninja -t compdb > compile_commands.json
 and moving `compile_commands.json` to the projects root directory.
 
 
-## `sdfest.vae`
+### `sdfest.vae`
+
+![Animation of differentiable renderer.](resources/vae_visualizer.gif)
+
 Architecture to learn a low-dimensional representation of signed-distance fields (i.e., an explicit voxel representation of a signed distance function)
 
-### Installation and training
-To run the train script you need to install this package with pip, for example, by running
-```bash
-pip install -e .
-```
-inside the root directory. 
+#### Preprocessing and training
 
-You need to preprocess the mesh data prior to running the script, like this:
+You need to preprocess the mesh data prior to running the training script, like this:
 ```bash
 python -m sdfest.vae.scripts.process_shapenet --inpath shapenet_subfolder --outpath output_path --resolution 64 --padding 2
 ```
 You can control the resolution and added padding so that there is some empty space left in the signed distance field on all borders. If you are running this script via ssh you need to run `export PYOPENGL_PLATFORM=egl` prior to running the script and use the `--all` option which will disable any filtering. Otherwise mesh selection will proceed in two steps: first you see one mesh after another and need to decide which to keep. Pressing left will remove a mesh, pressing right will keep it. After a decision has been made, the conversion will run. Finally another manual selection process is started, where you can remove SDFs in which the mesh to SDF conversion has failed. 
 
-To train the network you can now use either `python -m sdfest.vae.scripts.train` or `python sdfest.vae/scripts/train.py`.
+To train the network you can now use either `python -m sdfest.vae.scripts.train` or `python sdfest/vae/scripts/train.py`.
 
-### config
+#### config
 Configuration can be provided through command-line arguments and hierarchical yaml files. The config files are read in depth first order and later specifications will overwrite previous specifications. 
 To summarize:
 - command line parameters will take precedence over all config files
 - when specifying multiple config files, the second config file will overwrite params set by the first config file
 - parent config files overwrite the params set in the contained config files
 
-## `sdfest.estimation`
-Modular architecture and experiments for SDF shape and pose estimation
-
-### Development
-- Use `pip install -e .` to install the package in editable mode
-- Use `pip install -r requirements-dev.txt` to install dev tools
-- Use `pytest --cov=sdf_estimation --cov-report term-missing tests/` to run tests and check code coverage
-
-## `sdfest.initialization`
+### `sdfest.initialization`
 Architectures for single-shot SDF shape and pose estimation from a single (in the future possibly also multiple) depth views.
-
-Then you should be able to run
-```bash
-pip install git+ssh://git@github.com/roym899/sdfest.initialization.git
-```
 
 To train a new model run
 ```
 python -m sdfest.initialization.scripts.train --config CONFIG_FILE
 ```
-See the `./configs` folder for examples.
+See the `sdfest/initialization/configs` or `reproduction_scripts` folder.
+
+### `sdfest.estimation`
+Modular architecture and experiments for SDF shape and pose estimation.
+
+Combines initialization, VAE, and differentiable renderer for full analysis-by-synthesis.
 
 
-### Development
+## Development
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
-- Use `pytest --cov=sdfest.initialization --cov-report term-missing tests/` to run tests and check code coverage
+- Use `pytest --cov=sdfest --cov-report term-missing tests/` to run tests and check code coverage
