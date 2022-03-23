@@ -30,15 +30,15 @@ datasets:
         type: SDFVAEViewDataset
         probability: 0.6
     camera_train:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.3
     real_train:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.1
 
 validation_datasets: 
     camera_val:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
 
 # Network params
 backbone_type: VanillaPointNet

@@ -33,8 +33,8 @@ def test_sdf_vae_view_dataset(request: FixtureRequest) -> None:
         warnings.warn("CUDA not available. Skipping SDFVAEViewDataset tests.")
         return
 
-    sdfest.vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
-    sdfest.vae = _create_sdf_vae(sdf_vae_config_path)
+    vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
+    vae = _create_sdf_vae(vae_config_path)
     SDFVAEViewDataset(
         config={
             "extent_mean": 0.1,
@@ -44,7 +44,7 @@ def test_sdf_vae_view_dataset(request: FixtureRequest) -> None:
             "z_min": 0.15,
             "z_max": 1.0,
         },
-        vae=sdf_vae,
+        vae=vae,
     )
 
 
@@ -54,8 +54,8 @@ def test_data_generation(request: FixtureRequest) -> None:
         warnings.warn("CUDA not available. Skipping SDFVAEViewDataset tests.")
         return
 
-    sdfest.vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
-    sdfest.vae = _create_sdf_vae(sdf_vae_config_path)
+    vae_config_path = os.path.join(request.fspath.dirname, "vae_model", "mug.yaml")
+    vae = _create_sdf_vae(vae_config_path)
     dataset = SDFVAEViewDataset(
         config={
             "extent_mean": 0.1,
@@ -65,7 +65,7 @@ def test_data_generation(request: FixtureRequest) -> None:
             "z_min": 0.15,
             "z_max": 1.0,
         },
-        vae=sdf_vae,
+        vae=vae,
     )
     # depth
     sample = next(iter(dataset))

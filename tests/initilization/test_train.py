@@ -19,7 +19,7 @@ def test_single_iteration_train_sdfvae(request: FixtureRequest, tmp_path: str) -
         "--iterations",
         "1",
         "--config",
-        os.path.join(tests_dir, "../configs/", "default.yaml"),
+        os.path.join(tests_dir, "test_configs", "discretized.yaml"),
     ]
     train.main()
 
