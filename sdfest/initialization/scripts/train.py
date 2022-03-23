@@ -1,11 +1,10 @@
-"""Script to train model."""
+"""Script to train initialization model."""
 import argparse
 from collections import defaultdict
 from datetime import datetime, timedelta
 import os
 import random
 import time
-from typing import List
 
 import numpy as np
 from sdfest.vae.sdf_vae import SDFVAE
@@ -16,7 +15,6 @@ import wandb
 import yoco
 
 from sdfest.initialization.datasets import dataset_utils
-from sdfest.initialization.datasets.nocs_dataset import NOCSDataset
 from sdfest.initialization.datasets.generated_dataset import SDFVAEViewDataset
 from sdfest.initialization.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdfest.initialization.pointnet import VanillaPointNet
@@ -250,11 +248,6 @@ class Trainer:
                 predictions["position"], samples["position"]
             )
             log_dict["loss position"] = loss_position_l2.item()
-            if loss_position_l2.item() > 1.0:
-                _, index = torch.max(samples["scale"], dim=0)
-                # print(samples["scale"][index].item())
-                # print(samples["color_path"][index.item()])
-                # print(samples["position"][index.item()])
             loss = loss + self._config["position_weight"] * loss_position_l2
 
         if "scale" in samples:
@@ -300,7 +293,7 @@ class Trainer:
             dataset = self._create_dataset(
                 dataset_dict["type"], dataset_dict["config_dict"]
             )
-            num_workers = 12 if dataset_dict["type"] != "SDFVAEViewDataset" else 0
+            num_workers = 8 if dataset_dict["type"] != "SDFVAEViewDataset" else 0
             shuffle = (
                 False if isinstance(dataset, torch.utils.data.IterableDataset) else True
             )

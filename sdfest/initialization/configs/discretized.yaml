@@ -31,22 +31,20 @@ datasets:
         type: SDFVAEViewDataset
         probability: 1.0
     camera_train:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.0
     real_train:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.0
 
 validation_datasets:
     camera_val:
-        type: NOCSDataset
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
 
 # Network params
 backbone_type: VanillaPointNet
 backbone:
     in_size: 3  # dimension of input points
-    # tnets:
-    #     0: [64,64,64]
     mlp_out_sizes: [128, 128, 128, 128, 1024]
     batchnorm: True
     dense: True
@@ -57,4 +55,3 @@ head:
     in_size: 1024 # number of input features
     mlp_out_sizes: [512, 256, 128] 
     batchnorm: True
-    # residual: True
