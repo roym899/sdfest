@@ -20,6 +20,7 @@ setuptools.setup(
         ]
     },
     install_requires=[
+        "cpas_toolbox",
         "ffmpeg-python",
         "healpy",
         "joblib",
