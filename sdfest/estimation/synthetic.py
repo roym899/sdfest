@@ -166,7 +166,7 @@ def draw_depth_geometry(obj: Object, camera: Camera):
     # Generate the depth image
     vis.poll_events()
     vis.update_renderer()
-    depth = np.asarray(vis.capture_depth_float_buffer())
+    depth = np.asarray(vis.capture_depth_float_buffer(do_render=True))
 
     return depth
 
