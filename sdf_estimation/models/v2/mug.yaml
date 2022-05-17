@@ -87,6 +87,7 @@ init:
   position_weight: 1000
   scale_weight: 1000
   orientation_weight: 5
+  latent_weight: 1
   visualization_iteration: 1000
   validation_iteration: 10000
   checkpoint_iteration: 10000
@@ -111,7 +112,7 @@ init:
   category_str: mug
   device: cuda:1
   init_weights: ./sdf_estimation/models/new_mug_init_2.pt
-  normalize_pose: true
   model: ./mug_init.pt
+  normalize_pose: true
 category: cup
 far_field: 2.0  # from mask_noise_max

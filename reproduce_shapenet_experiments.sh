@@ -20,15 +20,22 @@
 #     --run_name shapenet_bottle
 
 # Render evaluation, NodeSLAM setup, mug
-python -m sdf_estimation.scripts.rendering_evaluation \
-    --data_path ./data/shapenet/03797390 \
-    --config sdf_estimation/configs/rendering_evaluation.yaml \
-    --out_folder ./results \
-    --run_name nodeslam
+# python -m sdf_estimation.scripts.rendering_evaluation \
+#     --data_path ./data/shapenet/03797390 \
+#     --config sdf_estimation/configs/rendering_evaluation.yaml \
+#     --out_folder ./results \
+#     --run_name nodeslam
 
 # Ablation study
+# python -m sdf_estimation.scripts.rendering_evaluation \
+#     --config sdf_estimation/configs/ablation_study.yaml \
+#     --out_folder ./results/ \
+#     --data_path data/shapenet/03797390 \
+#     --device cuda:0
+
+# Ablation study extension (after reviews)
 python -m sdf_estimation.scripts.rendering_evaluation \
-    --config sdf_estimation/configs/ablation_study.yaml \
+    --config sdf_estimation/configs/ablation_study_ext.yaml \
     --out_folder ./results/ \
     --data_path data/shapenet/03797390 \
     --device cuda:0
