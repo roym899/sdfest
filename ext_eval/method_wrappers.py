@@ -24,6 +24,9 @@ from spd.lib.network import DeformNet
 import spd.lib.utils
 import spd.lib.align
 
+from icaps.pose_rbpf.pose_rbpf import PoseRBPF
+from icaps.config import config as icaps_config
+
 
 # TODO add new SGPA and CR-Net
 
@@ -76,6 +79,72 @@ class MethodWrapper(ABC):
         """
         pass
 
+
+class ICapsWrapper(MethodWrapper):
+    """Wrapper class for iCaps."""
+
+    class Config(TypedDict):
+        """Configuration dictionary for iCaps.
+
+        Attributes:
+            TODO
+        """
+
+        pass
+
+    default_config: Config = {
+        # TODO
+    }
+
+    def __init__(self, config: Config, camera: Camera) -> None:
+        """Initialize and load ICaps models.
+
+        Args:
+            config: iCaps configuration. See ICapsWrapper.Config for more information.
+            camera: Camera used for the input image.
+        """
+        config = yoco.load_config(config, current_dict=ICapsWrapper.default_config)
+        self._parse_config(config)
+        self._camera = camera
+
+    def _parse_config(self, config: Config) -> None:
+        category_str_to_ckpt_folder = {
+            "bottle": "bottle20200608T172228_default",
+            "bowl": "bowl20200603T175721_default",
+            "camera": "camera20200603T175729_default",
+            "can": "can20200605T201536_default",
+            "laptop": "laptop20200605T205824_default",
+            "mug": "mug20200529T111737_default"
+        }
+        self._pose_rbpfs = {}
+        pf_cfg_folder = "./icaps/config/pf_cfgs/"
+        deepsdf_ckp_folder = "./icaps/checkpoints/deepsdf_ckpts/"
+        latentnet_ckp_folder = "./icaps/checkpoints/latentnet_ckpts/"
+        for category_str, ckpt_folder in category_str_to_ckpt_folder.items():
+            full_ckpt_folder = f"./icaps/checkpoints/aae_ckpts/{ckpt_folder}/"
+            train_cfg_file = full_ckpt_folder + "config.yml"
+            icaps_config.cfg_from_file(train_cfg_file)
+            test_cfg_file = pf_cfg_folder + category_str + ".yml"
+            icaps_config.cfg_from_file(test_cfg_file)
+            obj_list = icaps_config.cfg.TEST.OBJECTS
+            cfg_list = []
+            cfg_list.append(copy.deepcopy(icaps_config.cfg))
+
+            self._pose_rbpfs[category_str] = PoseRBPF(obj_list, cfg_list, full_ckpt_folder, deepsdf_ckp_folder, latentnet_ckp_folder)
+
+
+    def inference(
+        self,
+        color_image: torch.Tensor,
+        depth_image: torch.Tensor,
+        instance_mask: torch.Tensor,
+        category_str: str,
+    ) -> PredictionDict:
+        """See MethodWrapper.inference.
+
+        Based on icaps.pose_rbpf.pose_rbps.PoseRBPF.run_nocs_dataset
+        """
+        pass
 
 class SPDWrapper(MethodWrapper):
     """Wrapper class for Shape Prior Deformation (SPD)."""

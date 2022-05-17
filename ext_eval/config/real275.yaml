@@ -1,11 +1,12 @@
 # Standalone config to use with evaluate.py
 config:
   methods:
-    sdfest_prior: ./sdfest_prior.yaml
-    sdfest: ./sdfest.yaml
-    cass: ./cass.yaml
-    spd: ./spd.yaml
-    asmnet: ./asmnet.yaml
+    icaps: ./icaps.yaml
+    # sdfest_prior: ./sdfest_prior.yaml
+    # sdfest: ./sdfest.yaml
+    # cass: ./cass.yaml
+    # spd: ./spd.yaml
+    # asmnet: ./asmnet.yaml
 
 dataset_config:
   name: REAL275
