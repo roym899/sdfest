@@ -8,6 +8,7 @@ import numpy as np
 import open3d as o3d
 import torch
 import torchvision.transforms.functional as TF
+from scipy import ndimage
 from scipy.spatial.transform import Rotation
 
 from sdf_differentiable_renderer import Camera
@@ -114,7 +115,7 @@ class ICapsWrapper(MethodWrapper):
             "camera": "camera20200603T175729_default",
             "can": "can20200605T201536_default",
             "laptop": "laptop20200605T205824_default",
-            "mug": "mug20200529T111737_default"
+            "mug": "mug20200529T111737_default",
         }
         self._pose_rbpfs = {}
         pf_cfg_folder = "./icaps/config/pf_cfgs/"
@@ -130,8 +131,16 @@ class ICapsWrapper(MethodWrapper):
             cfg_list = []
             cfg_list.append(copy.deepcopy(icaps_config.cfg))
 
-            self._pose_rbpfs[category_str] = PoseRBPF(obj_list, cfg_list, full_ckpt_folder, deepsdf_ckp_folder, latentnet_ckp_folder)
-
+            self._pose_rbpfs[category_str] = PoseRBPF(
+                obj_list,
+                cfg_list,
+                full_ckpt_folder,
+                deepsdf_ckp_folder,
+                latentnet_ckp_folder,
+            )
+            self._pose_rbpfs[category_str].set_target_obj(
+                icaps_config.cfg.TEST.OBJECTS[0]
+            )
 
     def inference(
         self,
@@ -144,7 +153,83 @@ class ICapsWrapper(MethodWrapper):
 
         Based on icaps.pose_rbpf.pose_rbps.PoseRBPF.run_nocs_dataset
         """
-        pass
+        # prepare data as expected by iCaps functions (same as nocs_real_dataset)
+        color_image = color_image * 255  # see icaps.datasets.nocs_real_dataset l71
+        depth_image = depth_image.unsqueeze(2)  # (...)nocs_real_dataset l79
+        instance_mask = instance_mask.float()  # (...)nocs_real_dataset l100
+        intrinsics = torch.eye(3)
+        fx, fy, cx, cy, _ = self._camera.get_pinhole_camera_parameters(pixel_center=0.0)
+        intrinsics[0, 0] = fx
+        intrinsics[1, 1] = fy
+        intrinsics[0, 2] = cx
+        intrinsics[1, 2] = cy
+        x1 = min(instance_mask.nonzero()[:, 1]).item()
+        y1 = min(instance_mask.nonzero()[:, 0]).item()
+        x2 = max(instance_mask.nonzero()[:, 1]).item()
+        y2 = max(instance_mask.nonzero()[:, 0]).item()
+        bbox = [y1, y2, x1, x2]
+
+        # from here follow icaps.pose_rbpf.pose_rbps.PoseRBPF.run_nocs_dataset
+        pose_rbpf = self._pose_rbpfs[category_str]
+
+        pose_rbpf.data_intrinsics = intrinsics.numpy()
+        pose_rbpf.intrinsics = intrinsics.numpy()
+        pose_rbpf.target_obj_cfg.PF.FU = pose_rbpf.intrinsics[0, 0]
+        pose_rbpf.target_obj_cfg.PF.FV = pose_rbpf.intrinsics[1, 1]
+        pose_rbpf.target_obj_cfg.PF.U0 = pose_rbpf.intrinsics[0, 2]
+        pose_rbpf.target_obj_cfg.PF.V0 = pose_rbpf.intrinsics[1, 2]
+
+        pose_rbpf.data_with_est_center = False
+        pose_rbpf.data_with_gt = False  # should this be False now?
+
+        pose_rbpf.mask_raw = instance_mask[:, :].cpu().numpy()
+        pose_rbpf.mask = ndimage.binary_erosion(
+            pose_rbpf.mask_raw, iterations=2
+        ).astype(pose_rbpf.mask_raw.dtype)
+
+        pose_rbpf.prior_uv[0] = (bbox[2] + bbox[3]) / 2
+        pose_rbpf.prior_uv[1] = (bbox[0] + bbox[1]) / 2
+
+        # what is this ??
+        if pose_rbpf.aae_full.angle_diff.shape[0] != 0:
+            pose_rbpf.aae_full.angle_diff = np.array([])
+
+        if pose_rbpf.target_obj_cfg.PF.USE_DEPTH:
+            depth_data = depth_image
+        else:
+            depth_data = None
+
+        pose_rbpf.initialize_poserbpf(
+            color_image,
+            pose_rbpf.data_intrinsics,
+            pose_rbpf.prior_uv[:2],
+            pose_rbpf.target_obj_cfg.PF.N_INIT,
+            scale_prior=pose_rbpf.target_obj_cfg.PF.SCALE_PRIOR,
+            depth=depth_data,
+        )
+
+        pose_rbpf.process_poserbpf(
+            color_image, intrinsics.unsqueeze(0), depth=depth_data, run_deep_sdf=False
+        )
+        # 3 * 50 iters by default
+        pose_rbpf.refine_pose_and_shape(depth_data, intrinsics.unsqueeze(0))
+
+        # TODO extract pose and scale
+
+        # TODO extract mesh / point set from deepsdf
+        position_cv = torch.tensor([0, 0, 0])
+        orientation_cv = torch.tensor([0, 0, 0, 1.0])
+        extents = torch.tensor([0.5, 0.5, 0.5])
+        reconstructed_points = torch.tensor([[0.5, 0.5, 0.5]])
+
+        return {
+            "position": position_cv.detach().cpu(),
+            "orientation": orientation_cv.detach().cpu(),
+            "extents": extents.detach().cpu(),
+            "reconstructed_pointcloud": reconstructed_points,
+            "reconstructed_mesh": None,
+        }
+
 
 class SPDWrapper(MethodWrapper):
     """Wrapper class for Shape Prior Deformation (SPD)."""

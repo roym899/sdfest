@@ -2,6 +2,7 @@ import numpy as np
 import os, sys
 import cv2
 import torch
+import numpy.ma as ma
 
 from chamferdist import ChamferDistance
 

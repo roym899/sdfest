@@ -213,6 +213,7 @@ class PoseRBPF:
         # self.size_est = self.size_gt_pn
         # self.ratio = self.size_gt_pn / self.size_gt
         # self.sdf_optim.ratio = self.ratio * 1.0
+        self.ratio = 1.0  # ????
 
         # points_obj_norm = self.points_gt
         # Transform from Nocs object frame to ShapeNet object frame
@@ -1064,7 +1065,7 @@ class PoseRBPF:
             )
             torch.cuda.synchronize()
             time_elapse = time.time() - time_start
-            print("LatentNet inference time = ", time_elapse)
+            # print("LatentNet inference time = ", time_elapse)
             if len(points_np) > NPOINTS:
                 points_c = torch.from_numpy(
                     np.hstack(
@@ -1138,13 +1139,13 @@ class PoseRBPF:
         if self.aae_full.angle_diff.shape[0] != 0:
             self.aae_full.angle_diff = np.array([])
 
-        self.log_err_r = []
-        self.log_err_r_star = []
-        self.log_err_t = []
-        self.log_err_t_star = []
-        self.log_dir = self.target_obj_cfg.PF.SAVE_DIR + "seq_{}".format(sequence)
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        # self.log_err_r = []
+        # self.log_err_r_star = []
+        # self.log_err_t = []
+        # self.log_err_t_star = []
+        # self.log_dir = self.target_obj_cfg.PF.SAVE_DIR + "seq_{}".format(sequence)
+        # if not os.path.exists(self.log_dir):
+        #     os.makedirs(self.log_dir)
 
         val_generator = torch.utils.data.DataLoader(
             val_dataset, batch_size=1, shuffle=False, num_workers=0
@@ -1185,22 +1186,22 @@ class PoseRBPF:
                     self.mask_raw.dtype
                 )
                 # ground truth for visualization
-                pose_gt = poses_gt.numpy()[0, :, :]
-                self.gt_t = pose_gt[:3, 3]
-                self.gt_rotm = pose_gt[:3, :3]
-                gt_center = np.matmul(intrinsics, self.gt_t)
-                if gt_center.shape[0] == 1:
-                    gt_center = gt_center[0]
-                gt_center = gt_center / gt_center[2]
-                self.gt_uv[:2] = gt_center[:2]
-                self.gt_z = self.gt_t[2]
-                self.gt_scale = scale_gt[0]
+                # pose_gt = poses_gt.numpy()[0, :, :]
+                # self.gt_t = pose_gt[:3, 3]
+                # self.gt_rotm = pose_gt[:3, :3]
+                # gt_center = np.matmul(intrinsics, self.gt_t)
+                # if gt_center.shape[0] == 1:
+                #     gt_center = gt_center[0]
+                # gt_center = gt_center / gt_center[2]
+                # self.gt_uv[:2] = gt_center[:2]
+                # self.gt_z = self.gt_t[2]
+                # self.gt_scale = scale_gt[0]
 
                 self.prior_uv[0] = (bbox[0, 2] + bbox[0, 3]) / 2
                 self.prior_uv[1] = (bbox[0, 0] + bbox[0, 1]) / 2
-                self.log_err_uv.append(
-                    np.linalg.norm(self.prior_uv[:2] - self.gt_uv[:2])
-                )
+                # self.log_err_uv.append(
+                #     np.linalg.norm(self.prior_uv[:2] - self.gt_uv[:2])
+                # )
 
                 if self.prior_uv[0] > 0 and self.prior_uv[1]:
                     detect_flag = True
@@ -1238,32 +1239,33 @@ class PoseRBPF:
                             depth=depth_data,
                         )
 
-                        if self.data_with_gt:
-                            init_error = np.linalg.norm(
-                                self.rbpf.trans_star - self.gt_t
-                            )
-                            print(
-                                "     Initial translation error = {:.4} cm".format(
-                                    init_error * 100
-                                )
-                            )
-                            init_rot_error = abs(
-                                single_orientation_error(
-                                    mat2quat(self.gt_rotm), mat2quat(self.rbpf.rot_star)
-                                )
-                            )
-                            print(
-                                "     Initial rotation error    = {:.4} deg".format(
-                                    init_rot_error * 57.3
-                                )
-                            )
+                        # if self.data_with_gt:
+                        #     init_error = np.linalg.norm(
+                        #         self.rbpf.trans_star - self.gt_t
+                        #     )
+                        #     print(
+                        #         "     Initial translation error = {:.4} cm".format(
+                        #             init_error * 100
+                        #         )
+                        #     )
+                        #     init_rot_error = abs(
+                        #         single_orientation_error(
+                        #             mat2quat(self.gt_rotm), mat2quat(self.rbpf.rot_star)
+                        #         )
+                        #     )
+                        #     print(
+                        #         "     Initial rotation error    = {:.4} deg".format(
+                        #             init_rot_error * 57.3
+                        #         )
+                        #     )
 
                         self.rbpf_ok = True
 
                         # to avoid initialization to symmetric view and cause abnormal results
-                        if init_rot_error * 57.3 > 60 and self.target_obj != "bowl":
-                            self.rbpf_ok = False
-                            self.embeddings_prev = None
+                        # sounds like cheating to me...
+                        # if init_rot_error * 57.3 > 60 and self.target_obj != "bowl":
+                        #     self.rbpf_ok = False
+                        #     self.embeddings_prev = None
 
             # filtering
             if self.rbpf_ok:
@@ -1298,42 +1300,42 @@ class PoseRBPF:
                 print("size_gt_pn = ", self.size_gt_pn)
 
                 # logging
-                if self.data_with_gt:
-                    self.display_result(
-                        step, steps, step > refine_start and detect_flag
-                    )  # (step>refine_start and detect_flag)
-                    self.save_log(sequence, file_names, with_gt=self.data_with_gt)
+                # if self.data_with_gt:
+                #     self.display_result(
+                #         step, steps, step > refine_start and detect_flag
+                #     )  # (step>refine_start and detect_flag)
+                #     self.save_log(sequence, file_names, with_gt=self.data_with_gt)
 
-                    # visualization
-                    is_kf = step % 20 == 0
-                    if is_kf:
+                #     # visualization
+                #     is_kf = step % 20 == 0
+                #     if is_kf:
 
-                        image_disp = images[0].cpu().numpy() / 255.0
+                #         image_disp = images[0].cpu().numpy() / 255.0
 
-                        image_est_render, _ = self.renderer.render_pose(
-                            self.rbpf.trans_bar, self.rbpf.rot_bar
-                        )
+                #         image_est_render, _ = self.renderer.render_pose(
+                #             self.rbpf.trans_bar, self.rbpf.rot_bar
+                #         )
 
-                        image_est_disp = (
-                            image_est_render[0].permute(1, 2, 0).cpu().numpy()
-                        )
-                        image_est_disp[:, :, 0] *= 0
-                        image_est_disp[:, :, 2] *= 0
+                #         image_est_disp = (
+                #             image_est_render[0].permute(1, 2, 0).cpu().numpy()
+                #         )
+                #         image_est_disp[:, :, 0] *= 0
+                #         image_est_disp[:, :, 2] *= 0
 
-                        image_disp = 0.4 * image_disp + 0.6 * image_est_disp
-                        self.visualize_roi(
-                            image_disp,
-                            self.rbpf.uv,
-                            self.rbpf.z,
-                            self.rbpf.scale,
-                            step,
-                            show_gt=True,
-                            error=True,
-                            uncertainty=self.show_prior,
-                            show=False,
-                            skip=False,
-                        )
-                        plt.close()
+                #         image_disp = 0.4 * image_disp + 0.6 * image_est_disp
+                #         self.visualize_roi(
+                #             image_disp,
+                #             self.rbpf.uv,
+                #             self.rbpf.z,
+                #             self.rbpf.scale,
+                #             step,
+                #             show_gt=True,
+                #             error=True,
+                #             uncertainty=self.show_prior,
+                #             show=False,
+                #             skip=False,
+                #         )
+                #         plt.close()
 
                         # evaluate chamfer distance and save point cloud for visualization
                         # if step > refine_start and detect_flag:
