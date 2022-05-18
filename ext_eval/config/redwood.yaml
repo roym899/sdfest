@@ -1,9 +1,10 @@
 config:
   methods:
-    sdfest: ./sdfest.yaml
-    cass: ./cass.yaml
-    spd: ./spd.yaml
-    asmnet: ./asmnet.yaml
+    icaps: ./icaps.yaml
+    # sdfest: ./sdfest.yaml
+    # cass: ./cass.yaml
+    # spd: ./spd.yaml
+    # asmnet: ./asmnet.yaml
 
 dataset_config:
   name: Redwood

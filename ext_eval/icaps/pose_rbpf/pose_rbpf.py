@@ -209,11 +209,11 @@ class PoseRBPF:
         # self.size_gt = np.max(np.linalg.norm(points, axis=1))
         # self.points_gt = torch.from_numpy(points)
         self.latent_tensor_initialized = False
-        # self.size_gt_pn = get_bbox_dist(points)
+        # self.size_gt_pn = get_bbox_dist(points)  # metric ground truth diagonal
         # self.size_est = self.size_gt_pn
         # self.ratio = self.size_gt_pn / self.size_gt
         # self.sdf_optim.ratio = self.ratio * 1.0
-        self.ratio = 1.0  # ????
+        self.ratio = 2.0  # ????
 
         # points_obj_norm = self.points_gt
         # Transform from Nocs object frame to ShapeNet object frame

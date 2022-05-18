@@ -2,8 +2,8 @@
 config:
   methods:
     icaps: ./icaps.yaml
-    # sdfest_prior: ./sdfest_prior.yaml
     # sdfest: ./sdfest.yaml
+    # sdfest_prior: ./sdfest_prior.yaml
     # cass: ./cass.yaml
     # spd: ./spd.yaml
     # asmnet: ./asmnet.yaml
@@ -32,7 +32,7 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
-fast_eval: False  # only evaluate every 5th sample
+fast_eval: True  # only evaluate every 5th sample
 store_visualization: False
 run_name: ""
 num_gt_points: 10000
@@ -74,3 +74,8 @@ metrics:
     deg_thresholds: [5]
     iou_thresholds: [null]
     f_thresholds: [0.8]
+  correct_5deg5cm:
+    position_thresholds: [0.05]
+    deg_thresholds: [5]
+    iou_thresholds: [null]
+    f_thresholds: [null]

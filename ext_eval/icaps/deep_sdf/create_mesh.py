@@ -159,14 +159,13 @@ def convert_sdf_samples_to_ply(
     start_time = time.time()
 
     numpy_3d_sdf_tensor = pytorch_3d_sdf_tensor.numpy()
-
     if not silent:
         print('Min: {0:.3f}, Max:{1:.3f}'.format(numpy_3d_sdf_tensor.min(), numpy_3d_sdf_tensor.max()))
     try:
-        verts, faces, normals, values = skimage.measure.marching_cubes_lewiner(
+        verts, faces, normals, values = skimage.measure.marching_cubes(
             numpy_3d_sdf_tensor, level=0.0, spacing=[voxel_size] * 3
         )
-    except:
+    except ValueError:
         print('ValueError! level 0.0 is not within the range of [Min, Max]')
         return False
 
