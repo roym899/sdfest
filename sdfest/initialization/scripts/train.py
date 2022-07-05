@@ -14,6 +14,7 @@ from tqdm import tqdm
 import wandb
 import yoco
 
+import sdfest
 from sdfest.initialization.datasets import dataset_utils
 from sdfest.initialization.datasets.generated_dataset import SDFVAEViewDataset
 from sdfest.initialization.sdf_pose_network import SDFPoseNet, SDFPoseHead
@@ -512,7 +513,9 @@ def main() -> None:
     # define the arguments
     parser = argparse.ArgumentParser(description="Training script for init network.")
     parser.add_argument("--config", default="configs/default.yaml", nargs="+")
-    config = yoco.load_config_from_args(parser)
+    config = yoco.load_config_from_args(
+        parser, search_paths=[".", "~/.sdfest/", sdfest.__path__[0]]
+    )
     trainer = Trainer(config)
     trainer.run()
 

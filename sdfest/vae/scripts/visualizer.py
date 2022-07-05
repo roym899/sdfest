@@ -34,11 +34,11 @@ from matplotlib.ticker import NullLocator
 import numpy as np
 from PySide2 import QtCore
 import torch
+import yoco
 
+import sdfest
 from sdfest.vae.sdf_vae import SDFVAE
 from sdfest.vae import sdf_utils, utils
-
-import yoco
 
 
 class ArgumentParserError(Exception):
@@ -263,7 +263,7 @@ class VAEVisualizer(QDialog):
             ]
         )
         self.azimuth = 0
-        self.polar_angle = -np.pi / 4 
+        self.polar_angle = -np.pi / 4
 
     def reset_output(self) -> None:
         self._single_sdf_latent = None
@@ -410,9 +410,7 @@ class VAEVisualizer(QDialog):
             parser.add_argument("--tsdf", type=utils.str_to_tsdf, default=False)
             parser.add_argument("--latent_size", type=lambda x: int(float(x)))
             parser.add_argument("--config", default="configs/default.yaml", nargs="+")
-            args = parser.parse_args(arg_list)
-            config_dict = {k: v for k, v in vars(args).items() if v is not None}
-            self._config = yoco.load_config(config_dict)
+            self._config = yoco.load_config_from_args(parser, arg_list)
             self._config_label.setText(json.dumps(self._config, indent=4))
         except ArgumentParserError:
             self._model_status_label.setText("Error in config string.")
@@ -595,7 +593,7 @@ class VAEVisualizer(QDialog):
     def generate_sdf(self):
         self._single_sdf_input = None
         if self._model is not None:
-            self._single_sdf_latent = self._model.sample(1)
+            self._single_sdf_latent = self._model.sample(1) * 0.5
             self.update_single()
             self.update_sliders()
         else:
@@ -643,6 +641,7 @@ class VAEVisualizer(QDialog):
         if path.endswith(".yml") or path.endswith(".yaml"):
             self._config_line_edit.setText(f"--config {path}")
             self.parse_config()
+            print(self._config)
             if "model" in self._config:
                 self._state_dict = torch.load(self._config["model"], map_location="cpu")
             self.update_model()

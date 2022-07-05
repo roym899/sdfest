@@ -45,6 +45,7 @@ import torch
 import matplotlib.pyplot as plt
 import yoco
 
+import sdfest
 from sdfest.estimation.simple_setup import SDFPipeline, NoDepthError
 
 
@@ -334,7 +335,9 @@ def main() -> None:
     parser.add_argument("--segmentation_dir", default="./cached_segmentations/")
     parser.add_argument("--config", default="configs/default.yaml", nargs="+")
 
-    config = yoco.load_config_from_args(parser)
+    config = yoco.load_config_from_args(
+        parser, search_paths=[".", "~/.sdfest/", sdfest.__path__[0]]
+    )
 
     if "input" in config and "folder" in config:
         print("Only one of input and folder can be specified.")
@@ -456,9 +459,7 @@ def main() -> None:
                 plt.show()
             depth_tensor = torch.from_numpy(depth_img).to(config["device"])
             instance_mask = instance.pred_masks.cuda()[0]
-            color_img_tensor = (
-                torch.from_numpy(color_img).to(config["device"])
-            )
+            color_img_tensor = torch.from_numpy(color_img).to(config["device"])
 
             try:
                 position, orientation, scale, shape = pipeline(
@@ -471,6 +472,7 @@ def main() -> None:
                 )
             except NoDepthError:
                 print("No depth data, skipping")
+
             break  # comment to evaluate all instances, instead of largest only
 
         if timing_dict is not None:

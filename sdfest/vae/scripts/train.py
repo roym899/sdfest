@@ -11,6 +11,8 @@ import yoco
 
 from torchinfo import summary
 
+import sdfest
+
 from sdfest.vae import utils
 from sdfest.vae import sdf_utils
 from sdfest.vae.sdf_vae import SDFVAE
@@ -79,14 +81,14 @@ def pc_loss(points, position, orientation, scale, sdf):
     c = torch.clip(c, 0, res - 2)  # base cell index of each point
     cell_position = c * grid_size - 1.0  # base cell position of each point
     sdf_indices = c.new_empty((obj_point.shape[0], 8), dtype=torch.long)
-    sdf_indices[:, 0] = c[:, 0] * res ** 2 + c[:, 1] * res + c[:, 2]
-    sdf_indices[:, 1] = c[:, 0] * res ** 2 + c[:, 1] * res + c[:, 2] + 1
-    sdf_indices[:, 2] = c[:, 0] * res ** 2 + (c[:, 1] + 1) * res + c[:, 2]
-    sdf_indices[:, 3] = c[:, 0] * res ** 2 + (c[:, 1] + 1) * res + c[:, 2] + 1
-    sdf_indices[:, 4] = (c[:, 0] + 1) * res ** 2 + c[:, 1] * res + c[:, 2]
-    sdf_indices[:, 5] = (c[:, 0] + 1) * res ** 2 + c[:, 1] * res + c[:, 2] + 1
-    sdf_indices[:, 6] = (c[:, 0] + 1) * res ** 2 + (c[:, 1] + 1) * res + c[:, 2]
-    sdf_indices[:, 7] = (c[:, 0] + 1) * res ** 2 + (c[:, 1] + 1) * res + c[:, 2] + 1
+    sdf_indices[:, 0] = c[:, 0] * res**2 + c[:, 1] * res + c[:, 2]
+    sdf_indices[:, 1] = c[:, 0] * res**2 + c[:, 1] * res + c[:, 2] + 1
+    sdf_indices[:, 2] = c[:, 0] * res**2 + (c[:, 1] + 1) * res + c[:, 2]
+    sdf_indices[:, 3] = c[:, 0] * res**2 + (c[:, 1] + 1) * res + c[:, 2] + 1
+    sdf_indices[:, 4] = (c[:, 0] + 1) * res**2 + c[:, 1] * res + c[:, 2]
+    sdf_indices[:, 5] = (c[:, 0] + 1) * res**2 + c[:, 1] * res + c[:, 2] + 1
+    sdf_indices[:, 6] = (c[:, 0] + 1) * res**2 + (c[:, 1] + 1) * res + c[:, 2]
+    sdf_indices[:, 7] = (c[:, 0] + 1) * res**2 + (c[:, 1] + 1) * res + c[:, 2] + 1
     sdf_view = sdf.view([-1])
     point_cell_position = (obj_point - cell_position) / grid_size  # [0,1]^3
     sdf_values = torch.take(sdf_view, sdf_indices)
@@ -220,7 +222,7 @@ def train(config):
             # by the batch size. Probably would be better to keep losses comparable for
             # varying batch size.
             l1_error = torch.abs(recon_sdf_volumes - sdf_volumes)
-            l2_error = l1_error ** 2
+            l2_error = l1_error**2
             loss_l2_small = torch.sum(l2_error[torch.abs(sdf_volumes) < 0.1])
             loss_l2_large = torch.sum(l2_error[torch.abs(sdf_volumes) >= 0.1])
             loss_l1_small = torch.sum(l1_error[torch.abs(sdf_volumes) < 0.1])
@@ -261,9 +263,7 @@ def train(config):
                         threshold=0.01,
                         camera=camera,
                     )
-                    pointcloud = pointset_utils.depth_to_pointcloud(
-                        depth_image, camera
-                    )
+                    pointcloud = pointset_utils.depth_to_pointcloud(depth_image, camera)
                 loss_pc = loss_pc + torch.sum(
                     pc_loss(pointcloud, p, q[0], s, recon_sdf_volume[0]) ** 2
                 )
@@ -404,9 +404,9 @@ def main():
     parser.add_argument("--learning_rate", type=lambda x: float(x))
     parser.add_argument("--device")
     parser.add_argument("--config", default="configs/default.yaml", nargs="+")
-    args = parser.parse_args()
-    config_dict = {k: v for k, v in vars(args).items() if v is not None}
-    config = yoco.load_config(config_dict)
+    config = yoco.load_config_from_args(
+        parser, search_paths=[".", "~/.sdfest/", sdfest.__path__[0]]
+    )
     train(config)
 
 
