@@ -167,3 +167,16 @@ Combines initialization, VAE, and differentiable renderer for full analysis-by-s
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
 - Use `pytest --cov=sdfest --cov-report term-missing tests/` to run tests and check code coverage
+
+## Citation
+
+If you find this library useful in your research, consider citing our publication:
+
+```
+@article{bruns2022sdfest,
+  title={{SDFEst}: Categorical Pose and Shape Estimation of Objects from {RGB-D} Images using Signed Distance Fields},
+  author={Bruns, Leonard and Jensfelt, Patric},
+  journal={IEEE Robotics and Automation Letters},
+  year={2022},
+}
+```
