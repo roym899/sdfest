@@ -1,6 +1,9 @@
 # SDFEst
 Shape and pose estimation using discretized signed distance fields.
 
+[Installation](#installation) | [Dataset Preparation](#dataset--preparation)  | [Reproduce Paper](#reproduce--paper) | [Code Structure](#code--structure) | [Development](#development) | [Citation](#citation) | [Docs](https://roym899.github.io/sdfest/)
+
+
 ## Installation
 
 You can install everything with pip (either in your global Python environment, or a virtual environment).
@@ -33,7 +36,7 @@ You need to install Detectron2 manually to run the pipeline with automatic insta
 Follow the [detectron2 installation guide](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) from there.
 Tested with detectron2 0.5 + torch 1.9.0.
 
-## Prepare Datasets
+## Dataset Preparation
 See below for expected folder structure for each dataset.
 
 #### ShapeNet ([Website](https://shapenet.org/))
@@ -64,16 +67,20 @@ See below for expected folder structure for each dataset.
 ...
 ```
 
-## Reproduce Experiments
+## Reproduce Paper
+
+First, make sure the datasets are in the right format.
+
+### Benchmark Results
 Depending on which dataset, you have downloaded you can reproduce the results reported in the paper (using the already trained models) by running the script
 ```bash
 source reproduce_{shapenet,modelnet,redwood}_experiments.sh
 ```
 after that, all results can be found in `./results`.
 
-## Train models
+### Train Models
 To train a network for a specific category you need to first train a per-category VAE, and *afterwards* an initialization network.
-### VAE
+#### VAE
 First we need to convert the ShapeNet meshes to SDFs and optionally filter the dataset. To reproduce the preprocessing of the paper run
 ```bash
 source preprocess_shapenet.sh
@@ -84,7 +91,7 @@ source train_vaes.sh
 ```
 to train the models using the same configuration as used for the paper.
 
-### Init Network
+#### Init Network
 To train the initialization network we used in our paper, run
 ```bash
 source train_init_networks.sh
