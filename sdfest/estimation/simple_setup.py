@@ -21,6 +21,7 @@ from sdfest.differentiable_renderer import Camera, render_depth_gpu
 import torch
 
 from sdfest.estimation import synthetic, losses
+from sdfest.utils import load_model_weights
 
 
 INIT_MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
@@ -46,8 +47,12 @@ class SDFPipeline:
                 **self.init_config["head"],
             ),
         ).to(self.device)
-        state_dict = torch.load(self.init_config["model"], map_location=self.device)
-        self.init_network.load_state_dict(state_dict)
+        load_model_weights(
+            self.init_config["model"],
+            self.init_network,
+            self.device,
+            self.init_config.get("model_url"),
+        )
         self.init_network.eval()
 
         self.resolution = 64
@@ -58,8 +63,12 @@ class SDFPipeline:
             decoder_dict=self.vae_config["decoder"],
             device=self.device,
         ).to(self.device)
-        state_dict = torch.load(self.vae_config["model"], map_location=self.device)
-        self.vae.load_state_dict(state_dict)
+        load_model_weights(
+            self.vae_config["model"],
+            self.vae,
+            self.device,
+            self.vae_config.get("model_url"),
+        )
         self.vae.eval()
 
         self.cam = Camera(**self.camera_config)
@@ -390,7 +399,7 @@ class SDFPipeline:
         while self._current_iteration <= self.config["max_iterations"]:
             optimizer.zero_grad()
 
-            norm_orientation = orientation / torch.sqrt(torch.sum(orientation ** 2))
+            norm_orientation = orientation / torch.sqrt(torch.sum(orientation**2))
 
             with torch.set_grad_enabled(shape_optimization):
                 sdf = self.vae.decode(latent_shape)
@@ -441,7 +450,7 @@ class SDFPipeline:
             optimizer.zero_grad()
 
             with torch.no_grad():
-                orientation /= torch.sqrt(torch.sum(orientation ** 2))
+                orientation /= torch.sqrt(torch.sum(orientation**2))
                 inlier_ratio = self._update_best_estimate(
                     depth_image,
                     depth_estimate,
@@ -650,7 +659,9 @@ class SDFPipeline:
                 return None
             return synthetic.Mesh(mesh=mesh, scale=scale.item(), rel_scale=True)
 
-    def _preprocess_depth(self, depth_images: torch.Tensor, masks: torch.Tensor) -> None:
+    def _preprocess_depth(
+        self, depth_images: torch.Tensor, masks: torch.Tensor
+    ) -> None:
         """Preprocesses depth image based on segmentation mask.
 
         Args:

@@ -19,6 +19,7 @@ from sdfest.initialization.datasets.generated_dataset import SDFVAEViewDataset
 from sdfest.initialization.sdf_pose_network import SDFPoseNet, SDFPoseHead
 from sdfest.initialization.pointnet import VanillaPointNet
 from sdfest.initialization import quaternion_utils, sdf_utils, utils
+from sdfest.utils import load_model_weights
 
 os.environ["PYOPENGL_PLATFORM"] = "egl"
 
@@ -193,6 +194,7 @@ class Trainer:
         Returns:
             The SDFVAE on the specified device, with weights from specified model.
         """
+        model_url = self._config["vae"].get("model_url")
         device = self.get_device()
         vae = SDFVAE(
             sdf_size=64,
@@ -201,8 +203,7 @@ class Trainer:
             decoder_dict=self._config["vae"]["decoder"],
             device=device,
         ).to(device)
-        state_dict = torch.load(self._config["vae"]["model"], map_location=device)
-        vae.load_state_dict(state_dict)
+        load_model_weights(self._config["vae"]["model"], vae, device, model_url)
         vae.eval()
         return vae
 

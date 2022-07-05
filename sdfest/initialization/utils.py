@@ -116,15 +116,6 @@ def _plot_line(ax, pt1, pt2, *args, **kwargs):
     ax.plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], [pt1[2], pt2[2]], *args, **kwargs)
 
 
-def load_model(path, model):
-    """Load model weights from path."""
-    print(f"Loading model from checkpoint at {path} ...")
-    checkpoint = torch.load(path)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    print("Model loaded")
-    return model
-
-
 def set_axes_equal(ax) -> None:
     """Make axes of 3D plot have equal scale.
 

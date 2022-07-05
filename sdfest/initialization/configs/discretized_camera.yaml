@@ -1,6 +1,6 @@
 config:
     - "./discretized.yaml"
-    - vae: "../vae_models/camera.yaml"
+    - vae: "./vae_models/camera.yaml"
 
 # Category-specific dataset configs
 category_str: camera

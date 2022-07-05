@@ -94,14 +94,6 @@ def str_to_tsdf(x: str) -> Union[bool, float]:
     return float(x)
 
 
-def load_model(path, model):
-    print(f"Loading model from checkpoint at {path} ...")
-    checkpoint = torch.load(path)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    print("Model loaded")
-    return model
-
-
 class View(torch.nn.Module):
     """Wrapper of torch's view method to use with nn.Sequential."""
 

@@ -1,6 +1,6 @@
 config:
     - "./discretized.yaml"
-    - vae: "../vae_models/mug.yaml"
+    - vae: "./vae_models/mug.yaml"
 
 # Category-specific config
 category_str: mug
