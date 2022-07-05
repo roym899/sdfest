@@ -27,6 +27,11 @@ from sdfest.utils import load_model_weights
 INIT_MODULE_DICT = {c.__name__: c for c in [SDFPoseHead, VanillaPointNet]}
 
 
+class NoDepthError(ValueError):
+    """Raised when there is no depth data left after preprocessing."""
+    pass
+
+
 class SDFPipeline:
     """SDF pose and shape estimation pipeline."""
 
@@ -768,6 +773,8 @@ class SDFPipeline:
                 inp = pointset_utils.depth_to_pointcloud(
                     depth_image, self.cam, normalize=False
                 )
+                if len(inp) == 0:
+                    raise NoDepthError
                 if self.init_config["normalize_pose"]:
                     inp, centroid = pointset_utils.normalize_points(inp)
             else:

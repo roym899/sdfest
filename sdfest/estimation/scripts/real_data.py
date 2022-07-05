@@ -45,7 +45,7 @@ import torch
 import matplotlib.pyplot as plt
 import yoco
 
-from sdfest.estimation.simple_setup import SDFPipeline
+from sdfest.estimation.simple_setup import SDFPipeline, NoDepthError
 
 
 def load_real275_rgbd(rgb_path: str) -> Tuple[np.ndarray, np.ndarray, str, str]:
@@ -460,14 +460,17 @@ def main() -> None:
                 torch.from_numpy(color_img).to(config["device"])
             )
 
-            position, orientation, scale, shape = pipeline(
-                depth_tensor,
-                instance_mask,
-                color_img_tensor,
-                visualize=config["visualize_optimization"],
-                animation_path=animation_path,
-                shape_optimization=shape_optimization,
-            )
+            try:
+                position, orientation, scale, shape = pipeline(
+                    depth_tensor,
+                    instance_mask,
+                    color_img_tensor,
+                    visualize=config["visualize_optimization"],
+                    animation_path=animation_path,
+                    shape_optimization=shape_optimization,
+                )
+            except NoDepthError:
+                print("No depth data, skipping")
             break  # comment to evaluate all instances, instead of largest only
 
         if timing_dict is not None:
