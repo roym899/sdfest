@@ -258,6 +258,223 @@ class PoseRBPF:
         # self.points_gt_aug = self.points_gt_aug.cuda()
         self.fps = []
 
+    def reset(self):
+        # self.visualize = visualize
+
+        # self.obj_list = obj_list
+
+        # load the object information
+        # self.cfg_list = cfg_list
+
+        # load encoders and poses
+        # self.aae_list = []
+        # self.codebook_list = []
+        self.rbpf_list = []
+        self.rbpf_ok_list = []
+        for obj in self.obj_list:
+            # ckpt_file = "{}/ckpt_{}_0300.pth".format(
+            #     ckpt_dir, obj
+            # )
+            # print(ckpt_file)
+            # codebook_file = "{}/codebook_{}_0300.pth".format(
+            #     ckpt_dir, obj
+            # )
+            # print(codebook_file)
+            # self.aae_full = AAE([obj], capacity=1, code_dim=128)
+            # self.aae_full.encoder.eval()
+            # self.aae_full.decoder.eval()
+            # for param in self.aae_full.encoder.parameters():
+            #     param.requires_grad = False
+            # for param in self.aae_full.decoder.parameters():
+            #     param.requires_grad = False
+            # checkpoint = torch.load(ckpt_file)
+            # self.aae_full.load_ckpt_weights(checkpoint["aae_state_dict"])
+            # self.aae_list.append(copy.deepcopy(self.aae_full.encoder))
+            # if not os.path.exists(codebook_file):
+            #     print("Cannot find codebook in : " + codebook_file)
+            #     print("Start computing codebook ...")
+            #     dataset_code = shapenet_codebook_online_generator(
+            #         model_dir, obj, gpu_id=cfg.GPU_ID
+            #     )
+            #     self.aae_full.compute_codebook(dataset_code, codebook_file, save=True)
+            # else:
+            #     print("Found codebook in : " + codebook_file)
+
+            # self.codebook_list.append(torch.load(codebook_file)[0])
+            # self.rbpf_codepose = (
+            #     torch.load(codebook_file)[1].cpu().numpy()
+            # )  # all are identical
+            idx_obj = self.obj_list.index(obj)
+            self.rbpf_list.append(
+                particle_filter(
+                    self.cfg_list[idx_obj].PF,
+                    n_particles=self.cfg_list[idx_obj].PF.N_PROCESS,
+                )
+            )
+            self.rbpf_ok_list.append(False)
+
+        # renderer
+        self.intrinsics = np.array(
+            [
+                [self.cfg_list[0].PF.FU, 0, self.cfg_list[0].PF.U0],
+                [0, self.cfg_list[0].PF.FV, self.cfg_list[0].PF.V0],
+                [0, 0, 1.0],
+            ],
+            dtype=np.float32,
+        )
+
+        # self.renderer = render_wrapper(test_instance, test_model_dir, 0)
+
+        # target object property
+        self.target_obj = None
+        self.target_obj_idx = None
+        self.target_obj_encoder = None
+        self.target_obj_codebook = None
+        self.target_obj_cfg = None
+
+        # initialize the particle filters
+        self.rbpf = particle_filter(
+            self.cfg_list[0].PF, n_particles=self.cfg_list[0].PF.N_PROCESS
+        )
+        self.rbpf_ok = False
+
+        # pose rbpf for initialization
+        self.rbpf_init_max_sim = 0
+
+        # data properties
+        self.data_with_gt = False
+        self.data_with_est_bbox = False
+        self.data_with_est_center = False
+        self.data_intrinsics = np.ones((3, 3), dtype=np.float32)
+
+        # initialize the PoseRBPF variables
+        # ground truth information
+        self.gt_available = False
+        self.gt_t = [0, 0, 0]
+        self.gt_rotm = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
+        self.gt_bbox_center = np.zeros((3,))
+        self.gt_bbox_size = 0
+        self.gt_uv = np.array([0, 0, 1], dtype=np.float32)
+        self.gt_z = 0
+        self.gt_scale = 1.0
+
+        # estimated states
+        self.est_bbox_center = np.zeros((2, self.cfg_list[0].PF.N_PROCESS))
+        self.est_bbox_size = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
+        self.est_bbox_weights = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
+
+        # for logging
+        self.log_err_t = []
+        self.log_err_tx = []
+        self.log_err_ty = []
+        self.log_err_tz = []
+        self.log_err_rx = []
+        self.log_err_ry = []
+        self.log_err_rz = []
+        self.log_err_r = []
+        self.log_err_t_star = []
+        self.log_err_r_star = []
+        self.log_max_sim = []
+        self.log_dir = "./"
+        self.log_created = False
+        self.log_shape_created = False
+        self.log_pose = None
+        self.log_shape = None
+        self.log_error = None
+        self.log_err_uv = []
+        # posecnn prior
+        self.prior_uv = [0, 0, 1]
+        self.prior_z = 0
+        self.prior_t = np.array([0, 0, 0], dtype=np.float32)
+        self.prior_R = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
+
+        # flags for experiments
+        self.exp_with_mask = False
+        self.step = 0
+        self.iskf = False
+        self.init_step = False
+        self.save_uncertainty = False
+        self.show_prior = False
+
+        # motion model
+        self.T_c1c0 = np.eye(4, dtype=np.float32)
+        self.T_o0o1 = np.eye(4, dtype=np.float32)
+        self.T_c0o = np.eye(4, dtype=np.float32)
+        self.T_c1o = np.eye(4, dtype=np.float32)
+        self.Tbr1 = np.eye(4, dtype=np.float32)
+        self.Tbr0 = np.eye(4, dtype=np.float32)
+        self.Trc = np.eye(4, dtype=np.float32)
+        self.embeddings_prev = None
+
+        # deepsdf
+        # experiment_directory = "{}/{}s/".format(deepsdf_ckp_folder,obj_list[0])
+        # print(experiment_directory)
+        # self.decoder = load_decoder(experiment_directory, 2000)
+        # self.decoder = self.decoder.module.cuda()
+        # self.evaluator = Evaluator(self.decoder)
+        latent_size = 256
+        std_ = 0.01
+        self.rand_tensor = torch.ones(1, latent_size).normal_(mean=0, std=std_)
+        self.latent_tensor = self.rand_tensor.float().cuda()
+        self.latent_tensor.requires_grad = False
+        self.mask = None
+        self.sdf_optim = deepsdf_optimizer(self.decoder, optimize_shape=False)
+        # test_model_dir = "../obj_models/real_test/"
+        # fn = "{}{}_vertices.txt".format(test_model_dir, test_instance)
+        # points = np.loadtxt(fn, dtype=np.float32)  # n x 3
+        # self.size_gt = np.max(np.linalg.norm(points, axis=1))
+        # self.points_gt = torch.from_numpy(points)
+        self.latent_tensor_initialized = False
+        # self.size_gt_pn = get_bbox_dist(points)  # metric ground truth diagonal
+        # self.size_est = self.size_gt_pn
+        # self.ratio = self.size_gt_pn / self.size_gt
+        # self.sdf_optim.ratio = self.ratio * 1.0
+        self.ratio = 2.0  # ????
+
+        # points_obj_norm = self.points_gt
+        # Transform from Nocs object frame to ShapeNet object frame
+        rotm_obj2shapenet = euler.euler2mat(0.0, np.pi / 2.0, 0.0)
+        # points_obj_shapenet = np.dot(rotm_obj2shapenet, points_obj_norm.T).T
+        # points_obj_shapenet = np.float32(points_obj_shapenet)
+        # self.points_c = torch.from_numpy(points_obj_shapenet)
+
+        # partial point cloud observation
+        self.points_o_partial = None
+
+        # pointnet++
+        # ckpt_file_pn = "{}/{}/ckpt_{}_0300.pth".format(
+        #     latentnet_ckp_folder, self.obj_list[0], self.obj_list[0]
+        # )
+        # self.label_gt_path = "./latent_gt/{}_sfs.pth".format(test_instance)
+        # pn_checkpoint = torch.load(ckpt_file_pn)
+        # self.model = get_model(input_channels=0)
+        # self.model.load_ckpt_weights(pn_checkpoint["aae_state_dict"])
+        # self.model.cuda()
+        # self.model.eval()
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
+        # self.label_gt = torch.load(self.label_gt_path)[0, :, :].detach()
+        # self.label_gt.requires_grad = False
+
+        self.loss_shape_refine = 10000
+        self.loss_last = 10000
+        self.dist_init = 0
+        self.dist_opt = 0
+
+        # for debugging
+        self.T_filter = None
+        self.T_refine = None
+        self.latent_vec_pointnet = None
+        self.latent_vec_refine = None
+        self.points_o_est_vis = None
+        self.points_o_refine_vis = None
+        # self.points_gt_aug = torch.ones(
+        #     self.points_gt.shape[0], self.points_gt.shape[1] + 1
+        # )
+        # self.points_gt_aug[:, :3] = self.points_gt
+        # self.points_gt_aug = self.points_gt_aug.cuda()
+        self.fps = []
+
     # specify the target object for tracking
     def set_target_obj(self, target_object):
         assert (
@@ -460,6 +677,7 @@ class PoseRBPF:
                 rot=rot_max.cpu().numpy(),
                 rot_gt=mat2quat(self.gt_rotm),
             )
+
 
     # logging
     def display_result(self, step, steps, refine=False):
@@ -784,10 +1002,21 @@ class PoseRBPF:
             )
             self.latent_vec_optim = self.latent_tensor.clone()
         else:
+            # print(
+            #     "*** NOTHING ON THE DEPTH IMAGE! ... USING ORIGINAL BACKPROGATION METHOD ***"
+            # )
+            # self.initialize_latent_vector(points_c, T_init)  # this doesn't work ?
+            
             print(
-                "*** NOTHING ON THE DEPTH IMAGE! ... USING ORIGINAL BACKPROGATION METHOD ***"
+                "*** NOTHING ON THE DEPTH IMAGE! ... USING RANDOM LATENT ***"
             )
-            self.initialize_latent_vector(points_c, T_init)
+            # taken from __init__
+            latent_size = 256
+            std_ = 0.01
+            self.rand_tensor = torch.ones(1, latent_size).normal_(mean=0, std=std_)
+            self.latent_tensor = self.rand_tensor.float().cuda()
+            self.latent_vec_optim  = self.latent_tensor.clone()
+
 
     def latent_vector_prediction_pn(self, points_choice, rot, trans):
 

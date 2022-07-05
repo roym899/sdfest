@@ -2,11 +2,11 @@
 config:
   methods:
     icaps: ./icaps.yaml
-    # sdfest: ./sdfest.yaml
-    # sdfest_prior: ./sdfest_prior.yaml
-    # cass: ./cass.yaml
-    # spd: ./spd.yaml
-    # asmnet: ./asmnet.yaml
+    sdfest: ./sdfest.yaml
+    sdfest_prior: ./sdfest_prior.yaml
+    cass: ./cass.yaml
+    spd: ./spd.yaml
+    asmnet: ./asmnet.yaml
 
 dataset_config:
   name: REAL275
@@ -32,7 +32,7 @@ camera:
 visualize_input: False
 visualize_prediction: False
 visualize_gt: False
-fast_eval: True  # only evaluate every 5th sample
+fast_eval: False  # only evaluate every 5th sample
 store_visualization: False
 run_name: ""
 num_gt_points: 10000

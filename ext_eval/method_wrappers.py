@@ -119,29 +119,29 @@ class ICapsWrapper(MethodWrapper):
             "mug": "mug20200529T111737_default",
         }
         self._pose_rbpfs = {}
-        # pf_cfg_folder = "./icaps/config/pf_cfgs/"
-        # deepsdf_ckp_folder = "./icaps/checkpoints/deepsdf_ckpts/"
-        # latentnet_ckp_folder = "./icaps/checkpoints/latentnet_ckpts/"
-        # for category_str, ckpt_folder in category_str_to_ckpt_folder.items():
-        #     full_ckpt_folder = f"./icaps/checkpoints/aae_ckpts/{ckpt_folder}/"
-        #     train_cfg_file = full_ckpt_folder + "config.yml"
-        #     icaps_config.cfg_from_file(train_cfg_file)
-        #     test_cfg_file = pf_cfg_folder + category_str + ".yml"
-        #     icaps_config.cfg_from_file(test_cfg_file)
-        #     obj_list = icaps_config.cfg.TEST.OBJECTS
-        #     cfg_list = []
-        #     cfg_list.append(copy.deepcopy(icaps_config.cfg))
+        pf_cfg_folder = "./icaps/config/pf_cfgs/"
+        deepsdf_ckp_folder = "./icaps/checkpoints/deepsdf_ckpts/"
+        latentnet_ckp_folder = "./icaps/checkpoints/latentnet_ckpts/"
+        for category_str, ckpt_folder in self._category_str_to_ckpt_folder.items():
+            full_ckpt_folder = f"./icaps/checkpoints/aae_ckpts/{ckpt_folder}/"
+            train_cfg_file = full_ckpt_folder + "config.yml"
+            icaps_config.cfg_from_file(train_cfg_file)
+            test_cfg_file = pf_cfg_folder + category_str + ".yml"
+            icaps_config.cfg_from_file(test_cfg_file)
+            obj_list = icaps_config.cfg.TEST.OBJECTS
+            cfg_list = []
+            cfg_list.append(copy.deepcopy(icaps_config.cfg))
 
-        #     self._pose_rbpfs[category_str] = PoseRBPF(
-        #         obj_list,
-        #         cfg_list,
-        #         full_ckpt_folder,
-        #         deepsdf_ckp_folder,
-        #         latentnet_ckp_folder,
-        #     )
-        #     self._pose_rbpfs[category_str].set_target_obj(
-        #         icaps_config.cfg.TEST.OBJECTS[0]
-        #     )
+            self._pose_rbpfs[category_str] = PoseRBPF(
+                obj_list,
+                cfg_list,
+                full_ckpt_folder,
+                deepsdf_ckp_folder,
+                latentnet_ckp_folder,
+            )
+            self._pose_rbpfs[category_str].set_target_obj(
+                icaps_config.cfg.TEST.OBJECTS[0]
+            )
 
     def inference(
         self,
@@ -171,30 +171,30 @@ class ICapsWrapper(MethodWrapper):
         bbox = [y1, y2, x1, x2]
 
         # from here follow icaps.pose_rbpf.pose_rbps.PoseRBPF.run_nocs_dataset
-        # pose_rbpf = self._pose_rbpfs[category_str]
-        pf_cfg_folder = "./icaps/config/pf_cfgs/"
-        deepsdf_ckp_folder = "./icaps/checkpoints/deepsdf_ckpts/"
-        latentnet_ckp_folder = "./icaps/checkpoints/latentnet_ckpts/"
-        ckpt_folder = self._category_str_to_ckpt_folder[category_str]
-        full_ckpt_folder = f"./icaps/checkpoints/aae_ckpts/{ckpt_folder}/"
-        train_cfg_file = full_ckpt_folder + "config.yml"
-        icaps_config.cfg_from_file(train_cfg_file)
-        test_cfg_file = pf_cfg_folder + category_str + ".yml"
-        icaps_config.cfg_from_file(test_cfg_file)
-        obj_list = icaps_config.cfg.TEST.OBJECTS
-        cfg_list = []
-        cfg_list.append(copy.deepcopy(icaps_config.cfg))
+        pose_rbpf = self._pose_rbpfs[category_str]
+        pose_rbpf.reset()  # like init but without loading models
+        self._pose_rbpfs[category_str].set_target_obj(category_str)
+        # pf_cfg_folder = "./icaps/config/pf_cfgs/"
+        # deepsdf_ckp_folder = "./icaps/checkpoints/deepsdf_ckpts/"
+        # latentnet_ckp_folder = "./icaps/checkpoints/latentnet_ckpts/"
+        # ckpt_folder = self._category_str_to_ckpt_folder[category_str]
+        # full_ckpt_folder = f"./icaps/checkpoints/aae_ckpts/{ckpt_folder}/"
+        # train_cfg_file = full_ckpt_folder + "config.yml"
+        # icaps_config.cfg_from_file(train_cfg_file)
+        # test_cfg_file = pf_cfg_folder + category_str + ".yml"
+        # icaps_config.cfg_from_file(test_cfg_file)
+        # obj_list = icaps_config.cfg.TEST.OBJECTS
+        # cfg_list = []
+        # cfg_list.append(copy.deepcopy(icaps_config.cfg))
 
-        pose_rbpf = PoseRBPF(
-            obj_list,
-            cfg_list,
-            full_ckpt_folder,
-            deepsdf_ckp_folder,
-            latentnet_ckp_folder,
-        )
-        pose_rbpf.set_target_obj(
-            icaps_config.cfg.TEST.OBJECTS[0]
-        )
+        # pose_rbpf = PoseRBPF(
+        #     obj_list,
+        #     cfg_list,
+        #     full_ckpt_folder,
+        #     deepsdf_ckp_folder,
+        #     latentnet_ckp_folder,
+        # )
+        # pose_rbpf.set_target_obj(icaps_config.cfg.TEST.OBJECTS[0])
 
         pose_rbpf.data_intrinsics = intrinsics.numpy()
         pose_rbpf.intrinsics = intrinsics.numpy()
@@ -223,55 +223,67 @@ class ICapsWrapper(MethodWrapper):
         else:
             depth_data = None
 
-        pose_rbpf.initialize_poserbpf(
-            color_image,
-            pose_rbpf.data_intrinsics,
-            pose_rbpf.prior_uv[:2],
-            pose_rbpf.target_obj_cfg.PF.N_INIT,
-            scale_prior=pose_rbpf.target_obj_cfg.PF.SCALE_PRIOR,
-            depth=depth_data,
-        )
+        try:
+            pose_rbpf.initialize_poserbpf(
+                color_image,
+                pose_rbpf.data_intrinsics,
+                pose_rbpf.prior_uv[:2],
+                pose_rbpf.target_obj_cfg.PF.N_INIT,
+                scale_prior=pose_rbpf.target_obj_cfg.PF.SCALE_PRIOR,
+                depth=depth_data,
+            )
 
-        pose_rbpf.process_poserbpf(
-            color_image, intrinsics.unsqueeze(0), depth=depth_data, run_deep_sdf=False
-        )
-        # 3 * 50 iters by default
-        pose_rbpf.refine_pose_and_shape(depth_data, intrinsics.unsqueeze(0))
+            pose_rbpf.process_poserbpf(
+                color_image,
+                intrinsics.unsqueeze(0),
+                depth=depth_data,
+                run_deep_sdf=False,
+            )
+            # 3 * 50 iters by default
+            pose_rbpf.refine_pose_and_shape(depth_data, intrinsics.unsqueeze(0))
 
-        position_cv = torch.tensor(pose_rbpf.rbpf.trans_bar)
-        orientation_q = torch.Tensor(
-            Rotation.from_matrix(pose_rbpf.rbpf.rot_bar).as_quat()
-        )
+            position_cv = torch.tensor(pose_rbpf.rbpf.trans_bar)
+            orientation_q = torch.Tensor(
+                Rotation.from_matrix(pose_rbpf.rbpf.rot_bar).as_quat()
+            )
 
-        # NOCS Object -> ShapeNet Object convention
-        obj_fix = torch.tensor(
-            [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
-        )  # CASS object to ShapeNet object
-        orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
+            # NOCS Object -> ShapeNet Object convention
+            obj_fix = torch.tensor(
+                [0.0, -1 / np.sqrt(2.0), 0.0, 1 / np.sqrt(2.0)]
+            )  # CASS object to ShapeNet object
+            orientation_q = quaternion_utils.quaternion_multiply(orientation_q, obj_fix)
 
-        orientation_cv = orientation_q
-        extents = torch.tensor([0.5, 0.5, 0.5])
+            orientation_cv = orientation_q
+            extents = torch.tensor([0.5, 0.5, 0.5])
 
-        point_set = pose_rbpf.evaluator.latent_vec_to_points(
-            pose_rbpf.latent_vec_refine, num_points=self._num_points, silent=True
-        )
-        if point_set is None:
-            point_set = torch.tensor([[0.0, 0.0, 0.0]])  # failed / no isosurface
-        else:
-            point_set *= pose_rbpf.size_est / pose_rbpf.ratio
+            point_set = pose_rbpf.evaluator.latent_vec_to_points(
+                pose_rbpf.latent_vec_refine, N=64, num_points=self._num_points, silent=True
+            )
+            if point_set is None:
+                point_set = torch.tensor([[0.0, 0.0, 0.0]])  # failed / no isosurface
+            else:
+                point_set *= pose_rbpf.size_est / pose_rbpf.ratio
 
-        reconstructed_points = torch.tensor(point_set)
+            reconstructed_points = torch.tensor(point_set)
 
-        extents, _ = reconstructed_points.abs().max(dim=0)
-        extents *= 2.0
-
-        return {
-            "position": position_cv.detach().cpu(),
-            "orientation": orientation_cv.detach().cpu(),
-            "extents": extents.detach().cpu(),
-            "reconstructed_pointcloud": reconstructed_points,
-            "reconstructed_mesh": None,  # TODO if time
-        }
+            extents, _ = reconstructed_points.abs().max(dim=0)
+            extents *= 2.0
+            return {
+                "position": position_cv.detach().cpu(),
+                "orientation": orientation_cv.detach().cpu(),
+                "extents": extents.detach().cpu(),
+                "reconstructed_pointcloud": reconstructed_points,
+                "reconstructed_mesh": None,  # TODO if time
+            }
+        except:
+            print("===PROBLEM DETECTED WITH ICAPS, RETURNING NO PREDICTION INSTEAD===")
+            return {
+                "position": torch.tensor([0.0, 0.0, 0.0]),
+                "orientation": torch.tensor([0.0, 0.0, 0.0, 1.0]),
+                "extents": torch.tensor([0.5, 0.5, 0.5]),
+                "reconstructed_pointcloud": torch.tensor([[0.0, 0.0, 0.0]]),
+                "reconstructed_mesh": None,  # TODO if time
+            }
 
 
 class SPDWrapper(MethodWrapper):
@@ -427,6 +439,8 @@ class SPDWrapper(MethodWrapper):
             nocs_coords, points
         )
         orientation_q = torch.Tensor(Rotation.from_matrix(orientation_m).as_quat())
+
+        print(scale)
 
         reconstructed_points = inst_shape[0].detach().cpu() * scale
 
