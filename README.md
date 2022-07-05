@@ -1,7 +1,7 @@
 # SDFEst
 Shape and pose estimation using discretized signed distance fields.
 
-[Installation](#installation) | [Dataset Preparation](#dataset--preparation)  | [Reproduce Paper](#reproduce--paper) | [Code Structure](#code--structure) | [Development](#development) | [Citation](#citation) | [Docs](https://roym899.github.io/sdfest/)
+[Installation](#installation) | [Dataset Preparation](#dataset-preparation)  | [Paper Reproduction](#paper-reproduction) | [Code Structure](#code-structure) | [Development](#development) | [Citation](#citation) | [Docs](https://roym899.github.io/sdfest/)
 
 
 ## Installation
@@ -67,7 +67,7 @@ See below for expected folder structure for each dataset.
 ...
 ```
 
-## Reproduce Paper
+## Paper Reproduction
 
 First, make sure the datasets are in the right format.
 
