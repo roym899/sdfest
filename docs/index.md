@@ -8,6 +8,3 @@ Run
 pip install sdfest
 ```
 to install the latest release of the package.
-
-## API Reference
-::: sdfest
