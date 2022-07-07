@@ -1,0 +1,2721 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://roym899.github.io/sdfest/reference/initialization/datasets/generated_dataset/">
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.9">
+    
+    
+      
+        <title>generated_dataset - SDFEst</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../css/mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sdfest.initialization.datasets.generated_dataset" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="SDFEst" class="md-header__button md-logo" aria-label="SDFEst" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SDFEst
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              generated_dataset
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/roym899/sdfest" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    roym899/sdfest
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="SDFEst" class="md-nav__button md-logo" aria-label="SDFEst" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    SDFEst
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/roym899/sdfest" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    roym899/sdfest
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        Getting started
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          API Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="API Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          API Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_1">
+          differentiable_renderer
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="differentiable_renderer" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_1">
+          <span class="md-nav__icon md-icon"></span>
+          differentiable_renderer
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1_1" type="checkbox" id="__nav_2_1_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_1_1">
+          scripts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="scripts" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_1_1">
+          <span class="md-nav__icon md-icon"></span>
+          scripts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../differentiable_renderer/scripts/experiments/" class="md-nav__link">
+        experiments
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../differentiable_renderer/sdf_renderer/" class="md-nav__link">
+        sdf_renderer
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_2">
+          estimation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="estimation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_2">
+          <span class="md-nav__icon md-icon"></span>
+          estimation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/losses/" class="md-nav__link">
+        losses
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/metrics/" class="md-nav__link">
+        metrics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2_3" type="checkbox" id="__nav_2_2_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_2_3">
+          scripts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="scripts" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_2_3">
+          <span class="md-nav__icon md-icon"></span>
+          scripts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/scripts/play_log/" class="md-nav__link">
+        play_log
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/scripts/real_data/" class="md-nav__link">
+        real_data
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/scripts/rendering_evaluation/" class="md-nav__link">
+        rendering_evaluation
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/simple_setup/" class="md-nav__link">
+        simple_setup
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../estimation/synthetic/" class="md-nav__link">
+        synthetic
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_3">
+          initialization
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="initialization" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_3">
+          <span class="md-nav__icon md-icon"></span>
+          initialization
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3_1" type="checkbox" id="__nav_2_3_1" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_3_1">
+          datasets
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="datasets" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_3_1">
+          <span class="md-nav__icon md-icon"></span>
+          datasets
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataset_utils/" class="md-nav__link">
+        dataset_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          generated_dataset
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        generated_dataset
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset" class="md-nav__link">
+    generated_dataset
+  </a>
+  
+    <nav class="md-nav" aria-label="generated_dataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset" class="md-nav__link">
+    SDFVAEViewDataset
+  </a>
+  
+    <nav class="md-nav" aria-label="SDFVAEViewDataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.Config" class="md-nav__link">
+    Config
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__init__" class="md-nav__link">
+    __init__()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__iter__" class="md-nav__link">
+    __iter__()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nocs_dataset/" class="md-nav__link">
+        nocs_dataset
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nocs_utils/" class="md-nav__link">
+        nocs_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../redwood_dataset/" class="md-nav__link">
+        redwood_dataset
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pointnet/" class="md-nav__link">
+        pointnet
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pointset_utils/" class="md-nav__link">
+        pointset_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quaternion_utils/" class="md-nav__link">
+        quaternion_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3_5" type="checkbox" id="__nav_2_3_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_3_5">
+          scripts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="scripts" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_3_5">
+          <span class="md-nav__icon md-icon"></span>
+          scripts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/train/" class="md-nav__link">
+        train
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdf_pose_network/" class="md-nav__link">
+        sdf_pose_network
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdf_utils/" class="md-nav__link">
+        sdf_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../so3grid/" class="md-nav__link">
+        so3grid
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/" class="md-nav__link">
+        utils
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../utils/" class="md-nav__link">
+        utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_5" type="checkbox" id="__nav_2_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_5">
+          vae
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="vae" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_5">
+          <span class="md-nav__icon md-icon"></span>
+          vae
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_5_1" type="checkbox" id="__nav_2_5_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_5_1">
+          scripts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="scripts" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_5_1">
+          <span class="md-nav__icon md-icon"></span>
+          scripts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/scripts/benchmark/" class="md-nav__link">
+        benchmark
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/scripts/process_shapenet/" class="md-nav__link">
+        process_shapenet
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/scripts/train/" class="md-nav__link">
+        train
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/scripts/visualizer/" class="md-nav__link">
+        visualizer
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/sdf_dataset/" class="md-nav__link">
+        sdf_dataset
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/sdf_utils/" class="md-nav__link">
+        sdf_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/sdf_vae/" class="md-nav__link">
+        sdf_vae
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/torch_utils/" class="md-nav__link">
+        torch_utils
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vae/utils/" class="md-nav__link">
+        utils
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset" class="md-nav__link">
+    generated_dataset
+  </a>
+  
+    <nav class="md-nav" aria-label="generated_dataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset" class="md-nav__link">
+    SDFVAEViewDataset
+  </a>
+  
+    <nav class="md-nav" aria-label="SDFVAEViewDataset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.Config" class="md-nav__link">
+    Config
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__init__" class="md-nav__link">
+    __init__()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__iter__" class="md-nav__link">
+    __iter__()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/roym899/sdfest/edit/main/docs/sdfest/initialization/datasets/generated_dataset.py" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>generated_dataset</h1>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="sdfest.initialization.datasets.generated_dataset" class="doc doc-heading">
+          <span class="doc doc-object-name doc-module-name">sdfest.initialization.datasets.generated_dataset</span>
+
+
+</h2>
+
+  <div class="doc doc-contents first">
+  
+      <p>Module which provides SDFDataset class.</p>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset" class="doc doc-heading">
+        <span class="doc doc-object-name doc-class-name">SDFVAEViewDataset</span>
+
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+      <p class="doc doc-class-bases">
+        Bases: <code>torch.<span title="torch.utils">utils</span>.<span title="torch.utils.data">data</span>.<span title="torch.utils.data.IterableDataset">IterableDataset</span></code></p>
+
+  
+      <p>Dataset of SDF views generated by VAE and renderer from a random view.</p>
+
+
+        <details class="quote">
+          <summary>Source code in <code>sdfest/initialization/datasets/generated_dataset.py</code></summary>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 20</span>
+<span class="normal"> 21</span>
+<span class="normal"> 22</span>
+<span class="normal"> 23</span>
+<span class="normal"> 24</span>
+<span class="normal"> 25</span>
+<span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SDFVAEViewDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">IterableDataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dataset of SDF views generated by VAE and renderer from a random view.&quot;&quot;&quot;</span>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Configuration dictionary for SDFVAEViewDataset.</span>
+
+<span class="sd">        Attributes:</span>
+<span class="sd">            width: The width of the generated images in px.</span>
+<span class="sd">            height: The height of the generated images in px.</span>
+<span class="sd">            fov_deg: The horizontal fov in deg.</span>
+<span class="sd">            z_min:</span>
+<span class="sd">                Minimum z value (i.e., distance from camera) for the SDF.</span>
+<span class="sd">                Note that positive z means in front of the camera, hence z_sampler</span>
+<span class="sd">                should in most cases return positive values.</span>
+<span class="sd">            z_max:</span>
+<span class="sd">                Maximum z value (i.e., distance from camera) for the SDF.</span>
+<span class="sd">            extent_mean:</span>
+<span class="sd">                Mean extent of the SDF.</span>
+<span class="sd">                Extent is the total side length of an SDF.</span>
+<span class="sd">            extent_std:</span>
+<span class="sd">                Standard deviation of the SDF scale.</span>
+<span class="sd">            pointcloud: Whether to generate pointcloud or depth image.</span>
+<span class="sd">            normalize_pose:</span>
+<span class="sd">                Whether to center the augmented pointcloud at 0,0,0.</span>
+<span class="sd">                Ignored if pointcloud=False</span>
+<span class="sd">            orientation_repr:</span>
+<span class="sd">                Which orientation representation is used. One of:</span>
+<span class="sd">                    &quot;quaternion&quot;</span>
+<span class="sd">                    &quot;discretized&quot;</span>
+<span class="sd">            orientation_grid_resolution:</span>
+<span class="sd">                Resolution of the orientation grid.</span>
+<span class="sd">                Only used if orientation_repr is &quot;discretized&quot;.</span>
+<span class="sd">            mask_noise:</span>
+<span class="sd">                Whether the mask should be perturbed to simulate noisy segmentation.</span>
+<span class="sd">                If True a random, small, affine transform will be applied to the correct</span>
+<span class="sd">                mask. The outliers will be filled with a random value sampled between</span>
+<span class="sd">                mask_noise_min, and mask_noise_max.</span>
+<span class="sd">            mask_noise_min:</span>
+<span class="sd">                Minimum value to fill in for noisy mask.</span>
+<span class="sd">                Only used if mask_noise is True.</span>
+<span class="sd">            mask_noise_max:</span>
+<span class="sd">                Maximum value to fill in for noisy mask.</span>
+<span class="sd">                Only used if mask_noise is True.</span>
+<span class="sd">            gaussian_noise_probability:</span>
+<span class="sd">                Probability to apply gaussian noise filter on depth image.</span>
+<span class="sd">            gaussian_noise_kernel_size:</span>
+<span class="sd">                Size of the Gaussian kernel.</span>
+<span class="sd">                Only used if Gaussian noise probability &gt; 0.0.</span>
+<span class="sd">            gausian_noise_kernel_std:</span>
+<span class="sd">                Standard deviation of the Gaussian kernel.</span>
+<span class="sd">                Only used if Gaussian noise probability &gt; 0.0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">width</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="n">height</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="n">fov_deg</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">z_min</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">z_max</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">extent_mean</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">extent_std</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">pointcloud</span><span class="p">:</span> <span class="nb">bool</span>
+        <span class="n">normalize_pose</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span>
+        <span class="n">render_threshold</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">orientation_repr</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="n">orientation_grid_resolution</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+        <span class="n">mask_noise</span><span class="p">:</span> <span class="nb">bool</span>
+        <span class="n">mask_noise_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+        <span class="n">mask_noise_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+        <span class="n">norm_noise</span><span class="p">:</span> <span class="nb">bool</span>
+        <span class="n">norm_noise_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+        <span class="n">norm_noise_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+        <span class="n">scale_to_unit_ball</span><span class="p">:</span> <span class="nb">bool</span>
+        <span class="n">gaussian_noise_probability</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="n">gaussian_noise_kernel_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+        <span class="n">gausian_noise_kernel_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+
+    <span class="n">default_config</span><span class="p">:</span> <span class="n">Config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="mi">640</span><span class="p">,</span>
+        <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="mi">480</span><span class="p">,</span>
+        <span class="s2">&quot;fov_deg&quot;</span><span class="p">:</span> <span class="mi">90</span><span class="p">,</span>
+        <span class="s2">&quot;render_threshold&quot;</span><span class="p">:</span> <span class="mf">0.004</span><span class="p">,</span>
+        <span class="s2">&quot;normalize_pose&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;orientation_repr&quot;</span><span class="p">:</span> <span class="s2">&quot;quaternion&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;orientation_grid_resolution&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;mask_noise&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;mask_noise_min&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="s2">&quot;mask_noise_max&quot;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span>
+        <span class="s2">&quot;norm_noise&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;norm_noise_min&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="s2">&quot;norm_noise_max&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+        <span class="s2">&quot;scale_to_unit_ball&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;gaussian_noise_probability&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;gaussian_noise_kernel_size&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="s2">&quot;gaussian_noise_kernel_std&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">vae</span><span class="p">:</span> <span class="n">SDFVAE</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Initialize the dataset.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config:</span>
+<span class="sd">                Configuration dictionary of dataset. Provided dictionary will be merged</span>
+<span class="sd">                with default_dict. See SDFVAEViewDataset.Config for supported keys.</span>
+<span class="sd">            vae: The variational autoencoder used to create training samples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">yoco</span><span class="o">.</span><span class="n">load_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">current_dict</span><span class="o">=</span><span class="n">SDFVAEViewDataset</span><span class="o">.</span><span class="n">default_config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span> <span class="o">=</span> <span class="n">vae</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fov_deg&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.0</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">(</span>
+            <span class="n">width</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">],</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">],</span>
+            <span class="n">fx</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+            <span class="n">fy</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+            <span class="n">cx</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">cy</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">pixel_center</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fov_deg</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;fov_deg&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_z_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;z_min&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_z_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;z_max&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_z_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_z_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_z_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extent_mean</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;extent_mean&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extent_std</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;extent_std&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale_sampler</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">gauss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extent_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_std</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_min&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_max&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_min&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_max&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_min&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_max&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_min&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_max&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale_to_unit_ball</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;scale_to_unit_ball&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pointcloud</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;pointcloud&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_pose</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;normalize_pose&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_render_threshold</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;render_threshold&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;orientation_repr&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">==</span> <span class="s2">&quot;discretized&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_grid</span> <span class="o">=</span> <span class="n">so3grid</span><span class="o">.</span><span class="n">SO3Grid</span><span class="p">(</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;orientation_grid_resolution&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_noise_probability</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_probability&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_gaussian_kernel</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_kernel_std&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_kernel_size&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return SDF volume at a specific index.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Infinite iterator, generating sample dictionaries.</span>
+<span class="sd">            See SDFVAEViewDataset._generate_sample for more details about returned</span>
+<span class="sd">            dictionaries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># this is an infinite iterator as the sentinel False will never be returned</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_valid_sample</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_generate_uniform_quaternion</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Generate a uniform quaternion.</span>
+
+<span class="sd">        Following the method from K. Shoemake, Uniform Random Rotations, 1992.</span>
+
+<span class="sd">        See: http://planning.cs.uiuc.edu/node198.html</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Uniformly distributed unit quaternion on the dataset&#39;s device.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">u1</span><span class="p">,</span> <span class="n">u2</span><span class="p">,</span> <span class="n">u3</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(),</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(),</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">u1</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">u2</span><span class="p">),</span>
+                <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">u1</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">u2</span><span class="p">),</span>
+                <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">u1</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">u3</span><span class="p">),</span>
+                <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">u1</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">u3</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Check whether a generated sample is valid.</span>
+
+<span class="sd">        A valid sample contains at least one valid point in the depth image and hence</span>
+<span class="sd">        in the pointcloud.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;depth&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">_generate_valid_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Generate a single non-zero sample.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            See _generate_sample.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_sample</span><span class="p">()</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_valid</span><span class="p">(</span><span class="n">sample</span><span class="p">):</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_sample</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: invalid sample, this should only happen very infrequently.&quot;</span><span class="p">)</span>
+            <span class="c1"># if this happens often, either the SDF does not have any zero crossings</span>
+            <span class="c1"># or the object pose is completely outside the frustum</span>
+        <span class="k">return</span> <span class="n">sample</span>
+
+    <span class="k">def</span> <span class="nf">_perturb_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Perturb mask by applying small random affine transform to it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mask: The mask to perturb.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The perturbed mask. Same shape as mask.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">affine_transfomer</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">RandomAffine</span><span class="p">(</span>
+            <span class="n">degrees</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">translate</span><span class="o">=</span><span class="p">(</span><span class="mf">0.00</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="p">(</span><span class="mf">0.999</span><span class="p">,</span> <span class="mf">1.001</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">affine_transfomer</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_generate_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Generate a single sample. Possibly (albeit very unlikely) zero / empty.</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            Sample containing the following items:</span>
+<span class="sd">                &quot;depth&quot;</span>
+<span class="sd">                &quot;pointset&quot;</span>
+<span class="sd">                &quot;latent_shape&quot;</span>
+<span class="sd">                &quot;position&quot;</span>
+<span class="sd">                &quot;orientation&quot;</span>
+<span class="sd">                &quot;quaternion&quot;</span>
+<span class="sd">                &quot;scale&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">latent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>  <span class="c1"># will be 1xlatent_size (batch size 1 here)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">sdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">latent</span><span class="p">)</span>
+        <span class="c1"># generate x, y, z s.t. center is inside frustum</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_z_sampler</span><span class="p">()</span>
+        <span class="n">x_pix</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x_pix</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">fx</span> <span class="o">*</span> <span class="n">z</span>
+        <span class="n">y_pix</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y_pix</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="o">.</span><span class="n">fy</span> <span class="o">*</span> <span class="n">z</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">z</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+        <span class="n">quaternion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_uniform_quaternion</span><span class="p">()</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scale_sampler</span><span class="p">())</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+        <span class="n">inv_scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">scale</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quat_to_orientation_repr</span><span class="p">(</span><span class="n">quaternion</span><span class="p">)</span>
+
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">render_depth_gpu</span><span class="p">(</span>
+            <span class="n">sdf</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">position</span><span class="p">,</span>
+            <span class="n">quaternion</span><span class="p">,</span>
+            <span class="n">inv_scale</span><span class="p">,</span>
+            <span class="n">threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_render_threshold</span><span class="p">,</span>
+            <span class="n">camera</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">exact_mask</span> <span class="o">=</span> <span class="n">depth</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise</span><span class="p">:</span>
+            <span class="n">final_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_perturb_mask</span><span class="p">(</span><span class="n">exact_mask</span><span class="p">)</span>
+            <span class="n">depth</span><span class="p">[</span><span class="o">~</span><span class="n">exact_mask</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_sampler</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">final_mask</span> <span class="o">=</span> <span class="n">exact_mask</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_noise_probability</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_noise_probability</span><span class="p">:</span>
+                <span class="n">invalid_depth_mask</span> <span class="o">=</span> <span class="n">depth</span> <span class="o">==</span> <span class="mi">0</span>
+                <span class="n">depth</span><span class="p">[</span><span class="n">invalid_depth_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nan</span>
+                <span class="n">depth_filtered</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+                    <span class="n">depth</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_kernel</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="s2">&quot;same&quot;</span>
+                <span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># nan might become inf be preserved</span>
+                <span class="c1"># https://github.com/pytorch/pytorch/issues/12484</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">depth_filtered</span><span class="o">.</span><span class="n">isnan</span><span class="p">(),</span> <span class="n">depth_filtered</span><span class="o">.</span><span class="n">isinf</span><span class="p">())</span>
+                <span class="n">depth</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">depth_filtered</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span>
+                <span class="n">depth</span><span class="p">[</span><span class="n">depth</span><span class="o">.</span><span class="n">isnan</span><span class="p">()]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">depth</span><span class="p">[</span><span class="o">~</span><span class="n">final_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pointcloud</span><span class="p">:</span>
+            <span class="n">pointset</span> <span class="o">=</span> <span class="n">pointset_utils</span><span class="o">.</span><span class="n">depth_to_pointcloud</span><span class="p">(</span>
+                <span class="n">depth</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span><span class="p">,</span> <span class="n">convention</span><span class="o">=</span><span class="s2">&quot;opengl&quot;</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_pose</span><span class="p">:</span>
+                <span class="n">pointset</span><span class="p">,</span> <span class="n">centroid</span> <span class="o">=</span> <span class="n">pointset_utils</span><span class="o">.</span><span class="n">normalize_points</span><span class="p">(</span><span class="n">pointset</span><span class="p">)</span>
+                <span class="n">position</span> <span class="o">-=</span> <span class="n">centroid</span>  <span class="c1"># adjust target</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise</span><span class="p">:</span>
+                    <span class="n">noise</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">new_tensor</span><span class="p">(</span>
+                        <span class="p">[</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_sampler</span><span class="p">(),</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_sampler</span><span class="p">(),</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_sampler</span><span class="p">(),</span>
+                        <span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="n">position</span> <span class="o">+=</span> <span class="n">noise</span>
+                    <span class="n">pointset</span> <span class="o">+=</span> <span class="n">noise</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_to_unit_ball</span><span class="p">:</span>
+                    <span class="n">max_distance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">pointset</span><span class="p">))</span>
+                    <span class="n">pointset</span> <span class="o">/=</span> <span class="n">max_distance</span>
+                    <span class="n">scale</span> <span class="o">/=</span> <span class="n">max_distance</span>
+
+            <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;pointset&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pointset</span>
+
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;depth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">depth</span>
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;latent_shape&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">latent</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">position</span>
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;orientation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">orientation</span>
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;quaternion&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">quaternion</span>
+        <span class="n">sample</span><span class="p">[</span><span class="s2">&quot;scale&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale</span>
+
+        <span class="k">return</span> <span class="n">sample</span>
+
+        <span class="c1"># TODO: add augmentation</span>
+
+    <span class="k">def</span> <span class="nf">_quat_to_orientation_repr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quaternion</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Convert quaternion to selected orientation representation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            quaternion:</span>
+<span class="sd">                The quaternion to convert, scalar-last, shape (4,).</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            The same orientation as represented by the quaternion in the chosen</span>
+<span class="sd">            orientation representation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">==</span> <span class="s2">&quot;quaternion&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">quaternion</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">==</span> <span class="s2">&quot;discretized&quot;</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_grid</span><span class="o">.</span><span class="n">quat_to_index</span><span class="p">(</span><span class="n">quaternion</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span>
+                <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Orientation representation </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span><span class="si">}</span><span class="s2"> is not supported.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_gaussian_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Create and set Gaussian noise kernel used for smoothing the depth image.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">kernel_size</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Kernel size should be odd.&quot;</span><span class="p">)</span>
+        <span class="n">impulse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">))</span>
+        <span class="n">impulse</span><span class="p">[</span><span class="n">kernel_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">kernel_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">impulse</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_kernel</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">kernel</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+        </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.Config" class="doc doc-heading">
+        <span class="doc doc-object-name doc-class-name">Config</span>
+
+
+</h4>
+
+
+  <div class="doc doc-contents ">
+      <p class="doc doc-class-bases">
+        Bases: <code><span title="typing.TypedDict">TypedDict</span></code></p>
+
+  
+      <p>Configuration dictionary for SDFVAEViewDataset.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th><b>ATTRIBUTE</b></th>
+        <th><b>DESCRIPTION</b></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>width</code></td>
+          <td class="doc-attribute-details">
+            <p>The width of the generated images in px.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>int</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>height</code></td>
+          <td class="doc-attribute-details">
+            <p>The height of the generated images in px.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>int</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>fov_deg</code></td>
+          <td class="doc-attribute-details">
+            <p>The horizontal fov in deg.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>z_min</code></td>
+          <td class="doc-attribute-details">
+            <p>Minimum z value (i.e., distance from camera) for the SDF.
+Note that positive z means in front of the camera, hence z_sampler
+should in most cases return positive values.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>z_max</code></td>
+          <td class="doc-attribute-details">
+            <p>Maximum z value (i.e., distance from camera) for the SDF.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>extent_mean</code></td>
+          <td class="doc-attribute-details">
+            <p>Mean extent of the SDF.
+Extent is the total side length of an SDF.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>extent_std</code></td>
+          <td class="doc-attribute-details">
+            <p>Standard deviation of the SDF scale.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>pointcloud</code></td>
+          <td class="doc-attribute-details">
+            <p>Whether to generate pointcloud or depth image.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>bool</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>normalize_pose</code></td>
+          <td class="doc-attribute-details">
+            <p>Whether to center the augmented pointcloud at 0,0,0.
+Ignored if pointcloud=False</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[bool]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>orientation_repr</code></td>
+          <td class="doc-attribute-details">
+            <p>Which orientation representation is used. One of:
+    "quaternion"
+    "discretized"</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>str</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>orientation_grid_resolution</code></td>
+          <td class="doc-attribute-details">
+            <p>Resolution of the orientation grid.
+Only used if orientation_repr is "discretized".</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[int]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>mask_noise</code></td>
+          <td class="doc-attribute-details">
+            <p>Whether the mask should be perturbed to simulate noisy segmentation.
+If True a random, small, affine transform will be applied to the correct
+mask. The outliers will be filled with a random value sampled between
+mask_noise_min, and mask_noise_max.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>bool</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>mask_noise_min</code></td>
+          <td class="doc-attribute-details">
+            <p>Minimum value to fill in for noisy mask.
+Only used if mask_noise is True.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[float]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>mask_noise_max</code></td>
+          <td class="doc-attribute-details">
+            <p>Maximum value to fill in for noisy mask.
+Only used if mask_noise is True.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[float]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>gaussian_noise_probability</code></td>
+          <td class="doc-attribute-details">
+            <p>Probability to apply gaussian noise filter on depth image.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code>float</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>gaussian_noise_kernel_size</code></td>
+          <td class="doc-attribute-details">
+            <p>Size of the Gaussian kernel.
+Only used if Gaussian noise probability &gt; 0.0.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[int]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>gausian_noise_kernel_std</code></td>
+          <td class="doc-attribute-details">
+            <p>Standard deviation of the Gaussian kernel.
+Only used if Gaussian noise probability &gt; 0.0.</p>
+            <p>
+                <span class="doc-attribute-annotation">
+                  <b>TYPE:</b>
+                    <code><span title="typing.Optional">Optional</span>[float]</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+
+        <details class="quote">
+          <summary>Source code in <code>sdfest/initialization/datasets/generated_dataset.py</code></summary>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Configuration dictionary for SDFVAEViewDataset.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        width: The width of the generated images in px.</span>
+<span class="sd">        height: The height of the generated images in px.</span>
+<span class="sd">        fov_deg: The horizontal fov in deg.</span>
+<span class="sd">        z_min:</span>
+<span class="sd">            Minimum z value (i.e., distance from camera) for the SDF.</span>
+<span class="sd">            Note that positive z means in front of the camera, hence z_sampler</span>
+<span class="sd">            should in most cases return positive values.</span>
+<span class="sd">        z_max:</span>
+<span class="sd">            Maximum z value (i.e., distance from camera) for the SDF.</span>
+<span class="sd">        extent_mean:</span>
+<span class="sd">            Mean extent of the SDF.</span>
+<span class="sd">            Extent is the total side length of an SDF.</span>
+<span class="sd">        extent_std:</span>
+<span class="sd">            Standard deviation of the SDF scale.</span>
+<span class="sd">        pointcloud: Whether to generate pointcloud or depth image.</span>
+<span class="sd">        normalize_pose:</span>
+<span class="sd">            Whether to center the augmented pointcloud at 0,0,0.</span>
+<span class="sd">            Ignored if pointcloud=False</span>
+<span class="sd">        orientation_repr:</span>
+<span class="sd">            Which orientation representation is used. One of:</span>
+<span class="sd">                &quot;quaternion&quot;</span>
+<span class="sd">                &quot;discretized&quot;</span>
+<span class="sd">        orientation_grid_resolution:</span>
+<span class="sd">            Resolution of the orientation grid.</span>
+<span class="sd">            Only used if orientation_repr is &quot;discretized&quot;.</span>
+<span class="sd">        mask_noise:</span>
+<span class="sd">            Whether the mask should be perturbed to simulate noisy segmentation.</span>
+<span class="sd">            If True a random, small, affine transform will be applied to the correct</span>
+<span class="sd">            mask. The outliers will be filled with a random value sampled between</span>
+<span class="sd">            mask_noise_min, and mask_noise_max.</span>
+<span class="sd">        mask_noise_min:</span>
+<span class="sd">            Minimum value to fill in for noisy mask.</span>
+<span class="sd">            Only used if mask_noise is True.</span>
+<span class="sd">        mask_noise_max:</span>
+<span class="sd">            Maximum value to fill in for noisy mask.</span>
+<span class="sd">            Only used if mask_noise is True.</span>
+<span class="sd">        gaussian_noise_probability:</span>
+<span class="sd">            Probability to apply gaussian noise filter on depth image.</span>
+<span class="sd">        gaussian_noise_kernel_size:</span>
+<span class="sd">            Size of the Gaussian kernel.</span>
+<span class="sd">            Only used if Gaussian noise probability &gt; 0.0.</span>
+<span class="sd">        gausian_noise_kernel_std:</span>
+<span class="sd">            Standard deviation of the Gaussian kernel.</span>
+<span class="sd">            Only used if Gaussian noise probability &gt; 0.0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">width</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">fov_deg</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">z_min</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">z_max</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">extent_mean</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">extent_std</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">pointcloud</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">normalize_pose</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span>
+    <span class="n">render_threshold</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">orientation_repr</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">orientation_grid_resolution</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">mask_noise</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">mask_noise_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="n">mask_noise_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="n">norm_noise</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">norm_noise_min</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="n">norm_noise_max</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+    <span class="n">scale_to_unit_ball</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">gaussian_noise_probability</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gaussian_noise_kernel_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+    <span class="n">gausian_noise_kernel_std</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+        </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__init__" class="doc doc-heading">
+        <span class="doc doc-object-name doc-function-name">__init__</span>
+
+
+</h4>
+<div class="highlight"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">vae</span><span class="p">:</span> <span class="n">SDFVAE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+  <div class="doc doc-contents ">
+  
+      <p>Initialize the dataset.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th><b>PARAMETER</b></th>
+        <th><b>DESCRIPTION</b></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>config</code></td>
+          <td class="doc-param-details">
+            <p>Configuration dictionary of dataset. Provided dictionary will be merged
+with default_dict. See SDFVAEViewDataset.Config for supported keys.</p>
+            <p>
+                <span class="doc-param-annotation">
+                  <b>TYPE:</b>
+                    <code>dict</code>
+                </span>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td><code>vae</code></td>
+          <td class="doc-param-details">
+            <p>The variational autoencoder used to create training samples.</p>
+            <p>
+                <span class="doc-param-annotation">
+                  <b>TYPE:</b>
+                    <code><a class="autorefs autorefs-internal" title="sdfest.vae.sdf_vae.SDFVAE" href="../../../vae/sdf_vae/#sdfest.vae.sdf_vae.SDFVAE">SDFVAE</a></code>
+                </span>
+            </p>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+      <details class="quote">
+        <summary>Source code in <code>sdfest/initialization/datasets/generated_dataset.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">vae</span><span class="p">:</span> <span class="n">SDFVAE</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Initialize the dataset.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config:</span>
+<span class="sd">            Configuration dictionary of dataset. Provided dictionary will be merged</span>
+<span class="sd">            with default_dict. See SDFVAEViewDataset.Config for supported keys.</span>
+<span class="sd">        vae: The variational autoencoder used to create training samples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">yoco</span><span class="o">.</span><span class="n">load_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">current_dict</span><span class="o">=</span><span class="n">SDFVAEViewDataset</span><span class="o">.</span><span class="n">default_config</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span> <span class="o">=</span> <span class="n">vae</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vae</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">device</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;fov_deg&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.0</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_camera</span> <span class="o">=</span> <span class="n">Camera</span><span class="p">(</span>
+        <span class="n">width</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">],</span>
+        <span class="n">height</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">],</span>
+        <span class="n">fx</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+        <span class="n">fy</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+        <span class="n">cx</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">cy</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">pixel_center</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_fov_deg</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;fov_deg&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_z_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;z_min&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_z_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;z_max&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_z_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_z_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_z_max</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_extent_mean</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;extent_mean&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_extent_std</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;extent_std&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_scale_sampler</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">gauss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extent_mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extent_std</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_min&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_max&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_mask_noise_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_min&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;mask_noise_max&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_min</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_min&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_max</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_max&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_norm_noise_sampler</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_min&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;norm_noise_max&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_scale_to_unit_ball</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;scale_to_unit_ball&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_pointcloud</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;pointcloud&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_pose</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;normalize_pose&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_render_threshold</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;render_threshold&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;orientation_repr&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_repr</span> <span class="o">==</span> <span class="s2">&quot;discretized&quot;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orientation_grid</span> <span class="o">=</span> <span class="n">so3grid</span><span class="o">.</span><span class="n">SO3Grid</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;orientation_grid_resolution&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian_noise_probability</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_probability&quot;</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_create_gaussian_kernel</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_kernel_std&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;gaussian_noise_kernel_size&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h4 id="sdfest.initialization.datasets.generated_dataset.SDFVAEViewDataset.__iter__" class="doc doc-heading">
+        <span class="doc doc-object-name doc-function-name">__iter__</span>
+
+
+</h4>
+<div class="highlight"><pre><span></span><code><span class="fm">__iter__</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span>
+</code></pre></div>
+
+  <div class="doc doc-contents ">
+  
+      <p>Return SDF volume at a specific index.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th><b>RETURNS</b></th>
+        <th><b>DESCRIPTION</b></th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>
+              <span class="doc-returns-annotation">
+                  <code><span title="typing.Iterator">Iterator</span></code>
+              </span>
+          </td>
+          <td class="doc-returns-details">
+            <p>Infinite iterator, generating sample dictionaries.</p>
+          </td>
+        </tr>
+        <tr>
+          <td>
+              <span class="doc-returns-annotation">
+                  <code><span title="typing.Iterator">Iterator</span></code>
+              </span>
+          </td>
+          <td class="doc-returns-details">
+            <p>See SDFVAEViewDataset._generate_sample for more details about returned</p>
+          </td>
+        </tr>
+        <tr>
+          <td>
+              <span class="doc-returns-annotation">
+                  <code><span title="typing.Iterator">Iterator</span></code>
+              </span>
+          </td>
+          <td class="doc-returns-details">
+            <p>dictionaries.</p>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+      <details class="quote">
+        <summary>Source code in <code>sdfest/initialization/datasets/generated_dataset.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Return SDF volume at a specific index.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Infinite iterator, generating sample dictionaries.</span>
+<span class="sd">        See SDFVAEViewDataset._generate_sample for more details about returned</span>
+<span class="sd">        dictionaries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># this is an infinite iterator as the sentinel False will never be returned</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_valid_sample</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../dataset_utils/" class="md-footer__link md-footer__link--prev" aria-label="Previous: dataset_utils" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              dataset_utils
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../nocs_dataset/" class="md-footer__link md-footer__link--next" aria-label="Next: nocs_dataset" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              nocs_dataset
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.6c7ad80a.min.js"></script>
+      
+    
+  </body>
+</html>
