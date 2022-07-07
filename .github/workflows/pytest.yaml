@@ -15,6 +15,10 @@ jobs:
       matrix:
         python-version: [ "3.7", "3.8", "3.9" ]
     steps:
+    - uses: Jimver/cuda-toolkit@v0.2.7
+      id: cuda-toolkit
+      with:
+        cuda: '11.7.0'
     - uses: actions/checkout@v2
       with:
         persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
