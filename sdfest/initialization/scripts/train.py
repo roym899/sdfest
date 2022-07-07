@@ -243,7 +243,7 @@ class Trainer:
                 predictions["latent_shape"], samples["latent_shape"]
             )
             log_dict["loss latent"] = loss_latent_l2.item()
-            loss = loss + loss_latent_l2
+            loss = loss + self._config["latent_weight"] * loss_latent_l2
 
         if "position" in samples:
             loss_position_l2 = torch.nn.functional.mse_loss(
