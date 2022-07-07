@@ -1,0 +1,40 @@
+site_name: SDFEst
+site_url: https://roym899.github.io/sdfest/
+repo_url: https://github.com/roym899/sdfest
+repo_name: roym899/sdfest
+edit_uri: edit/main/docs
+theme: 
+  name: material
+  icon: 
+    repo: fontawesome/brands/github
+
+extra_css:
+  - css/mkdocstrings.css
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      watch:
+        - sdfest
+      handlers:
+        python:
+          rendering:
+            show_root_heading: true
+            show_signature_annotations: true
+            show_source: true
+            separate_signature: True
+            docstring_section_style: "spacy"
+            line_length: 75
+            members_order: source
+          selection:
+            docstring_style: "google"
+      enable_inventory: true
+
+nav:
+  - Getting started: index.md
+  - API Reference: reference/

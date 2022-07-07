@@ -4,3 +4,9 @@ flake8-docstrings
 flake8-annotations
 pytest
 pytest-cov
+mkdocs
+mkdocs-material
+mkdocstrings
+mkdocstrings-python
+mkdocs-gen-files
+mkdocs-literate-nav

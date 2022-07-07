@@ -230,11 +230,11 @@ class SDFPipeline:
 
         Args:
             depth_images:
-                the depth map containing the distance along the camera's z-axis,
-                does not have to be masked, necessary preprocessing is done by pipeline,
-                will be masked and preprocessed in-place
-                (pass copy if full depth is used afterwards)
-                shape (N, H, W) or (H, W) for a single depth image
+                The depth map containing the distance along the camera's z-axis.
+                Does not have to be masked, necessary preprocessing is done by pipeline.
+                Will be masked and preprocessed in-place (pass copy if full depth is
+                used afterwards).
+                Shape (N, H, W) or (H, W) for a single depth image.
             masks:
                 binary mask of the object to estimate, same shape as depth_images
             color_images:
@@ -622,13 +622,13 @@ class SDFPipeline:
         Currently only supports batch size 1.
 
         Args:
-            latent: latent shape descriptor, shape (1,L).
+            latent: Latent shape descriptor, shape (1,L).
             scale:
-                relative scale of the signed distance field, (i.e., half-width),
+                Relative scale of the signed distance field, (i.e., half-width),
                 shape (1,).
             complete_mesh:
-                if True, the SDF will be padded with positive values prior
-                to converting it to a mesh. This ensures a watertight mesh is created.
+                If True, the SDF will be padded with positive values prior to converting
+                it to a mesh. This ensures a watertight mesh is created.
 
         Returns:
             Generate mesh by decoding latent shape descriptor and scaling it.

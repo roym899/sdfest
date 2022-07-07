@@ -18,7 +18,7 @@ def load_model_weights(
     Args:
         path: Path to model weights.
         model: Path to model weights.
-        map_locaion: See torch.load.
+        map_location: See torch.load.
         model_weights_url: URL to download model weights from if path does not exist.
     """
     resolved_path = yoco.resolve_path(
