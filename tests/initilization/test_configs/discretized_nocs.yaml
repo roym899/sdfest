@@ -28,10 +28,10 @@ orientation_grid_resolution: 1
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 1.0
+        probability: 0.0
     camera_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
-        probability: 0.0
+        probability: 1.0
     real_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.0
