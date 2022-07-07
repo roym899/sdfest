@@ -1,0 +1,19 @@
+camera:
+  width: 640
+  height: 480
+  fx: 320
+  fy: 320
+  cx: 320
+  cy: 240
+  pixel_center: 0.5
+threshold: 0.005  # for ray termination, post scaling
+device: cuda
+
+iso_threshold: 0.02  # for mesh extraction, pre scaling
+max_iterations: 50
+depth_weight: 1.0
+pc_weight: 3.0
+nn_weight: 0.0
+mean_shape: False
+init_view: first
+shape_init: prediction

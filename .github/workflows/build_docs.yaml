@@ -1,0 +1,59 @@
+# Adapted from https://tech.michaelaltfield.net/2020/07/18/sphinx-rtd-github-pages-1/
+
+name: Docs
+
+on:
+  push:
+    branches: [ main ]
+ 
+jobs:
+  build_docs_job:
+    runs-on: ubuntu-latest
+ 
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install prerequisites
+      run:
+        pip install .
+        pip install -r requirements-dev.txt
+    - name: Build docs
+      run: |
+        mkdocs build
+    - name: Setup context
+      run: |
+        mkdocs build
+    - name: Pull current docs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git clone https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git docs_repo
+        cd docs_repo
+        if [[ `git ls-remote origin docs` ]]; then
+          git switch docs
+        else
+          git switch --orphan docs
+        fi
+    - name: Remove current docs
+      run: |
+        cd docs_repo
+        rm -rf docs
+    - name: Add updated docs
+      run: |
+        mv ./site ./docs_repo/docs
+    - name: Push updated docs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd docs_repo
+        git config --global user.name "github-actions"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add docs/
+        msg="Update docs for commit ${GITHUB_SHA}"
+        git commit --allow-empty -m "${msg}"
+        git push https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git

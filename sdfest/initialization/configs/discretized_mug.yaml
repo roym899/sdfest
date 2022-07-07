@@ -1,0 +1,13 @@
+config:
+    - "./discretized.yaml"
+    - vae: "./vae_models/mug.yaml"
+
+# Category-specific config
+category_str: mug
+datasets:
+    generated_dataset:
+        config_dict:
+            z_min: 0.2
+            z_max: 1.5
+            extent_mean: 0.11
+            extent_std: 0.01
