@@ -1,27 +1,6 @@
-[tool.poetry]
-name = "sdfest"
-version = "0.1.0"
-description = "Categorical pose and shape estimation using discretized signed distance fields"
-authors = ["Leonard Bruns <roym899@gmail.com>"]
-license = "MIT"
-
-[tool.poetry.dependencies]
-python = "~3.8"
-sdf-differentiable-renderer = {path = "sdf_differentiable_renderer", develop = true}
-sdf-vae = {path = "sdf_vae", develop = true}
-sdf-single-shot = {path = "sdf_single_shot", develop = true}
-sdf-estimation = {path = "sdf_estimation", develop = true}
-flake8 = "^3.9.2"
-flake8-docstrings = "^1.6.0"
-opencv-python-headless = "^4.5.3"
-py = "^1.10.0"
-h5py = "^3.6.0"
-
-[tool.poetry.dev-dependencies]
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.pyright]
-exclude = ["**/data"]
+# Minimum requirements for the build system to execute.
+requires = [
+    "setuptools",
+    "wheel",
+]

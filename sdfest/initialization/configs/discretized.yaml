@@ -1,0 +1,58 @@
+config:
+    - vae: "./vae_models/mug.yaml"
+    - datasets:
+        generated_dataset: 
+            config_dict: "./generated_dataset.yaml"
+        camera_train: 
+            config_dict: "./camera_train.yaml"
+        real_train: 
+            config_dict: "./real_train.yaml"
+    - validation_datasets:
+        camera_val: 
+            config_dict: "./camera_val.yaml"
+
+# Training params
+batch_size: 32
+iterations: 500000
+learning_rate: 1.0e-3
+position_weight: 1000
+scale_weight: 1000
+orientation_weight: 5
+latent_weight: 1
+visualization_iteration: 1000
+validation_iteration: 10000
+checkpoint_iteration: 10000
+orientation_repr: discretized
+orientation_grid_resolution: 1
+orientation_str: mug
+
+# Dataset specific config
+datasets:
+    generated_dataset:
+        type: SDFVAEViewDataset
+        probability: 1.0
+    camera_train:
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
+        probability: 0.0
+    real_train:
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
+        probability: 0.0
+
+validation_datasets:
+    camera_val:
+        type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
+
+# Network params
+backbone_type: VanillaPointNet
+backbone:
+    in_size: 3  # dimension of input points
+    mlp_out_sizes: [128, 128, 128, 128, 1024]
+    batchnorm: True
+    dense: True
+    residual: True
+
+head_type: SDFPoseHead
+head:
+    in_size: 1024 # number of input features
+    mlp_out_sizes: [512, 256, 128] 
+    batchnorm: True
