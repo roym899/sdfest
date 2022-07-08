@@ -1,7 +1,14 @@
 import setuptools
+import glob
+import os
 
 with open("PYPIREADME.md", "r") as fh:
     long_description = fh.read()
+
+config_files = [
+    os.path.relpath(path, "sdfest")
+    for path in glob.glob("sdfest/**/configs/**/*.yaml", recursive=True)
+]
 
 setuptools.setup(
     name="sdfest",
@@ -17,10 +24,8 @@ setuptools.setup(
         "sdfest": [
             "differentiable_renderer/csrc/sdf_renderer.cpp",
             "differentiable_renderer/csrc/sdf_renderer_cuda.cu",
-            "initialization/configs/*",
-            "vae/configs/*",
-            "estimation/configs/*",
         ]
+        + config_files
     },
     install_requires=[
         "cpas_toolbox",
