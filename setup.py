@@ -5,7 +5,7 @@ with open("PYPIREADME.md", "r") as fh:
 
 setuptools.setup(
     name="sdfest",
-    version="0.1.0a",
+    version="0.1.0",
     author="Leonard Bruns",
     author_email="roym899@gmail.com",
     description="6-DoF pose, scale, and shape estimation architecture",
