@@ -1,5 +1,5 @@
 # SDFEst
-Shape and pose estimation using discretized signed distance fields.
+SDFEst is a package for pose, scale, and shape estimation using discretized signed distance fields. It includes and combines three main components (generative model, discriminative initialization, and differentiable renderer) to enable pose and shape estimation in an analysis-by-synthesis framework.
 
 [Installation](#installation) | [Dataset Preparation](#dataset-preparation)  | [Paper Reproduction](#paper-reproduction) | [Code Structure](#code-structure) | [Development](#development) | [Citation](#citation) | [Docs](https://roym899.github.io/sdfest/)
 

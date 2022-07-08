@@ -1,14 +1,14 @@
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("PYPIREADME.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="sdfest",
-    version="0.1.0",
+    version="0.1.0a",
     author="Leonard Bruns",
     author_email="roym899@gmail.com",
-    description="7-DoF pose and shape estimation architecture",
+    description="6-DoF pose, scale, and shape estimation architecture",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/roym899/sdfest",
@@ -17,6 +17,9 @@ setuptools.setup(
         "sdfest": [
             "differentiable_renderer/csrc/sdf_renderer.cpp",
             "differentiable_renderer/csrc/sdf_renderer_cuda.cu",
+            "initialization/configs/*",
+            "vae/configs/*",
+            "estimation/configs/*",
         ]
     },
     install_requires=[
