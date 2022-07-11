@@ -964,6 +964,20 @@
   
   
     <li class="md-nav__item">
+      <a href="../../vae/scripts/benchmark_vae/" class="md-nav__link">
+        benchmark_vae
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../vae/scripts/process_shapenet/" class="md-nav__link">
         process_shapenet
       </a>
@@ -2243,7 +2257,11 @@
 <span class="normal">1003</span>
 <span class="normal">1004</span>
 <span class="normal">1005</span>
-<span class="normal">1006</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SDFPipeline</span><span class="p">:</span>
+<span class="normal">1006</span>
+<span class="normal">1007</span>
+<span class="normal">1008</span>
+<span class="normal">1009</span>
+<span class="normal">1010</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SDFPipeline</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;SDF pose and shape estimation pipeline.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -2252,6 +2270,10 @@
 <span class="sd">        Args:</span>
 <span class="sd">            config: Configuration dictionary.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># improve runtime for conv3d backward</span>
+        <span class="c1"># https://github.com/pytorch/pytorch/issues/32370</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">False</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_parse_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">init_network</span> <span class="o">=</span> <span class="n">SDFPoseNet</span><span class="p">(</span>
@@ -3318,12 +3340,20 @@
 <span class="normal">82</span>
 <span class="normal">83</span>
 <span class="normal">84</span>
-<span class="normal">85</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Load and initialize the pipeline.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        config: Configuration dictionary.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># improve runtime for conv3d backward</span>
+    <span class="c1"># https://github.com/pytorch/pytorch/issues/32370</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">False</span>
+
     <span class="bp">self</span><span class="o">.</span><span class="n">_parse_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">init_network</span> <span class="o">=</span> <span class="n">SDFPoseNet</span><span class="p">(</span>
@@ -3687,11 +3717,7 @@ training network (and hence distribution) is used independent of view.</p>
 
       <details class="quote">
         <summary>Source code in <code>sdfest/estimation/simple_setup.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">213</span>
 <span class="normal">214</span>
 <span class="normal">215</span>
 <span class="normal">216</span>
@@ -4070,7 +4096,11 @@ training network (and hence distribution) is used independent of view.</p>
 <span class="normal">589</span>
 <span class="normal">590</span>
 <span class="normal">591</span>
-<span class="normal">592</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">depth_images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">masks</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -4483,17 +4513,17 @@ training network (and hence distribution) is used independent of view.</p>
 
       <details class="quote">
         <summary>Source code in <code>sdfest/estimation/simple_setup.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">605</span>
-<span class="normal">606</span>
-<span class="normal">607</span>
-<span class="normal">608</span>
-<span class="normal">609</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">609</span>
 <span class="normal">610</span>
 <span class="normal">611</span>
 <span class="normal">612</span>
 <span class="normal">613</span>
 <span class="normal">614</span>
-<span class="normal">615</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_depth</span><span class="p">(</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_depth</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">position</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">orientation</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -4605,11 +4635,7 @@ it to a mesh. This ensures a watertight mesh is created.</p>
 
       <details class="quote">
         <summary>Source code in <code>sdfest/estimation/simple_setup.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">617</span>
-<span class="normal">618</span>
-<span class="normal">619</span>
-<span class="normal">620</span>
-<span class="normal">621</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">621</span>
 <span class="normal">622</span>
 <span class="normal">623</span>
 <span class="normal">624</span>
@@ -4653,7 +4679,11 @@ it to a mesh. This ensures a watertight mesh is created.</p>
 <span class="normal">662</span>
 <span class="normal">663</span>
 <span class="normal">664</span>
-<span class="normal">665</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_mesh</span><span class="p">(</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_mesh</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">latent</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">complete_mesh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">synthetic</span><span class="o">.</span><span class="n">Mesh</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Generate mesh without pose.</span>

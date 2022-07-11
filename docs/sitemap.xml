@@ -156,6 +156,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://roym899.github.io/sdfest/reference/vae/scripts/benchmark_vae/</loc>
+         <lastmod>2022-07-11</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://roym899.github.io/sdfest/reference/vae/scripts/process_shapenet/</loc>
          <lastmod>2022-07-11</lastmod>
          <changefreq>daily</changefreq>
