@@ -1,0 +1,28 @@
+# Standalone config to use with rendering_evaluation.py
+# Ablation study on synthetic mug data
+config:
+  - ./rendering_evaluation.yaml
+  - ./models/mug.yaml
+  - ablation_configs:
+      discretized_2: ./models/mug_discretized_2.yaml
+      quaternion: ./models/mug_quaternion.yaml
+
+num_views: [3,]
+run_name: ablation_study
+
+ablation_configs:
+  standard: {}
+  best_view:
+    init_view: best
+  mean_init:
+    mean_shape: True
+  no_shape_opt:
+    shape_optimization: False
+  pc_loss_only:
+    depth_weight: 0.0
+    nn_weight: 0.0
+  depth_loss_only:
+    pc_weight: 0.0
+    nn_weight: 0.0
+  init_only:
+    max_iterations: 0

@@ -7,12 +7,12 @@ python -m sdfest.vae.scripts.process_shapenet --inpath ./data/shapenet/02880940/
 python -m sdfest.vae.scripts.process_shapenet --inpath ./data/shapenet/02876657/ --outpath ./data/shapenet_processed/bottle_filtered/ --resolution 64 --padding 2
 
 # Train VAEs
-python -m sdfest.vae.scripts.train --config initialization/vae_models/bowl.yaml --dataset_path ./data/shapenet_processed/bowl_filtered/
-python -m sdfest.vae.scripts.train --config initialization/vae_models/bottle.yaml --dataset_path ./data/shapenet_processed/bottle_filtered/
-python -m sdfest.vae.scripts.train --config initialization/vae_models/mug.yaml --dataset_path ./data/shapenet_processed/mug_filtered/
-python -m sdfest.vae.scripts.train --config initialization/vae_models/camera.yaml --dataset_path ./data/shapenet_processed/camera_filtered/
-python -m sdfest.vae.scripts.train --config initialization/vae_models/laptop.yaml --dataset_path ./data/shapenet_processed/laptop_filtered/
-python -m sdfest.vae.scripts.train --config initialization/vae_models/can.yaml --dataset_path ./data/shapenet_processed/can_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/bowl.yaml --dataset_path ./data/shapenet_processed/bowl_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/bottle.yaml --dataset_path ./data/shapenet_processed/bottle_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/mug.yaml --dataset_path ./data/shapenet_processed/mug_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/camera.yaml --dataset_path ./data/shapenet_processed/camera_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/laptop.yaml --dataset_path ./data/shapenet_processed/laptop_filtered/
+python -m sdfest.vae.scripts.train --config initialization/configs/vae_models/can.yaml --dataset_path ./data/shapenet_processed/can_filtered/
 
 # Train init networks
 python -m sdfest.initialization.scripts.train --config initialization/configs/discretized_bottle.yaml 

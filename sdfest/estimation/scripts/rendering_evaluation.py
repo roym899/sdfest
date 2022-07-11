@@ -91,7 +91,7 @@ class Evaluator:
     def run(self) -> None:
         """Run the evaluation."""
         o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Warning)
-        if self.base_config["ablation_configs"] is not None:
+        if self.base_config["ablation_configs"]:
             ablation_results_dict = {}
             for name, ablation_config in self.base_config["ablation_configs"].items():
                 config = yoco.load_config(

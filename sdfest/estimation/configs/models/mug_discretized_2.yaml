@@ -142,8 +142,8 @@ init:
     orientation_repr: discretized
     orientation_grid_resolution: 2
   category_str: mug
-  model: ~/.sdfest/model_weights/mug_discretized_2.pt
-  model_url: https://github.com/roym899/sdfest/releases/download/v0.1.0/mug_discretized_2.pt
+  model: ~/.sdfest/model_weights/mug_discretized_2_init.pt
+  model_url: https://github.com/roym899/sdfest/releases/download/v0.1.0/mug_discretized_2_init.pt
   normalize_pose: true
 category: cup
 far_field: 2.0  # from mask_noise_max
