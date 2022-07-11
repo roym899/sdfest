@@ -41,6 +41,10 @@ class SDFPipeline:
         Args:
             config: Configuration dictionary.
         """
+        # improve runtime for conv3d backward
+        # https://github.com/pytorch/pytorch/issues/32370
+        torch.backends.cudnn.enabled = False
+
         self._parse_config(config)
 
         self.init_network = SDFPoseNet(
