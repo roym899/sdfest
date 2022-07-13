@@ -141,9 +141,14 @@ class MultiViewDataset(torch.utils.data.Dataset):
         """
         pcd_path = self._pcd_files[idx]
         dir_path = os.path.dirname(pcd_path)
-        sdf_path = os.path.join(dir_path, pcd_path)
+        sdf_path = os.path.join(dir_path, "sdf.npy")
         meta_path = os.path.join(dir_path, "metadata.json")
 
+        # TODO position
+
+        # TODO quaternion
+
+        # Pointset
         o3d_pointset = o3d.io.read_point_cloud(pcd_path)
         np_pointset = np.asarray(o3d_pointset.points, dtype=np.float32)
         pointset = torch.from_numpy(np_pointset)
@@ -152,6 +157,17 @@ class MultiViewDataset(torch.utils.data.Dataset):
             pointset, _ = pointset_utils.normalize_points(pointset)
             # position = position - centroid
 
+        # SDF
+        np_sdf = np.load(sdf_path)
+        sdf = torch.from_numpy(np_sdf).float()
+
+        # TODO Scale
+
         return {
             "pointset": pointset,
+            "position": None,
+            "quaternion": None,
+            "orientation": None,
+            "scale": None,
+            "sdf": sdf,
         }
