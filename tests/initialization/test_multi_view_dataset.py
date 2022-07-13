@@ -22,6 +22,7 @@ def test_multi_view_dataset() -> None:
     assert sample_0["pointset"].dtype == torch.float
     assert sample_0["sdf"].shape == (64, 64, 64)
     assert sample_0["sdf"].dtype == torch.float
+    assert isinstance(sample_0["scale"], float)
 
     # Test with and without normalization
     mvd._normalize_pointset = True
@@ -31,3 +32,11 @@ def test_multi_view_dataset() -> None:
     mvd._normalize_pointset = False
     sample_0 = mvd[0]
     assert torch.mean(sample_0["pointset"]) != 0
+
+    # Test different scale conventions
+    mvd._scale_convention = "max"
+    sample_0 = mvd[0]
+    assert 0.1 < sample_0["scale"] < 0.15
+    mvd._scale_convention = "half_max"
+    sample_0 = mvd[0]
+    assert 0.05 < sample_0["scale"] < 0.1

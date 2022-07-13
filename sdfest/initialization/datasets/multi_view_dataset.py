@@ -1,10 +1,12 @@
 """Module which provides SDFDataset class."""
 import glob
+import json
 import os
 from typing import TypedDict
 
 import numpy as np
 import open3d as o3d
+from scipy.spatial.transform import Rotation
 import torch
 import yoco
 
@@ -38,11 +40,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
                 that pointset centroid is at the origin.
             scale_convention:
                 Which scale is returned. The following strings are supported:
-                    "diagonal":
-                        Length of bounding box' diagonal. This is what NOCS uses.
-                    "max": Maximum side length of bounding box.
-                    "half_max": Half maximum side length of bounding box.
-                    "full": Bounding box side lengths. Shape (3,).
+                    "max": Maximum side length of SDF.
+                    "half_max": Half maximum side length of SDF.
             orientation_repr:
                 Which orientation representation is used. One of:
                     "quaternion"
@@ -134,7 +133,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
                     representation. Based on specified orientation_representation.
                     torch.FloatTensor, shape depending on orientation_representation.
                 "scale":
-                    The scale of the SDF. Based on specified scale_convention.
+                    The scale of the SDF. Note that this is not exactly the same as
+                    a tight bounding box. Based on specified scale_convention. float.
                 "sdf":
                     The discretized signed distance field.
                     torch.FloatTensor, Shape (N, N, N).
@@ -143,6 +143,10 @@ class MultiViewDataset(torch.utils.data.Dataset):
         dir_path = os.path.dirname(pcd_path)
         sdf_path = os.path.join(dir_path, "sdf.npy")
         meta_path = os.path.join(dir_path, "metadata.json")
+
+        # Load meta data
+        with open(meta_path) as json_file:
+            meta_data = json.load(json_file)
 
         # TODO position
 
@@ -161,13 +165,92 @@ class MultiViewDataset(torch.utils.data.Dataset):
         np_sdf = np.load(sdf_path)
         sdf = torch.from_numpy(np_sdf).float()
 
-        # TODO Scale
+        # Scale
+        scale = self._get_scale(meta_data["sdf_extent"] * meta_data["obj_extent"])
 
         return {
             "pointset": pointset,
             "position": None,
             "quaternion": None,
             "orientation": None,
-            "scale": None,
+            "scale": scale,
             "sdf": sdf,
         }
+
+    def _change_axis_convention(self, orientation_q: torch.Tensor) -> tuple:
+        """Adjust axis convention for the orientation.
+
+        Args:
+            orientation_q: Quaternion representing an orientation.
+
+        Returns: Quaternion representing orientation_q with remapped x and y axes.
+        """
+        if self._remap_y_axis is None and self._remap_x_axis is None:
+            return orientation_q
+        elif self._remap_y_axis is None or self._remap_x_axis is None:
+            raise ValueError("Either both or none of remap_{y,x}_axis have to be None.")
+
+        rotation_o2n = self._get_o2n_object_rotation_matrix()
+
+        # quaternion so far: original -> camera
+        # we want a quaternion: new -> camera
+        rotation_n2o = rotation_o2n.T
+
+        quaternion_n2o = torch.from_numpy(Rotation.from_matrix(rotation_n2o).as_quat())
+
+        remapped_orientation_q = quaternion_utils.quaternion_multiply(
+            orientation_q, quaternion_n2o
+        )  # new -> original -> camera
+
+        return remapped_orientation_q
+
+    def _get_scale(self, max_extent: torch.Tensor) -> float:
+        """Return scale convention from max_extent."""
+        if self._scale_convention == "max":
+            return max_extent
+        elif self._scale_convention == "half_max":
+            return 0.5 * max_extent
+        else:
+            raise ValueError(
+                f"Specified scale convention {self._scale_convnetion} not supported."
+            )
+
+    def _get_o2n_object_rotation_matrix(self) -> np.ndarray:
+        """Compute rotation matrix which rotates original to new object coordinates."""
+        rotation_o2n = np.zeros((3, 3))  # original to new object convention
+        if self._remap_y_axis == "x":
+            rotation_o2n[0, 1] = 1
+        elif self._remap_y_axis == "-x":
+            rotation_o2n[0, 1] = -1
+        elif self._remap_y_axis == "y":
+            rotation_o2n[1, 1] = 1
+        elif self._remap_y_axis == "-y":
+            rotation_o2n[1, 1] = -1
+        elif self._remap_y_axis == "z":
+            rotation_o2n[2, 1] = 1
+        elif self._remap_y_axis == "-z":
+            rotation_o2n[2, 1] = -1
+        else:
+            raise ValueError("Unsupported remap_y_axis {self.remap_y}")
+
+        if self._remap_x_axis == "x":
+            rotation_o2n[0, 0] = 1
+        elif self._remap_x_axis == "-x":
+            rotation_o2n[0, 0] = -1
+        elif self._remap_x_axis == "y":
+            rotation_o2n[1, 0] = 1
+        elif self._remap_x_axis == "-y":
+            rotation_o2n[1, 0] = -1
+        elif self._remap_x_axis == "z":
+            rotation_o2n[2, 0] = 1
+        elif self._remap_x_axis == "-z":
+            rotation_o2n[2, 0] = -1
+        else:
+            raise ValueError("Unsupported remap_x_axis {self.remap_y}")
+
+        # infer last column
+        rotation_o2n[:, 2] = 1 - np.abs(np.sum(rotation_o2n, 1))  # rows must sum to +-1
+        rotation_o2n[:, 2] *= np.linalg.det(rotation_o2n)  # make special orthogonal
+        if np.linalg.det(rotation_o2n) != 1.0:  # check if special orthogonal
+            raise ValueError("Unsupported combination of remap_{y,x}_axis. det != 1")
+        return rotation_o2n
