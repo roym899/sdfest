@@ -17,6 +17,7 @@ iterations: 2
 learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
+latent_weight: 1
 orientation_weight: 1
 visualization_iteration: 1
 validation_iteration: 1
@@ -28,10 +29,10 @@ orientation_grid_resolution: 1
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 0.0
+        probability: 1.0
     camera_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
-        probability: 1.0
+        probability: 0.0
     real_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
         probability: 0.0
