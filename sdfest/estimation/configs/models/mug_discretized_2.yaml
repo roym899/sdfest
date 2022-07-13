@@ -1,0 +1,150 @@
+vae:
+  decoder:
+    fc_layers:
+    - {out: 20}
+    - {out: 50}
+    - {out: 8192}
+    conv_layers:
+    - {in_size: 8, in_channels: 16, out_channels: 16, kernel_size: 3, relu: true}
+    - {in_size: 16, in_channels: 16, out_channels: 8, kernel_size: 3, relu: true}
+    - {in_size: 32, in_channels: 8, out_channels: 4, kernel_size: 3, relu: true}
+    - {in_size: 64, in_channels: 4, out_channels: 1, kernel_size: 1, relu: false}
+  latent_size: 8
+  tsdf: false
+  encoder:
+    layer_infos:
+    - type: torch.nn.Conv3d
+      args: {in_channels: 1, out_channels: 4, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 4, out_channels: 8, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Conv3d
+      args: {in_channels: 8, out_channels: 16, kernel_size: 3, stride: 2}
+    - type: torch.nn.ReLU
+      args: {}
+    - type: torch.nn.Flatten
+      args: {}
+  iterations: 100000
+  batch_size: 16
+  l2_large_weight: 1.0
+  l2_small_weight: 10.0
+  l1_large_weight: 0.0
+  l1_small_weight: 0.0
+  pc_weight: 1.0
+  kld_weight: 3.0
+  learning_rate: 0.001
+  dataset_path: sdf_single_shot/vae_models/data/shapenet_processed/mug_filtered
+  model: ~/.sdfest/model_weights/mug_vae.pt
+  model_url: https://github.com/roym899/sdfest/releases/download/v0.1.0/mug_vae.pt
+init:
+  datasets:
+    generated_dataset:
+      config_dict:
+        width: 640
+        height: 480
+        fov_deg: 90
+        pointcloud: true
+        normalize_pose: true
+        render_threshold: 0.004
+        z_min: 0.2
+        z_max: 1.5
+        extent_mean: 0.11
+        extent_std: 0.01
+        mask_noise: true
+        mask_noise_min: 0.1
+        mask_noise_max: 2.0
+        norm_noise: false
+        norm_noise_min: -0.1
+        norm_noise_max: 0.1
+        scale_to_unit_ball: false
+        gaussian_noise_probability: 0.5
+        orientation_repr: discretized
+        orientation_grid_resolution: 2
+        category_str: mug
+      type: SDFVAEViewDataset
+      probability: 1.0
+    camera_train:
+      config_dict:
+        split: camera_train
+        root_dir: sdf_single_shot/data/nocs
+        mask_pointcloud: true
+        normalize_pointcloud: true
+        scale_convention: half_max
+        camera_convention: opengl
+        remap_y_axis: y
+        remap_x_axis: -z
+        orientation_repr: discretized
+        orientation_grid_resolution: 2
+        category_str: mug
+      type: NOCSDataset
+      probability: 0.0
+    real_train:
+      config_dict:
+        split: real_train
+        root_dir: sdf_single_shot/data/nocs
+        mask_pointcloud: true
+        normalize_pointcloud: true
+        scale_convention: half_max
+        camera_convention: opengl
+        remap_y_axis: y
+        remap_x_axis: -z
+        orientation_repr: discretized
+        orientation_grid_resolution: 2
+        category_str: mug
+      type: NOCSDataset
+      probability: 0.0
+  validation_datasets:
+    camera_val:
+      config_dict:
+        split: camera_val
+        root_dir: sdf_single_shot/data/nocs
+        mask_pointcloud: true
+        normalize_pointcloud: true
+        scale_convention: half_max
+        camera_convention: opengl
+        remap_y_axis: y
+        remap_x_axis: -z
+        orientation_repr: discretized
+        orientation_grid_resolution: 2
+        category_str: mug
+      type: NOCSDataset
+  batch_size: 32
+  iterations: 500000
+  learning_rate: 1.0e-3
+  position_weight: 1000
+  scale_weight: 1000
+  orientation_weight: 5
+  visualization_iteration: 1000
+  validation_iteration: 10000
+  checkpoint_iteration: 10000
+  orientation_repr: discretized
+  orientation_grid_resolution: 2
+  orientation_str: mug
+  backbone_type: VanillaPointNet
+  backbone:
+    in_size: 3    # dimension of input points
+      # tnets:
+      #     0: [64,64,64]
+    mlp_out_sizes: [128, 128, 128, 128, 1024]
+    batchnorm: true
+    dense: true
+    residual: true
+
+  head_type: SDFPoseHead
+  head:
+    in_size: 1024   # number of input features
+    mlp_out_sizes: [512, 256, 128]
+    batchnorm: true
+      # residual: True
+    orientation_repr: discretized
+    orientation_grid_resolution: 2
+  category_str: mug
+  model: ~/.sdfest/model_weights/mug_discretized_2_init.pt
+  model_url: https://github.com/roym899/sdfest/releases/download/v0.1.0/mug_discretized_2_init.pt
+  normalize_pose: true
+category: cup
+far_field: 2.0  # from mask_noise_max
+

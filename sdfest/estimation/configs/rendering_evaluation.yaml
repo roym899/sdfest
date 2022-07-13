@@ -1,6 +1,6 @@
 config:
   - ./default.yaml
-  - ../models/mug.yaml
+  - ./models/mug.yaml
 
 camera:
   width: 640
@@ -25,7 +25,7 @@ visualize_meshes: False
 visualize_points: False
 iso_threshold: 0.01
 log_folder: null
-ablation_configs: null
+ablation_configs: {}
 shape_optimization: True
 seed: 0
 run_name: ''

@@ -12,15 +12,15 @@ config:
             config_dict: "./camera_val.yaml"
 
 # Training params
-batch_size: 32
-iterations: 500000
+batch_size: 2
+iterations: 2
 learning_rate: 1.0e-3
 position_weight: 1000
 scale_weight: 1000
 orientation_weight: 1
-visualization_iteration: 5000
-validation_iteration: 50000
-checkpoint_iteration: 50000
+visualization_iteration: 1
+validation_iteration: 1
+checkpoint_iteration: 1
 orientation_repr: discretized
 orientation_grid_resolution: 1
 
@@ -28,13 +28,13 @@ orientation_grid_resolution: 1
 datasets:
     generated_dataset:
         type: SDFVAEViewDataset
-        probability: 0.6
+        probability: 1.0
     camera_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
-        probability: 0.3
+        probability: 0.0
     real_train:
         type: sdfest.initialization.datasets.nocs_dataset.NOCSDataset
-        probability: 0.1
+        probability: 0.0
 
 validation_datasets: 
     camera_val:

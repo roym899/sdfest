@@ -1,5 +1,11 @@
 # SDFEst
-Shape and pose estimation using discretized signed distance fields.
+[![PyPI Release](https://github.com/roym899/sdfest/actions/workflows/publish_release.yaml/badge.svg)](https://github.com/roym899/sdfest/actions/workflows/publish_release.yaml) [![Docs](https://github.com/roym899/sdfest/actions/workflows/build_docs.yaml/badge.svg)](https://github.com/roym899/sdfest/actions/workflows/build_docs.yaml)
+
+SDFEst is a package for pose, scale, and shape estimation using discretized signed distance fields. It includes and combines three main components (generative model, discriminative initialization, and differentiable renderer) to enable pose and shape estimation in an analysis-by-synthesis framework.
+
+[Installation](#installation) | [Dataset Preparation](#dataset-preparation)  | [Paper Reproduction](#paper-reproduction) | [Code Structure](#code-structure) | [Development](#development) | [Citation](#citation) | [Docs](https://roym899.github.io/sdfest/)
+
+![Animation of differentiable renderer.](resources/sdfest_overview.gif)
 
 ## Installation
 
@@ -31,9 +37,9 @@ pip install -r requirements.txt -e .
 You need to install Detectron2 manually to run the pipeline with automatic instance segmentation.
 
 Follow the [detectron2 installation guide](https://detectron2.readthedocs.io/en/latest/tutorials/install.html) from there.
-Tested with detectron2 0.5 + torch 1.9.0.
+Tested with detectron2 0.6 + torch 1.12.0 (and various older versions).
 
-## Prepare Datasets
+## Dataset Preparation
 See below for expected folder structure for each dataset.
 
 #### ShapeNet ([Website](https://shapenet.org/))
@@ -64,16 +70,20 @@ See below for expected folder structure for each dataset.
 ...
 ```
 
-## Reproduce Experiments
-Depending on which dataset, you have downloaded you can reproduce the results reported in the paper (using the already trained models) by running the script
-```bash
-source reproduce_{shapenet,modelnet,redwood}_experiments.sh
-```
-after that, all results can be found in `./results`.
+## Paper Reproduction
 
-## Train models
+First, make sure the datasets are in the right format.
+
+### Full paper (training and experiments)
+See the bash script in `reproduction_scripts/reproduce_paper.sh`.
+
+Evaluation code for REAL275 and REDWOOD75 experiments will be integrated in [cpas_toolbox](https://github.com/roym899/pose_and_shape_evaluation) soon.
+
+<sup>Non-cleaned up version of evaluation code can be found in `icaps_eval` branch.</sup>
+
+### Train Models Only
 To train a network for a specific category you need to first train a per-category VAE, and *afterwards* an initialization network.
-### VAE
+#### VAE
 First we need to convert the ShapeNet meshes to SDFs and optionally filter the dataset. To reproduce the preprocessing of the paper run
 ```bash
 source preprocess_shapenet.sh
@@ -84,7 +94,7 @@ source train_vaes.sh
 ```
 to train the models using the same configuration as used for the paper.
 
-### Init Network
+#### Initialization Network
 To train the initialization network we used in our paper, run
 ```bash
 source train_init_networks.sh
@@ -106,7 +116,7 @@ Code is structured into 4 sub-packages:
 
 Differentiable rendering of depth image for signed distance fields.
 
-The signed distance field is assumed to be voxelized and it's pose is given by a x, y, z in the camera frame, a quaternion describing its orientation and a scale parameter describing its size. This module provides the derivative with respect to the signed distance values, and the full pose description (position, orientation, scale).
+The signed distance field is assumed to be voxelized and its pose is given by a x, y, z in the camera frame, a quaternion describing its orientation and a scale parameter describing its size. This module provides the derivative with respect to the signed distance values, and the full pose description (position, orientation, scale).
 
 #### Generating compile_commands.json
 <sup>General workflow for PyTorch extensions (only tested for JIT, probably similar otherwise)</sup>
@@ -160,3 +170,16 @@ Combines initialization, VAE, and differentiable renderer for full analysis-by-s
 - Use `pip install -e .` to install the package in editable mode
 - Use `pip install -r requirements-dev.txt` to install dev tools
 - Use `pytest --cov=sdfest --cov-report term-missing tests/` to run tests and check code coverage
+
+## Citation
+
+If you find this library useful in your research, consider citing our publication:
+
+```
+@article{bruns2022sdfest,
+  title={{SDFEst}: Categorical Pose and Shape Estimation of Objects from {RGB-D} Images using Signed Distance Fields},
+  author={Bruns, Leonard and Jensfelt, Patric},
+  journal={IEEE Robotics and Automation Letters},
+  year={2022},
+}
+```

@@ -1,8 +1,8 @@
 # Standalone config to use with real_data.py
 # Used to generate runtime breakdown
 config:
-  - redwood.yaml
-  - ../models/bottle.yaml
+  - ./redwood.yaml
+  - ./models/bottle.yaml
 
 input:
   data/redwood/bottle/rgbd/01259/rgb/0000300-000010021284.jpg

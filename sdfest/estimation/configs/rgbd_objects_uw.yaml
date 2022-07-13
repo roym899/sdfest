@@ -1,5 +1,5 @@
 config:
-  - default.yaml
+  - ./default.yaml
 
 camera:
   width: 640

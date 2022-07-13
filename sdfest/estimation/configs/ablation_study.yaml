@@ -2,7 +2,10 @@
 # Ablation study on synthetic mug data
 config:
   - ./rendering_evaluation.yaml
-  - ../models/mug.yaml
+  - ./models/mug.yaml
+  - ablation_configs:
+      discretized_2: ./models/mug_discretized_2.yaml
+      quaternion: ./models/mug_quaternion.yaml
 
 num_views: [3,]
 run_name: ablation_study

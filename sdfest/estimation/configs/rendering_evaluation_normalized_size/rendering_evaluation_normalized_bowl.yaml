@@ -1,6 +1,6 @@
 config:
   - ../rendering_evaluation.yaml
-  - ../../models/bowl.yaml
+  - ../models/bowl.yaml
 
 mesh_scale: 0.1
 rel_scale: False

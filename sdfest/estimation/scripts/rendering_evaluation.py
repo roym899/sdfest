@@ -54,6 +54,7 @@ import torch
 from tqdm import tqdm
 import yoco
 
+import sdfest
 from sdfest.initialization import quaternion_utils
 from sdfest.estimation import synthetic
 from sdfest.differentiable_renderer import Camera
@@ -90,7 +91,7 @@ class Evaluator:
     def run(self) -> None:
         """Run the evaluation."""
         o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Warning)
-        if self.base_config["ablation_configs"] is not None:
+        if self.base_config["ablation_configs"]:
             ablation_results_dict = {}
             for name, ablation_config in self.base_config["ablation_configs"].items():
                 config = yoco.load_config(
@@ -399,7 +400,9 @@ def main() -> None:
     )
     parser.add_argument("--data_path", required=True)
     parser.add_argument("--out_folder", required=True)
-    config = yoco.load_config_from_args(parser)
+    config = yoco.load_config_from_args(
+        parser, search_paths=[".", "~/.sdfest/", sdfest.__path__[0]]
+    )
 
     evaluator = Evaluator(config)
     evaluator.run()

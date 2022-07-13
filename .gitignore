@@ -4,6 +4,7 @@ runs/
 wandb/
 good_meshes.json
 .vscode/
+./models/
 
 # System-specific compile commands
 compile_commands.json

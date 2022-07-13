@@ -1,6 +1,6 @@
 config:
   - ../rendering_evaluation.yaml
-  - ../../models/bottle.yaml
+  - ../models/bottle.yaml
 
 mesh_scale: 0.15
 rel_scale: False
