@@ -3,8 +3,11 @@ import glob
 import os
 from typing import TypedDict
 
+import numpy as np
+import open3d as o3d
 import torch
 import yoco
+
 from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
 
 # TODO add abstraction for transforming conventions
@@ -122,15 +125,33 @@ class MultiViewDataset(torch.utils.data.Dataset):
         Returns:
             Sample containing the following items:
                 "pointset": The voxelized pointset containing all occupied cells.
-                "position": The position of the SDF. Shape (3,).
+                "position": The position of the SDF. torch.FloatTensor, shape (3,).
                 "quaternion":
                     The orientation of the SDF in the pointset as a quaternion.
-                    Scalar-last quaternion, shape (4,).
+                    Scalar-last quaternion, torch.FloatTensor, shape (4,).
                 "orientation":
                     The orientation of the SDF in the specified orientation
                     representation. Based on specified orientation_representation.
+                    torch.FloatTensor, shape depending on orientation_representation.
                 "scale":
                     The scale of the SDF. Based on specified scale_convention.
-                "sdf": The SDF. Shape (N, N, N).
+                "sdf":
+                    The discretized signed distance field.
+                    torch.FloatTensor, Shape (N, N, N).
         """
-        pass
+        pcd_path = self._pcd_files[idx]
+        dir_path = os.path.dirname(pcd_path)
+        sdf_path = os.path.join(dir_path, pcd_path)
+        meta_path = os.path.join(dir_path, "metadata.json")
+
+        o3d_pointset = o3d.io.read_point_cloud(pcd_path)
+        np_pointset = np.asarray(o3d_pointset.points, dtype=np.float32)
+        pointset = torch.from_numpy(np_pointset)
+
+        if self._normalize_pointset:
+            pointset, _ = pointset_utils.normalize_points(pointset)
+            # position = position - centroid
+
+        return {
+            "pointset": pointset,
+        }
