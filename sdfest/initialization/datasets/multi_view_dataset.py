@@ -170,7 +170,7 @@ class MultiViewDataset(torch.utils.data.Dataset):
 
         # Orientation
         orientation_q = torch.Tensor(meta_data["obj_quaternion"])
-        orientation_q[[0, 3]] = orientation_q[[3, 0]]  # scalar-first -> scalar-last
+        orientation_q = torch.roll(orientation_q, -1)  # scalar-first -> scalar-last
         orientation_q = self._change_axis_convention(orientation_q)
         orientation = self._quat_to_orientation_repr(orientation_q)
 
