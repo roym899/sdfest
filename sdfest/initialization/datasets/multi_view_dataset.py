@@ -2,7 +2,7 @@
 import glob
 import json
 import os
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 import numpy as np
 import open3d as o3d
@@ -100,16 +100,32 @@ class MultiViewDataset(torch.utils.data.Dataset):
         self._scale_convention = config["scale_convention"]
         self._remap_y_axis = config["remap_y_axis"]
         self._remap_x_axis = config["remap_x_axis"]
-        self._orientation_repr = config["orientation_repr"]
-        if self._orientation_repr == "discretized":
-            self._orientation_grid = so3grid.SO3Grid(
-                config["orientation_grid_resolution"]
-            )
+        self.set_orientation_repr(
+            config["orientation_repr"], config.get("orientation_grid_resolution")
+        )
 
     def _init_dataset(self) -> None:
         dataset_dir = os.path.join(self._root_dir, self._split)
         pcd_glob = os.path.join(dataset_dir, "**", "*.pcd")
         self._pcd_files = glob.glob(pcd_glob, recursive=True)
+
+    def set_orientation_repr(
+        self, orientation_repr: str, orientation_grid_resolution: Optional[int] = None
+    ) -> None:
+        """Change orientation representation of returned samples.
+
+        Args:
+            orientation_repr:
+                Which orientation representation is used. One of:
+                    "quaternion"
+                    "discretized"
+            orientation_grid_resolution:
+                Resolution of the orientation grid.
+                Only used if orientation_repr is "discretized".
+        """
+        self._orientation_repr = orientation_repr
+        if self._orientation_repr == "discretized":
+            self._orientation_grid = so3grid.SO3Grid(orientation_grid_resolution)
 
     def __len__(self) -> int:
         """Return number of sample in dataset."""
@@ -131,7 +147,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
                 "orientation":
                     The orientation of the SDF in the specified orientation
                     representation. Based on specified orientation_representation.
-                    torch.FloatTensor, shape depending on orientation_representation.
+                    For "quaternion": FloatTensor, scalar-last quaternion, shape (4,).
+                    For "discretized": LongTensor, scalar.
                 "scale":
                     The scale of the SDF. Note that this is not exactly the same as
                     a tight bounding box. Based on specified scale_convention. float.
@@ -148,9 +165,14 @@ class MultiViewDataset(torch.utils.data.Dataset):
         with open(meta_path) as json_file:
             meta_data = json.load(json_file)
 
-        # TODO position
+        # Position
+        position = torch.Tensor(meta_data["obj_position"])
 
-        # TODO quaternion
+        # Orientation
+        orientation_q = torch.Tensor(meta_data["obj_quaternion"])
+        orientation_q[[0, 3]] = orientation_q[[3, 0]]  # scalar-first -> scalar-last
+        orientation_q = self._change_axis_convention(orientation_q)
+        orientation = self._quat_to_orientation_repr(orientation_q)
 
         # Pointset
         o3d_pointset = o3d.io.read_point_cloud(pcd_path)
@@ -158,8 +180,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
         pointset = torch.from_numpy(np_pointset)
 
         if self._normalize_pointset:
-            pointset, _ = pointset_utils.normalize_points(pointset)
-            # position = position - centroid
+            pointset, centroid = pointset_utils.normalize_points(pointset)
+            position = position - centroid
 
         # SDF
         np_sdf = np.load(sdf_path)
@@ -170,9 +192,9 @@ class MultiViewDataset(torch.utils.data.Dataset):
 
         return {
             "pointset": pointset,
-            "position": None,
-            "quaternion": None,
-            "orientation": None,
+            "position": position,
+            "quaternion": orientation_q,
+            "orientation": orientation,
             "scale": scale,
             "sdf": sdf,
         }
@@ -181,9 +203,12 @@ class MultiViewDataset(torch.utils.data.Dataset):
         """Adjust axis convention for the orientation.
 
         Args:
-            orientation_q: Quaternion representing an orientation.
+            orientation_q:
+                Quaternion representing an orientation. Scalar-last, shape (4,).
 
-        Returns: Quaternion representing orientation_q with remapped x and y axes.
+        Returns:
+            Quaternion representing orientation_q with remapped x and y axes.
+            Scalar-last, shape (4,).
         """
         if self._remap_y_axis is None and self._remap_x_axis is None:
             return orientation_q
@@ -254,3 +279,27 @@ class MultiViewDataset(torch.utils.data.Dataset):
         if np.linalg.det(rotation_o2n) != 1.0:  # check if special orthogonal
             raise ValueError("Unsupported combination of remap_{y,x}_axis. det != 1")
         return rotation_o2n
+
+    def _quat_to_orientation_repr(self, quaternion: torch.Tensor) -> torch.Tensor:
+        """Convert quaternion to selected orientation representation.
+
+        Args:
+            quaternion:
+                The quaternion to convert, scalar-last, shape (4,).
+
+        Returns:
+            The same orientation as represented by the quaternion in the chosen
+            orientation representation.
+        """
+        if self._orientation_repr == "quaternion":
+            return quaternion
+        elif self._orientation_repr == "discretized":
+            index = self._orientation_grid.quat_to_index(quaternion.numpy())
+            return torch.tensor(
+                index,
+                dtype=torch.long,
+            )
+        else:
+            raise NotImplementedError(
+                f"Orientation representation {self._orientation_repr} is not supported."
+            )

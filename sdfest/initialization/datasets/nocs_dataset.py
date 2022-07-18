@@ -184,6 +184,7 @@ class NOCSDataset(torch.utils.data.Dataset):
 
         Args:
             idx: Index of the instance.
+
         Returns:
             Sample containing the following items:
                 "color"
@@ -392,6 +393,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         Args:
             category_str:
                 If not None, only instances of the provided category will be returned.
+
         Returns:
             List of sample_data files.
         """
@@ -800,6 +802,7 @@ class NOCSDataset(torch.utils.data.Dataset):
         Args:
             quaternion:
                 The quaternion to convert, scalar-last, shape (4,).
+
         Returns:
             The same orientation as represented by the quaternion in the chosen
             orientation representation.
