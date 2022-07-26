@@ -22,9 +22,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
     Expected directory format:
         {root_dir}/{split}/{seq_id:08d}/cloud_{id:05d}.pcd
         {root_dir}/{split}/{seq_id:08d}/depth_{id:05d}.tiff
-        {root_dir}/{split}/{seq_id:08d}/rgba_{id:05d}.tiff
-        {root_dir}/{split}/{seq_id:08d}/segmentation_{id:05d}.tiff
-        {root_dir}/{split}/{seq_id:08d}/segmentation_{id:05d}.tiff
+        {root_dir}/{split}/{seq_id:08d}/rgba_{id:05d}.png
+        {root_dir}/{split}/{seq_id:08d}/segmentation_{id:05d}.png
         {root_dir}/{split}/{seq_id:08d}/sdf.npy
         {root_dir}/{split}/{seq_id:08d}/metadata.json
     """
