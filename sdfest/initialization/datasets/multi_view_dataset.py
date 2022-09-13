@@ -6,11 +6,12 @@ from typing import Optional, TypedDict
 
 import numpy as np
 import open3d as o3d
-from scipy.spatial.transform import Rotation
 import torch
 import yoco
+from scipy.spatial.transform import Rotation
 
 from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
+from sdfest.initialization.datasets import dataset_utils
 
 # TODO add abstraction for transforming conventions
 # (this is common to all datasets, and shouldn't be repeated in each dataset)
@@ -38,9 +39,7 @@ class MultiViewDataset(torch.utils.data.Dataset):
                 Whether the returned pointset and position will be normalized, such
                 that pointset centroid is at the origin.
             scale_convention:
-                Which scale is returned. The following strings are supported:
-                    "max": Maximum side length of SDF.
-                    "half_max": Half maximum side length of SDF.
+                See sdfest.initialization.datasets.dataset_utils.get_scale.
             orientation_repr:
                 Which orientation representation is used. One of:
                     "quaternion"
@@ -107,6 +106,7 @@ class MultiViewDataset(torch.utils.data.Dataset):
         dataset_dir = os.path.join(self._root_dir, self._split)
         pcd_glob = os.path.join(dataset_dir, "**", "*.pcd")
         self._pcd_files = glob.glob(pcd_glob, recursive=True)
+        self._pcd_files.sort()
 
     def set_orientation_repr(
         self, orientation_repr: str, orientation_grid_resolution: Optional[int] = None
@@ -150,7 +150,8 @@ class MultiViewDataset(torch.utils.data.Dataset):
                     For "discretized": LongTensor, scalar.
                 "scale":
                     The scale of the SDF. Note that this is not exactly the same as
-                    a tight bounding box. Based on specified scale_convention. float.
+                    a tight bounding box. Based on specified scale_convention.
+                    torch.FloatTensor, scalar or shape (3,).
                 "sdf":
                     The discretized signed distance field.
                     torch.FloatTensor, Shape (N, N, N).
@@ -187,7 +188,10 @@ class MultiViewDataset(torch.utils.data.Dataset):
         sdf = torch.from_numpy(np_sdf).float()
 
         # Scale
-        scale = self._get_scale(meta_data["sdf_extent"] * meta_data["obj_extent"])
+        sdf_scale_factor = meta_data["sdf_extent"]  # scalar, SDF max extent / tight bb
+        tight_extents = torch.Tensor(meta_data["obj_extents"])
+        sdf_extents = sdf_scale_factor * tight_extents
+        scale = dataset_utils.get_scale(sdf_extents, self._scale_convention)
 
         return {
             "pointset": pointset,
@@ -227,17 +231,6 @@ class MultiViewDataset(torch.utils.data.Dataset):
         )  # new -> original -> camera
 
         return remapped_orientation_q
-
-    def _get_scale(self, max_extent: torch.Tensor) -> float:
-        """Return scale convention from max_extent."""
-        if self._scale_convention == "max":
-            return max_extent
-        elif self._scale_convention == "half_max":
-            return 0.5 * max_extent
-        else:
-            raise ValueError(
-                f"Specified scale convention {self._scale_convnetion} not supported."
-            )
 
     def _get_o2n_object_rotation_matrix(self) -> np.ndarray:
         """Compute rotation matrix which rotates original to new object coordinates."""

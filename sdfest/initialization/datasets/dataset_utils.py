@@ -6,6 +6,42 @@ import numpy as np
 import torch
 
 
+def get_scale(extents: torch.Tensor, convention: str) -> torch.Tensor:
+    """Convert 3D extents of a bounding box to different scale conventions.
+
+    Args:
+        extents:
+            Extents to convert. Shape (3,).
+        convention:
+            Which scale is returned. The following strings are supported:
+                "diagonal":
+                    Length of bounding box diagonal. This is what NOCS uses.
+                "max": Maximum side length of bounding box.
+                "half_max": Half maximum side length of bounding box.
+                "full": Bounding box side lengths. Same as extents. Shape (3,).
+
+    Raises:
+        ValueError: If the provided convention is unknown / not supported.
+
+    Returns:
+        Scale based on chosen convention.
+        Scalar for diagonal | max | half_max.
+        Shape (3,) for full.
+    """
+    if convention == "diagonal":
+        return torch.linalg.norm(extents)
+    elif convention == "max":
+        return extents.max()
+    elif convention == "half_max":
+        return 0.5 * extents.max()
+    elif convention == "full":
+        return extents
+    else:
+        raise ValueError(
+            f"Specified scale convention {convention} not supported."
+        )
+
+
 def collate_samples(samples: List[dict]) -> dict:
     """Collate sample dictionaries.
 
@@ -20,6 +56,7 @@ def collate_samples(samples: List[dict]) -> dict:
             Dictionary containing various types of data.
             All keys except "pointset" will use standard batching.
             All samples are expected to contain the same keys.
+
     Returns:
         Dictionary containing same keys as each sample.
         For "pointset" key:

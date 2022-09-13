@@ -1,18 +1,19 @@
 """Module providing dataset class for annotated Redwood dataset."""
 import json
 import os
-from typing import TypedDict, Optional
+from typing import Optional, TypedDict
 
-from scipy.spatial.transform import Rotation
 import numpy as np
 import open3d as o3d
 import torch
-from PIL import Image
-from sdfest.differentiable_renderer import Camera
 import yoco
+from PIL import Image
+from scipy.spatial.transform import Rotation
 
+from sdfest.differentiable_renderer import Camera
 from sdfest.estimation import synthetic
 from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
+from sdfest.initialization.datasets import dataset_utils
 
 
 class AnnotatedRedwoodDataset(torch.utils.data.Dataset):
@@ -235,7 +236,7 @@ class AnnotatedRedwoodDataset(torch.utils.data.Dataset):
             orientation_q, "opencv", self._camera_convention
         )
         orientation = self._quat_to_orientation_repr(orientation_q)
-        scale = self._get_scale(extents)
+        scale = dataset_utils.get_scale(extents, self._scale_convention)
 
         # normalize pointcloud & position
         if self._normalize_pointcloud:
@@ -280,21 +281,6 @@ class AnnotatedRedwoodDataset(torch.utils.data.Dataset):
             np.asarray(Image.open(depth_path), dtype=np.float32) * 0.001
         )
         return depth
-
-    def _get_scale(self, extents: torch.Tensor) -> float:
-        """Return scale from stored sample data and extents."""
-        if self._scale_convention == "diagonal":
-            return torch.linalg.norm(extents)
-        elif self._scale_convention == "max":
-            return extents.max()
-        elif self._scale_convention == "half_max":
-            return 0.5 * extents.max()
-        elif self._scale_convention == "full":
-            return extents
-        else:
-            raise ValueError(
-                f"Specified scale convention {self._scale_convention} not supported."
-            )
 
     def _change_axis_convention(
         self, orientation_q: torch.Tensor, extents: torch.Tensor

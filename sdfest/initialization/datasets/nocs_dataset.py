@@ -2,26 +2,26 @@
 import datetime
 import imghdr
 import json
-from glob import glob
 import os
 import pickle
-from shutil import copyfile
 import time
-from typing import TypedDict, Optional
+from glob import glob
+from shutil import copyfile
+from typing import Optional, TypedDict
 
-from joblib import Parallel, delayed
-from scipy.spatial.transform import Rotation
 import numpy as np
 import open3d as o3d
 import pandas as pd
 import torch
-from PIL import Image
-from sdfest.differentiable_renderer import Camera
 import yoco
+from joblib import Parallel, delayed
+from PIL import Image
+from scipy.spatial.transform import Rotation
 from tqdm import tqdm
 
+from sdfest.differentiable_renderer import Camera
 from sdfest.initialization import pointset_utils, quaternion_utils, so3grid
-from sdfest.initialization.datasets import nocs_utils
+from sdfest.initialization.datasets import dataset_utils, nocs_utils
 
 
 class NOCSDataset(torch.utils.data.Dataset):
@@ -470,7 +470,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             orientation_q, "opencv", self._camera_convention
         )
         orientation = self._quat_to_orientation_repr(orientation_q)
-        scale = self._get_scale(sample_data, extents)
+        scale = dataset_utils.get_scale(extents, self._scale_convention)
 
         # normalize pointcloud & position
         if self._normalize_pointcloud:
@@ -556,7 +556,7 @@ class NOCSDataset(torch.utils.data.Dataset):
             nocs_transform = gts_data["gt_RTs"][gt_id]
             position = nocs_transform[0:3, 3]
             rot_scale = nocs_transform[0:3, 0:3]
-            nocs_scales = np.sqrt(np.sum(rot_scale ** 2, axis=0))
+            nocs_scales = np.sqrt(np.sum(rot_scale**2, axis=0))
             rotation_matrix = rot_scale / nocs_scales[:, None]
             nocs_scale = nocs_scales[0]
         else:  # camera_train, camera_val, real_train
@@ -643,7 +643,7 @@ class NOCSDataset(torch.utils.data.Dataset):
 
     def _load_mask(self, mask_path: str) -> torch.Tensor:
         """Load mask from mask filepath."""
-        mask_img = np.asarray(Image.open(mask_path), dtype=np.uint8)
+        mask_img = np.asarray(Image.open(mask_path), dtype=np.uint8).copy()
         if mask_img.ndim == 3 and mask_img.shape[2] == 4:  # CAMERA masks are RGBA
             instances_mask = mask_img[:, :, 0]  # use first channel only
         else:  # REAL masks are grayscale
@@ -712,21 +712,6 @@ class NOCSDataset(torch.utils.data.Dataset):
             raise nocs_utils.PoseEstimationError()
 
         return position, rotation_matrix, scale, out_transform
-
-    def _get_scale(self, sample_data: dict, extents: torch.Tensor) -> float:
-        """Return scale from stored sample data and extents."""
-        if self._scale_convention == "diagonal":
-            return sample_data["nocs_scale"]
-        elif self._scale_convention == "max":
-            return sample_data["max_extent"]
-        elif self._scale_convention == "half_max":
-            return 0.5 * sample_data["max_extent"]
-        elif self._scale_convention == "full":
-            return extents
-        else:
-            raise ValueError(
-                f"Specified scale convention {self._scale_convnetion} not supported."
-            )
 
     def _change_axis_convention(
         self, orientation_q: torch.Tensor, extents: torch.Tensor

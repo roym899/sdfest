@@ -14,7 +14,7 @@ def test_multi_view_dataset() -> None:
             "split": "train",
         }
     )
-    assert len(mvd) == 2
+    assert len(mvd) == 3
 
     sample_0 = mvd[0]
     assert sample_0["position"].shape == (3,)
@@ -24,7 +24,7 @@ def test_multi_view_dataset() -> None:
     assert sample_0["pointset"].dtype == torch.float
     assert sample_0["sdf"].shape == (64, 64, 64)
     assert sample_0["sdf"].dtype == torch.float
-    assert isinstance(sample_0["scale"], float)
+    assert isinstance(sample_0["scale"], torch.Tensor)
 
     # Test with and without normalization
     mvd._normalize_pointset = False
@@ -42,10 +42,10 @@ def test_multi_view_dataset() -> None:
     # Test different scale conventions
     mvd._scale_convention = "max"
     sample_0 = mvd[0]
-    assert 0.1 < sample_0["scale"] < 0.15
+    assert 0.07 < sample_0["scale"].item() < 0.08
     mvd._scale_convention = "half_max"
     sample_0 = mvd[0]
-    assert 0.05 < sample_0["scale"] < 0.1
+    assert 0.035 < sample_0["scale"].item() < 0.04
 
     # Test different orientation conventions
     mvd.set_orientation_repr("quaternion")
