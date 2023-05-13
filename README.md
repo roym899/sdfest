@@ -177,7 +177,7 @@ If you find this library useful in your research, consider citing our publicatio
 
 ```
 @article{bruns2022sdfest,
-  title={{SDFEst}: Categorical Pose and Shape Estimation of Objects from {RGB-D} Images using Signed Distance Fields},
+  title={{SDFEst}: Categorical Pose and Shape Estimation of Objects from {RGB-D} using Signed Distance Fields},
   author={Bruns, Leonard and Jensfelt, Patric},
   journal={IEEE Robotics and Automation Letters},
   year={2022},
