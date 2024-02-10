@@ -12,7 +12,7 @@ config_files = [
 
 setuptools.setup(
     name="sdfest",
-    version="0.1.0",
+    version="0.1.1",
     author="Leonard Bruns",
     author_email="roym899@gmail.com",
     description="6-DoF pose, scale, and shape estimation architecture",
@@ -33,7 +33,7 @@ setuptools.setup(
         "healpy",
         "joblib",
         "matplotlib",
-        "mesh-to-sdf",
+        # "mesh-to-sdf, removed due to https://github.com/marian42/mesh_to_sdf/issues/38
         "ninja",
         "numpy",
         "open3d",
