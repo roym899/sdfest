@@ -77,9 +77,7 @@ First, make sure the datasets are in the right format.
 ### Full paper (training and experiments)
 See the bash script in `reproduction_scripts/reproduce_paper.sh`.
 
-Evaluation code for REAL275 and REDWOOD75 experiments will be integrated in [cpas_toolbox](https://github.com/roym899/pose_and_shape_evaluation) soon.
-
-<sup>Non-cleaned up version of evaluation code can be found in `icaps_eval` branch.</sup>
+Evaluation is integrated in [cpas_toolbox](https://github.com/roym899/pose_and_shape_evaluation).
 
 ### Train Models Only
 To train a network for a specific category you need to first train a per-category VAE, and *afterwards* an initialization network.
